@@ -22,9 +22,17 @@ To hear other voices:  python tools\make_audio.py --list
 To switch voices:      python tools\make_audio.py --voice en-US-AnaNeural --force
 
 ## 2. Build (Android Studio)
-1. File > Open > this SpaceWords folder. Let Gradle sync. Accept any build-tools upgrade it offers.
-2. Build > Build App Bundle(s) / APK(s) > Build APK(s).
-3. The APK lands in app/build/outputs/apk/debug/app-debug.apk
+1. File > Open > this SpaceWords folder. Wait for the Gradle sync bar at the bottom to finish
+   (the Build menu items stay grey until it does). Decline the Android Gradle plugin upgrade.
+2. Build > Generate App Bundles or APKs > Generate APKs.
+   (Older Android Studio versions call this Build > Build Bundle(s) / APK(s) > Build APK(s).)
+3. A "Build APK(s)" popup appears when it is done; its "locate" link opens the folder.
+   The APK lands in app/build/outputs/apk/debug/app-debug.apk
+
+Or from a terminal in this folder (uses Android Studio's Java; adjust the path if yours differs):
+
+    set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr
+    gradlew assembleDebug
 
 ## 3. Install on the frame (ADB already working)
     adb install -r app\build\outputs\apk\debug\app-debug.apk
