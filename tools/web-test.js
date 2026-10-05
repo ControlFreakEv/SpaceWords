@@ -129,7 +129,7 @@ const server = http.createServer((req, res) => {
     await shot(w.replace(".html", "") + "-round");
   }
   const literalKeys = [];
-  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html", "compound.html"]) {
     const src = fs.readFileSync(path.join(WWW, w), "utf8"), re = /"((?:[pmi])_[a-z_]+)"/g; let m;
     while ((m = re.exec(src))) if (!/_$/.test(m[1])) literalKeys.push(m[1]);
   }
@@ -215,6 +215,36 @@ const server = http.createServer((req, res) => {
     break;
   }
 
+  // Compound Words: wrong choices never make real words, match boards pair up only one way, play every level.
+  await page.goto(base + "compound.html"); await page.waitForTimeout(150); await shot("compound-levels");
+  const cw = await page.evaluate(() => {
+    const d = Compound.data, all = d.PIC.concat(d.MID, d.BIG), bad = [];
+    for (let t = 0; t < 400; t++) {
+      const c = all[t % all.length], wrong = Compound.wrongSeconds(c.a, c.b, all, 3);
+      wrong.forEach(b => { if (d.KNOWN[c.a + b]) bad.push(c.a + "+" + b); });
+      [d.PIC, d.MID, d.BIG].forEach(pool => {
+        const set = Compound.matchSet(pool, 4);
+        if (set.length !== 4) bad.push("short match board");
+        set.forEach(x => set.forEach(y => { if (x !== y && d.KNOWN[x.a + y.b]) bad.push("ambiguous " + x.a + "+" + y.b); }));
+      });
+    }
+    return bad.slice(0, 10);
+  });
+  cw.length ? cw.forEach(b => fail("compound: " + b)) : ok("compound: wrong choices never make real words; match boards pair up one way");
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate(i => Compound.start(i), i);
+    for (let r = 0; r < 10; r++) {
+      if (r === 0) await shot("compound-L" + (i + 1));
+      const R = await page.evaluate(() => { const R = Compound.state().R; return R.pairs ? R.pairs.map(p => p.w) : null; });
+      if (R) {
+        for (const w of R) { await page.locator('.hb[data-side="L"][data-pair="' + w + '"]').click(); await page.locator('.hb[data-side="R"][data-pair="' + w + '"]').click(); }
+      } else await page.locator("[data-ok]").first().click();
+      await page.waitForFunction(r => { const s = Compound.state(); return s.round > r || document.getElementById("end").className.indexOf("on") >= 0; }, r, { timeout: 4000 });
+    }
+    const end = await page.evaluate(() => [document.getElementById("end").className.indexOf("on") >= 0, Compound.state().stars]);
+    end[0] && end[1] === 10 ? ok("compound level " + (i + 1) + ": 10 rounds, 10 stars") : fail("compound level " + (i + 1) + " ended " + JSON.stringify(end));
+  }
+
   // Tap any word: every tappable piece on screen has a clip.
   const tapKeys = new Set();
   const collect = async () => (await page.evaluate(() => Array.prototype.map.call(document.querySelectorAll("[data-say]"), e => e.getAttribute("data-say")))).forEach(k => tapKeys.add(k));
@@ -222,7 +252,7 @@ const server = http.createServer((req, res) => {
     await page.goto(base + "math-game.html?g=" + g);
     for (let i = 0; i < 5; i++) for (let t = 0; t < 8; t++) { await page.evaluate(i => MathGame.start(i), i); await collect(); }
   }
-  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html"]) {
     await page.goto(base + w); await page.waitForTimeout(100); await collect();
     const n = await page.locator("#path button").count();
     for (let i = 0; i < n; i++) for (let t = 0; t < 6; t++) {

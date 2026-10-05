@@ -16,6 +16,10 @@ A floating UFO button sits on top of the Skylight screen. Tap it to pick a missi
   vowel in b_g to hear bag, beg, big, bog, bug), magic e (cap, cape), vowel teams (rain, boat),
   syllables (clap and count; tap each part to hear it), and bossy R (car, fork, bird).
 
+- **Compound Words** - sun + flower = sunflower: picture puzzles, match the halves, split it
+  (tap between the letters), build it, and big words like thunderstorm. Wrong choices are
+  checked so they never make a real word too (sun + set would).
+
 In every game, tapping a word that isn't an answer choice reads it aloud (instructions,
 sentences, numbers in math questions). In Picture Planet's "read the word" rounds that counts
 as a hint, like Peek, and costs the round's gold star.
@@ -38,7 +42,7 @@ Open Command Prompt in this SpaceWords folder (not platform-tools), then:
     pip install edge-tts
     python tools\make_audio.py
 
-That saves about 870 MP3 clips into app/src/main/assets/www/audio. It only records clips
+That saves about 1,020 MP3 clips into app/src/main/assets/www/audio. It only records clips
 that are missing, so after an update that adds new spoken text (like the math games),
 run it again and then rebuild.
 To hear other voices:  python tools\make_audio.py --list
