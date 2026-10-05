@@ -536,5 +536,11 @@
  "m_praise_2": "Correct!",
  "m_praise_3": "Super smart!",
  "m_praise_4": "Nice thinking!",
- "m_praise_5": "You're a math whiz!"
+ "m_praise_5": "You're a math whiz!",
+ "i_pic": "Read the word. Tap its picture.",
+ "i_listen": "Listen, then tap the word you hear.",
+ "i_build": "Tap the letters to spell it.",
+ "i_beam": "Listen, then beam up the word you hear.",
+ "i_sentence": "Read the sentence. Which word fits?",
+ "i_look": "Look at the word, then spell it."
 }

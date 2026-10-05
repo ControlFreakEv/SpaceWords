@@ -317,7 +317,7 @@ function roundListen(stage, word){
   p.appendChild(speakBtn(word, true));
   stage.appendChild(p);
   choiceRow(stage, word, [word].concat(lookAlikes(word, 3)));
-  setTimeout(function(){ say([word.k]); }, 400);
+  setTimeout(function(){ if (G.words[G.round] === word) say(["i_beam", word.k]); }, 400);
 }
 
 function roundSentence(stage, word){
@@ -331,6 +331,7 @@ function roundSentence(stage, word){
   p.appendChild(sent);
   stage.appendChild(p);
   G.blank = blank;
+  setTimeout(function(){ if (G.words[G.round] === word) say(["i_sentence"]); }, 400);
   var lv = LEVELS[G.level].words, opts = [word];
   word.d.forEach(function(dw){ for (var i = 0; i < lv.length; i++) if (lv[i].w === dw) opts.push(lv[i]); });
   choiceRow(stage, word, opts);
@@ -354,7 +355,7 @@ function roundSpell(stage, word){
   btns.appendChild(peek);
   p.appendChild(btns);
   stage.appendChild(p);
-  say([word.k]);
+  say(["i_look", word.k]);
 
   var letters = word.w.split("");
   var slots = el("div", "row");
@@ -393,7 +394,7 @@ function roundSpell(stage, word){
     tiles.style.visibility = "";
     peek.style.display = "";
     say(["p_spell"]);
-  }, 2400);
+  }, 3400);
 }
 
 function beamUp(target, done){

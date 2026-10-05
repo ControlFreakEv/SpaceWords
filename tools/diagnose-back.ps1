@@ -136,6 +136,7 @@ if (-not $gameUp) {
 }
 
 $log += Snapshot "2 game open"
+$log += Get-FrameHistory "2 while the game opened"
 A logcat -c | Out-Null
 A logcat -b events -c | Out-Null
 A logcat -b crash -c | Out-Null

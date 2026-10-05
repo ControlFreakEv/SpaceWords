@@ -264,6 +264,7 @@ function roundPic(stage, word){
     row.appendChild(b);
   });
   stage.appendChild(row);
+  setTimeout(function(){ if (G.words[G.round] === word) say(["i_pic"]); }, 350);
 }
 
 function roundListen(stage, word){
@@ -278,7 +279,7 @@ function roundListen(stage, word){
     row.appendChild(b);
   });
   stage.appendChild(row);
-  setTimeout(function(){ say([Speech.key(word.w)]); }, 350);
+  setTimeout(function(){ if (G.words[G.round] === word) say(["i_listen", Speech.key(word.w)]); }, 350);
 }
 
 function roundBuild(stage, word){
@@ -318,6 +319,7 @@ function roundBuild(stage, word){
     tiles.appendChild(t);
   });
   stage.appendChild(tiles);
+  setTimeout(function(){ if (G.words[G.round] === word) say(["i_build", Speech.key(word.w)]); }, 350);
 }
 
 function correct(target, word){

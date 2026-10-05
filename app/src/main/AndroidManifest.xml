@@ -38,12 +38,16 @@
             </intent-filter>
         </activity>
 
+        <!-- The UFO runs in its own process: the frame kills the game's process whenever
+             another app comes to the front, and the UFO has to survive that. -->
         <service
             android:name=".BubbleService"
+            android:process=":ufo"
             android:exported="false" />
 
         <receiver
             android:name=".BootReceiver"
+            android:process=":ufo"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

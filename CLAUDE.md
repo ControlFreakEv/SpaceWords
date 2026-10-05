@@ -34,6 +34,12 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   ro.adb.secure=0, so Wi-Fi adb needs no approval). On the owner's Windows PC adb is not on PATH:
   `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`. Cloud sessions cannot reach the frame.
   The owner deploys with `tools\deploy.ps1` (see README).
+- **The firmware kills the previous app whenever another app comes to the front** (low-RAM
+  policy): Skylight dies when the game opens (so "Back to photos" cold-starts it, about 7 s), and
+  the game's process dies 2 ms after its onPause ("user request after error", counted as a crash).
+  That is why BubbleService and BootReceiver run in their own process (`:ufo`); GameActivity
+  shows/hides the UFO with ACTION_SHOW/ACTION_HIDE intents (`showBubble()` in Compat.kt), and
+  the service re-shows itself if the game process is no longer in front.
 - `ro.config.low_ram=true`. On 2026-10-05 the old build froze on "Back to photos" and Android
   silently killed it ("user request after error": the frame shows no ANR dialog), which explains
   both the long black screen and the vanished UFO. Prime suspect: WebView's media player stuck
@@ -68,6 +74,7 @@ web audio from https://wordhop.local is silent there. mp3s are kept uncompressed
 `phrases.json` maps every spoken key to its text (about 540; numbers are n_0..n_100, math prompts
 m_*). To add spoken text:
 1. Add the key to `phrases.json`, then run `python3 tools/sync_phrases.py` to update speech.js.
+   Every round reads its instructions aloud (i_* keys in the word games, R.say in math).
 2. The owner re-runs `python tools\make_audio.py` on their PC (edge-tts, voice en-US-AvaNeural,
    rate -10%). It needs internet access to Microsoft's service, so it can't run in the cloud.
 New keys without a clip stay silent on the frame until the clips are regenerated, so list

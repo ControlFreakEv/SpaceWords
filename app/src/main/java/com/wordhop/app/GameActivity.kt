@@ -140,15 +140,14 @@ class GameActivity : Activity() {
     override fun onResume() {
         super.onResume()
         hideSystemBars()
-        if (canOverlay(this)) startBubble(this)
-        BubbleService.setVisible(false)   // hide the UFO while the game is open
+        if (canOverlay(this)) showBubble(this, false)   // hide the UFO while the game is open (starts it if needed)
     }
 
     override fun onPause() {
         super.onPause()
         tts?.stop()
         stopClip()
-        BubbleService.setVisible(true)
+        if (canOverlay(this)) showBubble(this, true)
     }
 
     /** Back steps up one level: game -> its hub (from <meta name="parent">) -> picker -> photos. */

@@ -120,6 +120,22 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(r => MathGame.state().round > r, r);
   }
 
+  // Word games: start the first level and let a round or two run (speech keys must exist).
+  for (const w of ["picture-planet.html", "saucer.html"]) {
+    await page.goto(base + w); await page.waitForTimeout(200);
+    await page.locator("#path button").first().click(); await page.waitForTimeout(3800);
+    const shown = await page.evaluate(() => document.getElementById("game").className.indexOf("on") >= 0);
+    shown ? ok(w + ": level 1 starts") : fail(w + ": level 1 did not start");
+    await shot(w.replace(".html", "") + "-round");
+  }
+  const literalKeys = [];
+  for (const w of ["picture-planet.html", "saucer.html", "math-game.html"]) {
+    const src = fs.readFileSync(path.join(WWW, w), "utf8"), re = /"((?:[pmi])_[a-z_]+)"/g; let m;
+    while ((m = re.exec(src))) if (!/_$/.test(m[1])) literalKeys.push(m[1]);
+  }
+  const missingLit = literalKeys.filter(k => !(k in phrases));
+  missingLit.length ? fail("spoken keys in the pages missing from phrases.json: " + missingLit.join(", ")) : ok("all " + literalKeys.length + " spoken keys written in the pages exist");
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();
