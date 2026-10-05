@@ -11,3 +11,6 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# Diagnostics output
+tools/back-to-photos-log.txt
