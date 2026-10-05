@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Picture Planet</title>
+<style>
+@font-face{font-family:"WHRead";src:url("fonts/andika.ttf") format("truetype");font-weight:400}
+@font-face{font-family:"WHRead";src:url("fonts/andika-bold.ttf") format("truetype");font-weight:700}
+@font-face{font-family:"WHFun";src:url("fonts/fredoka.ttf") format("truetype");font-weight:600}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:#0B1026;background-image:radial-gradient(circle at 25% 15%, #2A1E5C 0%, #131A3D 45%, #0B1026 80%);color:#F3F6FF;font-family:"WHFun","Trebuchet MS",sans-serif;font-weight:600;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0);overflow:hidden;
+}
+button{font-family:inherit;font-weight:inherit;color:inherit;border:0;background:none;padding:0;margin:0;cursor:pointer;outline:none}
+img{display:block}
+.screen{display:none;position:absolute;left:0;top:0;right:0;bottom:0;padding:3vmin 4vmin;overflow:hidden}
+.screen.on{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+
+.paper{background:#F7F9FF;color:#1F2A44;border:0.5vmin solid #1F2A44;border-radius:2.8vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A}
+.press{-webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s}
+.press:active{-webkit-transform:translate(0.5vmin,0.5vmin);transform:translate(0.5vmin,0.5vmin);box-shadow:0.3vmin 0.3vmin 0 #05081A}
+
+/* home */
+.hero{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:2vmin 0 4vmin}
+.hero img{width:15vmin;height:15vmin;margin-right:3vmin;-webkit-animation:hop 1.6s ease-out 1;animation:hop 1.6s ease-out 1}
+@-webkit-keyframes hop{0%{-webkit-transform:translateY(5vmin) scale(.6);opacity:0}35%{-webkit-transform:translateY(-5vmin) scale(1.05);opacity:1}55%{-webkit-transform:translateY(0) scaleY(.88)}70%{-webkit-transform:translateY(-1.5vmin)}100%{-webkit-transform:none}}
+@keyframes hop{0%{transform:translateY(5vmin) scale(.6);opacity:0}35%{transform:translateY(-5vmin) scale(1.05);opacity:1}55%{transform:translateY(0) scaleY(.88)}70%{transform:translateY(-1.5vmin)}100%{transform:none}}
+.hero h1{margin:0;font-size:12vmin;line-height:.95;font-weight:600;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.hero p{margin:1vmin 0 0;font-size:3.6vmin;color:#B9C3F2}
+.path{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin:0 -1.2vmin}
+.stone{width:calc(20% - 2.4vmin);margin:1.2vmin;padding:2.2vmin 2.4vmin;text-align:left;min-height:26vmin;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.num{width:7vmin;height:7vmin;border-radius:50%;border:0.5vmin solid #1F2A44;font-size:3.6vmin;line-height:6vmin;text-align:center;color:#1F2A44}
+.sname{font-size:3.4vmin;margin-top:1.4vmin}
+.ex{font-family:"WHRead",sans-serif;font-weight:400;font-size:3vmin;color:#4F5F80;margin-top:.6vmin}
+.best{margin-top:auto;padding-top:1vmin;font-size:2.6vmin;color:#4F5F80}
+.best b{color:#1F2A44}
+.foot{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-align-items:center;align-items:center;margin-top:auto;padding-top:2vmin}
+.foot > *{margin:0 2vmin 1.4vmin 0}
+.pill{padding:1.6vmin 2.8vmin;font-size:2.8vmin;border-radius:10vmin}
+.voicebox{font-size:2.8vmin;color:#F3F6FF;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+.voicebox select{margin-left:1.2vmin;font-family:inherit;font-size:2.6vmin;padding:1.2vmin 1.6vmin;border:0.5vmin solid #1F2A44;border-radius:2vmin;background:#fff;color:#1F2A44;max-width:40vmin}
+.note{font-size:2.4vmin;color:#B9C3F2}
+.credit{font-size:1.8vmin;color:#7F8AC0;width:100%}
+
+/* game */
+.bar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:2vmin}
+.icon-btn{width:9vmin;height:9vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;-webkit-flex:none;flex:none}
+.icon-btn img{width:5.5vmin;height:5.5vmin}
+.dots{-webkit-flex:1;flex:1;text-align:center;font-size:0}
+.dot{display:inline-block;width:3.2vmin;height:3.2vmin;border-radius:50%;border:0.45vmin solid #5CE1E6;background:#131A3D;margin:0 .6vmin}
+.dot.now{background:#5CE1E6}.dot.gold{background:#FFD93D;border-color:#FFD93D}.dot.ok{background:#7CFFB2;border-color:#7CFFB2}
+.stars{font-size:4vmin;min-width:13vmin;text-align:right;color:#FFD93D}
+.stage{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-around;justify-content:space-around}
+.hint{margin:0;font-size:3.4vmin;color:#B9C3F2;text-align:center}
+.prompt{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center}
+.bigword{font-family:"WHRead",sans-serif;font-weight:700;font-size:15vmin;line-height:1.1;padding:1vmin 6vmin 2vmin}
+.bigpic{width:24vmin;height:24vmin}
+.speak{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:1.6vmin 3.4vmin;font-size:3.4vmin;border-radius:10vmin;background:#FFD93D;color:#1F2A44;margin-top:1.6vmin}
+.speak img{width:4.4vmin;height:4.4vmin;margin-right:1.4vmin}
+.speak.big{padding:3vmin 6vmin;font-size:5vmin}
+.speak.big img{width:7vmin;height:7vmin}
+.choices{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;width:100%}
+.choice{width:22vmin;height:22vmin;margin:0 1.6vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;padding:1.5vmin}
+.choice img{width:15vmin;height:15vmin}
+.choice.word{width:28vmin;font-family:"WHRead",sans-serif;font-weight:700;font-size:6.2vmin;word-wrap:break-word}
+.choice.dim{opacity:.35;pointer-events:none}
+.choice.right{background:#7CFFB2;color:#14193A}
+.nope{-webkit-animation:shake .4s;animation:shake .4s}
+@-webkit-keyframes shake{20%{-webkit-transform:translateX(-1.4vmin)}40%{-webkit-transform:translateX(1.4vmin)}60%{-webkit-transform:translateX(-.8vmin)}80%{-webkit-transform:translateX(.8vmin)}}
+@keyframes shake{20%{transform:translateX(-1.4vmin)}40%{transform:translateX(1.4vmin)}60%{transform:translateX(-.8vmin)}80%{transform:translateX(.8vmin)}}
+.row{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.slot{width:8vmin;height:10vmin;margin:0 .7vmin;border-bottom:0.8vmin solid #5CE1E6;font-family:"WHRead",sans-serif;font-weight:700;font-size:8vmin;line-height:10vmin;text-align:center}
+.slot.filled{-webkit-animation:pop .25s;animation:pop .25s}
+@-webkit-keyframes pop{50%{-webkit-transform:scale(1.2)}}
+@keyframes pop{50%{transform:scale(1.2)}}
+.tile{width:10vmin;height:10vmin;margin:.8vmin;font-family:"WHRead",sans-serif;font-weight:700;font-size:6.6vmin;line-height:9vmin;text-align:center;border-radius:2.2vmin}
+.tile.used{visibility:hidden}
+
+/* end */
+.endbox{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;text-align:center}
+.endbox img{width:18vmin;height:18vmin}
+.endbox h2{margin:2vmin 0 1vmin;font-size:10vmin;font-weight:600;line-height:1;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.score{font-size:4.4vmin;color:#B9C3F2}
+.score b{color:#FFD93D}
+.endbtns{margin-top:4vmin;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center}
+.bigbtn{padding:2.4vmin 4vmin;font-size:3.8vmin;border-radius:2.6vmin;margin:1vmin 1.4vmin}
+.bigbtn.go{background:#7CFFB2;color:#14193A}
+
+.bit{position:fixed;width:1.8vmin;height:1.8vmin;border-radius:.4vmin;pointer-events:none;z-index:9;
+  -webkit-transition:-webkit-transform .9s ease-out,opacity .9s ease-out;transition:transform .9s ease-out,opacity .9s ease-out}
+
+#sky{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:0}
+.screen{z-index:1}
+.star{position:absolute;border-radius:50%;background:#fff;-webkit-animation:twinkle 3s ease-in-out infinite;animation:twinkle 3s ease-in-out infinite}
+@-webkit-keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+/* portrait */
+@media (orientation: portrait){
+  .stone{width:calc(50% - 2.4vmin);min-height:20vmin}
+  .choices{-webkit-flex-wrap:wrap;flex-wrap:wrap;max-width:60vmin}
+  .choice{margin:1.6vmin;width:26vmin;height:26vmin}
+  .choice.word{width:26vmin}
+  .hero h1{font-size:15vmin}
+}
+</style>
+</head>
+<body>
+<div id="sky"></div>
+
+<section class="screen on" id="home">
+  <div class="hero">
+    <img src="emoji/1f680.svg" alt="">
+    <div><h1>Picture Planet</h1><p>Pick a level. Read the words to fly your rocket!</p></div>
+  </div>
+  <div class="path" id="path"></div>
+  <div class="foot">
+    <button class="paper press pill" id="gamesBtn">&#8592; Games</button>
+    <button class="paper press pill" id="soundBtn"></button>
+    <label class="voicebox" id="voiceBox" style="display:none">Voice <select id="voiceSel"></select></label>
+    <button class="paper press pill" id="testBtn" style="display:none">Test voice</button>
+    <span class="note" id="speechNote" style="display:none">Talking isn't set up on this device yet, so listening rounds are skipped.</span>
+    <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0</span>
+  </div>
+</section>
+
+<section class="screen" id="game">
+  <div class="bar">
+    <button class="paper press icon-btn" id="homeBtn" aria-label="Back to levels"><img src="emoji/1f680.svg" alt=""></button>
+    <div class="dots" id="dots"></div>
+    <div class="stars" id="stars"></div>
+  </div>
+  <div class="stage" id="stage"></div>
+</section>
+
+<section class="screen" id="end">
+  <div class="endbox">
+    <img src="emoji/1f47d.svg" alt="">
+    <h2 id="endTitle"></h2>
+    <div class="score" id="endScore"></div>
+    <div class="endbtns" id="endBtns"></div>
+  </div>
+</section>
+
+<script src="speech.js"></script>
+<script>
+(function(){
+"use strict";
+var RAW = [[["cat","1f431"],["dog","1f436"],["sun","2600"],["bus","1f68c"],["hat","1f3a9"],["pig","1f437"],["bed","1f6cf"],["bug","1f41b"],["box","1f4e6"],["fox","1f98a"],["egg","1f95a"],["map","1f5fa"],["pen","1f58a"],["web","1f578"],["bat","1f987"],["van","1f690"],["ant","1f41c"]],[["frog","1f438"],["ship","1f6a2"],["fish","1f41f"],["duck","1f986"],["crab","1f980"],["drum","1f941"],["star","2b50"],["sock","1f9e6"],["chick","1f424"],["shell","1f41a"],["truck","1f69a"],["clock","1f570"],["flag","1f6a9"],["sled","1f6f7"],["ring","1f48d"],["tent","26fa"],["milk","1f95b"]],[["cake","1f382"],["kite","1fa81"],["bike","1f6b2"],["rose","1f339"],["snail","1f40c"],["train","1f686"],["tree","1f333"],["bee","1f41d"],["boat","26f5"],["goat","1f410"],["moon","1f319"],["snake","1f40d"],["whale","1f433"],["cheese","1f9c0"],["sheep","1f411"],["house","1f3e0"],["owl","1f989"],["bone","1f9b4"],["rain","1f327"]],[["rabbit","1f430"],["rocket","1f680"],["pumpkin","1f383"],["apple","1f34e"],["tiger","1f42f"],["zebra","1f993"],["pencil","270f"],["carrot","1f955"],["robot","1f916"],["lemon","1f34b"],["monkey","1f412"],["turtle","1f422"],["candle","1f56f"],["guitar","1f3b8"],["balloon","1f388"],["penguin","1f427"],["dragon","1f409"],["spider","1f577"],["cookie","1f36a"],["pizza","1f355"]],[["butterfly","1f98b"],["rainbow","1f308"],["snowman","26c4"],["octopus","1f419"],["elephant","1f418"],["dinosaur","1f995"],["umbrella","2602"],["strawberry","1f353"],["pineapple","1f34d"],["helicopter","1f681"],["telescope","1f52d"],["kangaroo","1f998"],["crocodile","1f40a"],["watermelon","1f349"],["sandwich","1f96a"],["popcorn","1f37f"],["sunflower","1f33b"],["ladybug","1f41e"],["cupcake","1f9c1"]]];
+var NAMES = ["Short words","Blends","Long vowels","Two parts","Big words"];
+var COLORS = ["#FFC93C","#FF8A3D","#E5487A","#3FB37F","#4BA3D9"];
+var LEVELS = RAW.map(function(ws, i){
+  return { name:NAMES[i], color:COLORS[i], words:ws.map(function(p){ return {w:p[0], img:"emoji/"+p[1]+".svg"}; }) };
+});
+var ROUNDS = 10;
+var PRAISE = ["Great job!","You got it!","Super reading!","Awesome!","Yes!","Nice work!"];
+var HINTS = { pic:"Read the word. Tap its picture.", listen:"Listen, then tap the word you hear.", build:"Tap the letters to spell it." };
+
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, html){ var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+function shuffle(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); }
+function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ") >= 0; }
+function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
+function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
+
+/* storage */
+function load(k, d){ try { var v = localStorage.getItem("wordhop:" + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } }
+function save(k, v){ try { localStorage.setItem("wordhop:" + k, JSON.stringify(v)); } catch(e){} }
+var best = load("best", {});
+function canTalk(){ return Speech.canTalk(); }
+function say(keys){ Speech.say(keys); }
+function stopTalking(){ Speech.stop(); }
+Speech.onChange(function(){ if ($("home").className.indexOf("on") >= 0) renderHome(); });
+
+/* home */
+function renderHome(){
+  var path = $("path"); path.innerHTML = "";
+  LEVELS.forEach(function(lv, i){
+    var b = el("button", "paper press stone");
+    var got = best[i];
+    b.innerHTML = '<span class="num" style="background:' + lv.color + '">' + (i+1) + '</span>' +
+      '<span class="sname">' + lv.name + '</span>' +
+      '<span class="ex">' + lv.words.slice(0,3).map(function(x){ return x.w; }).join(", ") + '</span>' +
+      '<span class="best">' + (got === undefined ? "Not played yet" : 'Best: <b>&#9733; ' + got + '</b> of ' + ROUNDS) + '</span>';
+    b.onclick = function(){ startLevel(i); };
+    path.appendChild(b);
+  });
+  $("soundBtn").textContent = Speech.soundOn() ? "Talking: on" : "Talking: off";
+  var m = Speech.mode();
+  var showVoices = Speech.soundOn() && m === "tts";
+  $("voiceBox").style.display = showVoices ? "" : "none";
+  $("testBtn").style.display = (Speech.soundOn() && m !== "none") ? "" : "none";
+  $("speechNote").style.display = m === "none" ? "" : "none";
+  if (showVoices){
+    var sel = $("voiceSel"); sel.innerHTML = "";
+    var cur = Speech.voice();
+    Speech.voices().forEach(function(v){
+      var o = document.createElement("option");
+      o.value = v.id; o.textContent = v.name + (v.lang ? " (" + v.lang + ")" : "");
+      if (cur && v.id === cur.id) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+}
+$("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
+$("voiceSel").onchange = function(){ Speech.setVoice(this.value); say(["p_hi"]); };
+$("testBtn").onclick = function(){ say(["w_butterfly","p_praise_0"]); };
+$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "index.html"; };
+
+/* game */
+var G = null;
+function startLevel(i){
+  var modes = canTalk() ? ["pic","listen","build"] : ["pic","build"];
+  var seq = [];
+  while (seq.length < ROUNDS) seq = seq.concat(shuffle(modes));
+  G = { level:i, words:shuffle(LEVELS[i].words).slice(0, ROUNDS), modes:seq.slice(0, ROUNDS), round:0, stars:0, results:[] };
+  show("game");
+  renderRound();
+}
+$("homeBtn").onclick = function(){ stopTalking(); renderHome(); show("home"); };
+
+function renderDots(){
+  var d = $("dots"); d.innerHTML = "";
+  for (var i = 0; i < ROUNDS; i++){
+    var r = G.results[i];
+    d.appendChild(el("span", "dot" + (r === "gold" ? " gold" : r === "ok" ? " ok" : i === G.round ? " now" : "")));
+  }
+  $("stars").innerHTML = "&#9733; " + G.stars;
+}
+
+function renderRound(){
+  G.mistakes = 0; G.locked = false;
+  renderDots();
+  var word = G.words[G.round], mode = G.modes[G.round];
+  var stage = $("stage"); stage.innerHTML = "";
+  stage.appendChild(el("p", "hint", HINTS[mode]));
+  if (mode === "pic") roundPic(stage, word);
+  else if (mode === "listen") roundListen(stage, word);
+  else roundBuild(stage, word);
+}
+
+function distractors(word, n){
+  return shuffle(LEVELS[G.level].words.filter(function(x){ return x.w !== word.w && x.img !== word.img; })).slice(0, n);
+}
+function speakBtn(word, big){
+  var b = el("button", "paper press speak" + (big ? " big" : ""), '<img src="emoji/1f50a.svg" alt="">Hear it');
+  b.onclick = function(){ say([Speech.key(word.w)]); };
+  return b;
+}
+
+function roundPic(stage, word){
+  var p = el("div", "prompt");
+  p.appendChild(el("div", "paper bigword", word.w));
+  stage.appendChild(p);
+  var row = el("div", "choices");
+  shuffle([word].concat(distractors(word, 3))).forEach(function(opt){
+    var b = el("button", "paper press choice", '<img src="' + opt.img + '" alt="">');
+    b.onclick = function(){ if (opt.w === word.w) correct(b, word); else wrong(b, true); };
+    row.appendChild(b);
+  });
+  stage.appendChild(row);
+}
+
+function roundListen(stage, word){
+  var p = el("div", "prompt");
+  p.appendChild(speakBtn(word, true));
+  stage.appendChild(p);
+  var row = el("div", "choices");
+  shuffle([word].concat(distractors(word, 3))).forEach(function(opt){
+    var b = el("button", "paper press choice word");
+    b.textContent = opt.w;
+    b.onclick = function(){ if (opt.w === word.w) correct(b, word); else wrong(b, true); };
+    row.appendChild(b);
+  });
+  stage.appendChild(row);
+  setTimeout(function(){ say([Speech.key(word.w)]); }, 350);
+}
+
+function roundBuild(stage, word){
+  var p = el("div", "prompt");
+  p.appendChild(el("img", "bigpic")); p.lastChild.src = word.img; p.lastChild.alt = "";
+  if (canTalk()) p.appendChild(speakBtn(word, false));
+  stage.appendChild(p);
+
+  var letters = word.w.split("");
+  var slots = el("div", "row");
+  var slotEls = letters.map(function(){ var s = el("div", "slot"); slots.appendChild(s); return s; });
+  stage.appendChild(slots);
+
+  var pool = letters.slice();
+  if (G.level <= 2){
+    var abc = "abcdefghijklmnoprstuvwy".split("").filter(function(c){ return letters.indexOf(c) < 0; });
+    pool.push(pick(abc));
+  }
+  var order = shuffle(pool);
+  if (pool.length > 2 && order.join("") === pool.join("")) order = shuffle(pool);
+
+  var pos = 0;
+  var tiles = el("div", "row");
+  order.forEach(function(ch){
+    var t = el("button", "paper press tile");
+    t.textContent = ch;
+    t.onclick = function(){
+      if (G.locked || hasClass(t, "used")) return;
+      if (ch === letters[pos]){
+        slotEls[pos].textContent = ch;
+        addClass(slotEls[pos], "filled");
+        addClass(t, "used");
+        pos++;
+        if (pos === letters.length) correct(slots, word);
+      } else wrong(t, false);
+    };
+    tiles.appendChild(t);
+  });
+  stage.appendChild(tiles);
+}
+
+function correct(target, word){
+  if (G.locked) return;
+  G.locked = true;
+  var clean = G.mistakes === 0;
+  if (clean) G.stars++;
+  G.results[G.round] = clean ? "gold" : "ok";
+  if (hasClass(target, "choice")) addClass(target, "right");
+  renderDots();
+  confetti(target);
+  say([Speech.key(word.w), "p_praise_" + Math.floor(Math.random()*PRAISE.length)]);
+  setTimeout(nextRound, 1700);
+}
+
+function wrong(target, dim){
+  if (G.locked) return;
+  G.mistakes++;
+  removeClass(target, "nope"); void target.offsetWidth; addClass(target, "nope");
+  if (dim){ setTimeout(function(){ addClass(target, "dim"); }, 400); say(["p_try"]); }
+}
+
+function nextRound(){
+  G.round++;
+  if (G.round >= ROUNDS) showEnd(); else renderRound();
+}
+
+function showEnd(){
+  var i = G.level, s = G.stars;
+  if (best[i] === undefined || s > best[i]){ best[i] = s; save("best", best); }
+  $("endTitle").textContent = s === ROUNDS ? "Perfect!" : s >= 7 ? "Amazing reading!" : "Level done!";
+  $("endScore").innerHTML = "You earned <b>&#9733; " + s + "</b> of " + ROUNDS + " stars.";
+  var btns = $("endBtns"); btns.innerHTML = "";
+  var again = el("button", "paper press bigbtn", "Play again"); again.onclick = function(){ startLevel(i); }; btns.appendChild(again);
+  if (i < LEVELS.length - 1){
+    var nx = el("button", "paper press bigbtn go", "Next: " + LEVELS[i+1].name); nx.onclick = function(){ startLevel(i+1); }; btns.appendChild(nx);
+  }
+  var all = el("button", "paper press bigbtn", "All levels"); all.onclick = function(){ renderHome(); show("home"); }; btns.appendChild(all);
+  show("end");
+  say([s === ROUNDS ? "p_perfect" : "p_stars_" + s]);
+}
+
+function confetti(target){
+  var r = target.getBoundingClientRect();
+  for (var i = 0; i < 16; i++){
+    (function(i){
+      var b = el("span", "bit");
+      b.style.left = (r.left + r.width/2) + "px";
+      b.style.top = (r.top + r.height/2) + "px";
+      b.style.background = COLORS[i % COLORS.length];
+      document.body.appendChild(b);
+      var x = Math.random()*360 - 180, y = -(Math.random()*260 + 40), rot = Math.random()*540;
+      setTimeout(function(){
+        var t = "translate(" + x + "px," + y + "px) rotate(" + rot + "deg)";
+        b.style.webkitTransform = t; b.style.transform = t; b.style.opacity = "0";
+      }, 20);
+      setTimeout(function(){ if (b.parentNode) b.parentNode.removeChild(b); }, 1000);
+    })(i);
+  }
+}
+
+(function(){
+  var sky = $("sky");
+  for (var i = 0; i < 70; i++){
+    var st = el("span", "star"), size = Math.random() < 0.15 ? 0.6 : 0.3;
+    st.style.left = (Math.random()*100) + "%"; st.style.top = (Math.random()*100) + "%";
+    st.style.width = st.style.height = size + "vmin";
+    st.style.webkitAnimationDelay = st.style.animationDelay = (Math.random()*3) + "s";
+    sky.appendChild(st);
+  }
+})();
+
+/* makes :active press effects work in older Android WebViews */
+document.addEventListener("touchstart", function(){}, true);
+
+renderHome();
+})();
+</script>
+</body>
+</html>
