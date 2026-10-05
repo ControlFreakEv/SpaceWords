@@ -3,12 +3,21 @@
 #   - acorn, for tools/check-es5.js (Chromium 39 / ES5 checker)
 #   - Android SDK (platform 34 + build-tools 34) in ~/android-sdk, plus local.properties
 #   - Gradle 8.7 and the Android Gradle plugin, pre-downloaded
-# Runs only in cloud sessions. Every step is idempotent, and a blocked download only warns,
-# so the session still starts. The Android SDK needs dl.google.com allowed in the
-# environment's network settings.
+# Runs only in cloud sessions, in the background so the session starts right away.
+# Every step is idempotent, and a blocked download only warns. The Android SDK needs
+# dl.google.com allowed in the environment's network settings.
+#
+# Because it runs in the background, the tools must not depend on its environment variables:
+# check-es5.js finds acorn by path, and Gradle finds the SDK through local.properties.
+# Progress goes to $STATUS_FILE: "running" while working, then one line per result.
 set -uo pipefail
 
 [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || exit 0
+
+echo '{"async": true, "asyncTimeout": 900000}'
+
+STATUS_FILE="$HOME/.space-words-setup"
+echo "running (started $(date -u +%H:%M:%S) UTC)" > "$STATUS_FILE"
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 ENV_FILE="${CLAUDE_ENV_FILE:-/dev/null}"
@@ -66,6 +75,5 @@ else
   status+=("Android SDK NOT available (dl.google.com blocked): APK builds will fail; use node tools/check-es5.js")
 fi
 
-# Shown to Claude at session start.
-printf 'Session setup: %s\n' "${status[@]}"
+printf 'done: %s\n' "${status[@]}" > "$STATUS_FILE"
 exit 0

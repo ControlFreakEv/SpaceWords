@@ -44,6 +44,27 @@ On newer Android, also run:
 
 Stars are kept across reinstalls with -r.
 
+## Updating over Wi-Fi (no USB cable)
+The frame is set up for Wi-Fi adb at 192.168.1.242 (reserve that address for it in your router,
+hardware address e0:cb:56:8c:bd:58). After building a new APK, from this folder run:
+
+    powershell -ExecutionPolicy Bypass -File tools\deploy.ps1
+
+Add -Open at the end to open the games afterwards for a quick test. The UFO button
+comes back on its own after an update.
+
+One-time setup so Wi-Fi adb survives reboots (frame plugged in by USB, or already connected):
+
+    adb tcpip 5555
+    adb connect 192.168.1.242:5555
+    adb root
+    adb connect 192.168.1.242:5555
+    adb shell setprop persist.adb.tcp.port 5555
+
+Turn it off again with:  adb shell setprop persist.adb.tcp.port ""  then reboot.
+Note: this frame reports ro.adb.secure=0, so any device on your Wi-Fi can connect to it
+without a prompt while Wi-Fi adb is on.
+
 ## If the Skylight app keeps jumping in front of the game
     adb shell pm disable-user --user 0 skylight.watchdog
 Undo with:

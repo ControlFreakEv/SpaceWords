@@ -12,8 +12,12 @@ var fs = require("fs");
 var path = require("path");
 var acorn;
 try { acorn = require("acorn"); } catch (e) {
-  console.error("acorn not found. Install it with: npm install -g acorn  (then set NODE_PATH to the global node_modules)");
-  process.exit(2);
+  try {  // where the cloud session hook installs it
+    acorn = require(path.join(require("os").homedir(), ".cache", "space-words-node", "node_modules", "acorn"));
+  } catch (e2) {
+    console.error("acorn not found. Install it with: npm install -g acorn  (then set NODE_PATH to the global node_modules)");
+    process.exit(2);
+  }
 }
 
 var WWW = path.join(__dirname, "..", "app", "src", "main", "assets", "www");
