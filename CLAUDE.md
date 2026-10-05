@@ -26,7 +26,8 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
 - ADB over USB (serial 0123456789ABCDEF) or Wi-Fi at 192.168.1.242:5555 (persist.adb.tcp.port set;
   ro.adb.secure=0, so Wi-Fi adb needs no approval). On the owner's Windows PC adb is not on PATH:
   `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`. Cloud sessions cannot reach the frame.
-  The owner deploys with `tools\deploy.ps1` (see README).
+  The owner deploys with `tools\deploy.ps1` (see README). `tools\diagnose-back.ps1` captures the
+  frame's task stack, processes, UFO service/window state and kill/crash logs for debugging.
 
 ## Project
 - Kotlin, no third-party dependencies. minSdk 22, targetSdk 33, compileSdk 34, AGP 8.5.2,
