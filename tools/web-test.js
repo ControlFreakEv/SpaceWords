@@ -129,12 +129,64 @@ const server = http.createServer((req, res) => {
     await shot(w.replace(".html", "") + "-round");
   }
   const literalKeys = [];
-  for (const w of ["picture-planet.html", "saucer.html", "math-game.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html"]) {
     const src = fs.readFileSync(path.join(WWW, w), "utf8"), re = /"((?:[pmi])_[a-z_]+)"/g; let m;
     while ((m = re.exec(src))) if (!/_$/.test(m[1])) literalKeys.push(m[1]);
   }
   const missingLit = literalKeys.filter(k => !(k in phrases));
   missingLit.length ? fail("spoken keys in the pages missing from phrases.json: " + missingLit.join(", ")) : ok("all " + literalKeys.length + " spoken keys written in the pages exist");
+
+  // Match games: board rules, then play every level.
+  for (const g of ["connect", "rhyme"]) {
+    await page.goto(base + "match.html?g=" + g); await page.waitForTimeout(150);
+    await shot("match-" + g + "-levels");
+    const rep = await page.evaluate(() => {
+      const out = { bad: [], keys: {} }, G = MatchGame.game();
+      G.pool.forEach((pool, li) => {
+        for (let t = 0; t < 200; t++) {
+          const b = MatchGame.makeBoard(li);
+          if (b.length !== G.sizes[li]) out.bad.push("L" + (li + 1) + " board has " + b.length + " pairs");
+          const tags = b.map(p => p.tag), words = [].concat.apply([], b.map(p => [p.a, p.b]));
+          if (new Set(tags).size !== tags.length) out.bad.push("L" + (li + 1) + " repeated sound " + tags);
+          if (new Set(words).size !== words.length) out.bad.push("L" + (li + 1) + " repeated word " + words);
+          b.forEach(p => { out.keys[Speech.key(p.a)] = 1; if (G.instr === "i_rhyme") out.keys[Speech.key(p.b)] = 1; });
+        }
+      });
+      out.bad = out.bad.slice(0, 10); out.keys = Object.keys(out.keys); return out;
+    });
+    rep.bad.length ? rep.bad.forEach(b => fail(g + " " + b)) : ok(g + ": 200 boards per level follow the rules");
+    const miss = rep.keys.filter(k => !(k in phrases));
+    miss.length ? fail(g + " words without clips: " + miss.join(", ")) : ok(g + ": all " + rep.keys.length + " words have clips");
+
+    for (let i = 0; i < 5; i++) {
+      await page.evaluate(i => MatchGame.start(i), i);
+      for (let bd = 0; bd < 5; bd++) {
+        const n = await page.evaluate(() => MatchGame.state().pairs.length);
+        for (let k = 0; k < n; k++) {
+          await page.evaluate(k => {
+            const p = MatchGame.state().pairs[k], cols = document.querySelectorAll(".col");
+            const find = c => Array.prototype.filter.call(cols[c].children, e => e.pair === p)[0];
+            find(1).click(); find(0).click();   // right side first: either order works
+          }, k);
+          if (i === 4 && bd === 0 && k === 1) await shot("match-" + g + "-L5-partial");
+          if (i === 0 && bd === 0 && k === 0) await shot("match-" + g + "-L1-partial");
+        }
+        await page.waitForFunction(bd => { const s = MatchGame.state(); return s.board > bd || document.getElementById("end").className.indexOf("on") >= 0; }, bd, { timeout: 4000 });
+      }
+      const end = await page.evaluate(() => [document.getElementById("end").className.indexOf("on") >= 0, MatchGame.state().stars]);
+      end[0] && end[1] === 5 ? ok(g + " level " + (i + 1) + ": 5 boards, 5 stars") : fail(g + " level " + (i + 1) + " ended " + JSON.stringify(end));
+    }
+    // a wrong pair shakes and counts a mistake
+    await page.evaluate(() => MatchGame.start(0));
+    const wrongOk = await page.evaluate(() => {
+      const st = MatchGame.state(), cols = document.querySelectorAll(".col");
+      const l = cols[0].children[0], r = Array.prototype.filter.call(cols[1].children, e => e.pair !== l.pair)[0];
+      l.click(); r.click();
+      return st.mistakes === 1 && l.className.indexOf("nope") >= 0 && st.matched === 0;
+    });
+    wrongOk ? ok(g + ": wrong pair shakes and counts a mistake") : fail(g + ": wrong pair not handled");
+  }
+  await page.goto(base + "words.html"); await page.waitForTimeout(150); await shot("words-after");
 
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);

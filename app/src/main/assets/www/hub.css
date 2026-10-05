@@ -33,9 +33,19 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
 .three .t{font-size:6vmin}
 .three .game img{width:20vmin;height:20vmin}
 .muted{position:absolute;left:5vmin;bottom:3vmin;font-size:3vmin;color:#FFD93D}
+/* four games: a 2 x 2 grid, picture beside the words */
+.four{-webkit-flex-wrap:wrap;flex-wrap:wrap;margin-bottom:2vmin;-webkit-align-content:stretch;align-content:stretch}
+.four .game{-webkit-flex:0 0 46%;flex:0 0 46%;margin:1.4vmin 2%;padding:2.6vmin 3vmin;-webkit-flex-direction:row;flex-direction:row;-webkit-align-items:center;align-items:center;-webkit-justify-content:flex-start;justify-content:flex-start}
+.four .game img{width:16vmin;height:16vmin;margin:0 3vmin 0 0}
+.four .txt{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-flex:1;flex:1;min-width:0}
+.four .t{font-size:5.6vmin}
+.four .d{font-size:3vmin;margin-top:1vmin}
+.four .got{font-size:2.8vmin;margin-top:1vmin}
 @media (orientation: portrait){
   .games{-webkit-flex-direction:column;flex-direction:column;margin:0 0 6vmin}
   .game{margin:1.6vmin 0}
   .game img,.three .game img{width:16vmin;height:16vmin}
+  .four .game{-webkit-flex:0 0 96%;flex:0 0 96%}
+  .four .game img{width:13vmin;height:13vmin}
   .nums{font-size:11vmin}
 }

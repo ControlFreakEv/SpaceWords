@@ -6,6 +6,10 @@ A floating UFO button sits on top of the Skylight screen. Tap it to pick a missi
 - **Picture Planet** - picture words: read it, hear it, spell it.
 - **Sight Word Saucer** - Dolch sight words across five planets (Pre-primer to Grade 3):
   hear a word and beam it up, pick the word that fits a sentence, or look-cover-spell.
+- **Connect the Pairs** - tap a word, then its picture; a line joins them. Picture Planet's
+  five word levels, 3 to 5 pairs per board.
+- **Rhyming Pairs** - tap two words that rhyme: short vowels (cat, hat), long vowels
+  (cake, lake), same sound with new spelling (blue, shoe), and two-part words (kitten, mitten).
 
 **Math games** (five levels each, from kindergarten starter to about 3rd grade)
 - **Star Count** - count to 10 and 20, more or fewer, numbers to 100, tens and ones.
@@ -25,7 +29,7 @@ Open Command Prompt in this SpaceWords folder (not platform-tools), then:
     pip install edge-tts
     python tools\make_audio.py
 
-That saves about 540 MP3 clips into app/src/main/assets/www/audio. It only records clips
+That saves about 630 MP3 clips into app/src/main/assets/www/audio. It only records clips
 that are missing, so after an update that adds new spoken text (like the math games),
 run it again and then rebuild.
 To hear other voices:  python tools\make_audio.py --list
