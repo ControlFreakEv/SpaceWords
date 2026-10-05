@@ -290,7 +290,7 @@ function renderRound(){
   var stage = $("stage"); stage.innerHTML = "";
   var ufo = el("img", "ufo hover"); ufo.src = "emoji/1f6f8.svg"; ufo.alt = ""; ufo.id = "ufo";
   stage.appendChild(ufo);
-  stage.appendChild(el("p", "hint", HINTS[mode]));
+  stage.appendChild(el("p", "hint", Speech.tapText(HINTS[mode])));
   if (mode === "listen") roundListen(stage, word);
   else if (mode === "sentence") roundSentence(stage, word);
   else roundSpell(stage, word);
@@ -323,11 +323,9 @@ function roundListen(stage, word){
 function roundSentence(stage, word){
   var p = el("div", "prompt");
   var parts = word.s.split("___");
-  var sent = el("div", "card sentence");
-  sent.appendChild(document.createTextNode(parts[0]));
-  var blank = el("span", "blank", "&nbsp;");
-  sent.appendChild(blank);
-  sent.appendChild(document.createTextNode(parts[1]));
+  /* every word of the sentence reads itself when tapped */
+  var sent = el("div", "card sentence", Speech.tapText(parts[0]) + '<span class="blank">&nbsp;</span>' + Speech.tapText(parts[1]));
+  var blank = sent.querySelector(".blank");
   p.appendChild(sent);
   stage.appendChild(p);
   G.blank = blank;

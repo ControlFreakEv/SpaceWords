@@ -11,6 +11,15 @@ A floating UFO button sits on top of the Skylight screen. Tap it to pick a missi
 - **Rhyming Pairs** - tap two words that rhyme: short vowels (cat, hat), long vowels
   (cake, lake), same sound with new spelling (blue, shoe), and two-part words (kitten, mitten).
 
+- **Sound Lab** - pronunciation: every vowel has its own color, long vowels get a bar on top,
+  silent e is gray, vowel teams and bossy R are underlined. Levels: short vowels (swap the
+  vowel in b_g to hear bag, beg, big, bog, bug), magic e (cap, cape), vowel teams (rain, boat),
+  syllables (clap and count; tap each part to hear it), and bossy R (car, fork, bird).
+
+In every game, tapping a word that isn't an answer choice reads it aloud (instructions,
+sentences, numbers in math questions). In Picture Planet's "read the word" rounds that counts
+as a hint, like Peek, and costs the round's gold star.
+
 **Math games** (five levels each, from kindergarten starter to about 3rd grade)
 - **Star Count** - count to 10 and 20, more or fewer, numbers to 100, tens and ones.
 - **Rocket Math** - add to 5 with pictures, add and take away, facts to 20, two-digit
@@ -29,7 +38,7 @@ Open Command Prompt in this SpaceWords folder (not platform-tools), then:
     pip install edge-tts
     python tools\make_audio.py
 
-That saves about 630 MP3 clips into app/src/main/assets/www/audio. It only records clips
+That saves about 870 MP3 clips into app/src/main/assets/www/audio. It only records clips
 that are missing, so after an update that adds new spoken text (like the math games),
 run it again and then rebuild.
 To hear other voices:  python tools\make_audio.py --list

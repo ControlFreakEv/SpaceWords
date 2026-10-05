@@ -234,11 +234,11 @@ function renderDots(){
 }
 
 function renderRound(){
-  G.mistakes = 0; G.locked = false;
+  G.mistakes = 0; G.locked = false; G.peeked = false;
   renderDots();
   var word = G.words[G.round], mode = G.modes[G.round];
   var stage = $("stage"); stage.innerHTML = "";
-  stage.appendChild(el("p", "hint", HINTS[mode]));
+  stage.appendChild(el("p", "hint", Speech.tapText(HINTS[mode])));
   if (mode === "pic") roundPic(stage, word);
   else if (mode === "listen") roundListen(stage, word);
   else roundBuild(stage, word);
@@ -255,7 +255,10 @@ function speakBtn(word, big){
 
 function roundPic(stage, word){
   var p = el("div", "prompt");
-  p.appendChild(el("div", "paper bigword", word.w));
+  var big = el("div", "paper bigword", word.w);
+  /* tapping the word reads it; that's a hint here, so it costs this round's gold star (like Peek) */
+  big.onclick = function(){ if (G.locked) return; if (!G.peeked){ G.peeked = true; G.mistakes++; } say([Speech.key(word.w)]); };
+  p.appendChild(big);
   stage.appendChild(p);
   var row = el("div", "choices");
   shuffle([word].concat(distractors(word, 3))).forEach(function(opt){

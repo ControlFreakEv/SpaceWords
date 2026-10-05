@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="parent" content="words.html">
+<title>Sound Lab</title>
+<style>
+@font-face{font-family:"WHRead";src:url("fonts/andika.ttf") format("truetype");font-weight:400}
+@font-face{font-family:"WHRead";src:url("fonts/andika-bold.ttf") format("truetype");font-weight:700}
+@font-face{font-family:"WHFun";src:url("fonts/fredoka.ttf") format("truetype");font-weight:600}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:#0B1026;background-image:radial-gradient(circle at 70% 20%, #2A1E5C 0%, #131A3D 45%, #0B1026 80%);color:#F3F6FF;font-family:"WHFun","Trebuchet MS",sans-serif;font-weight:600;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0);overflow:hidden;
+}
+button{font-family:inherit;font-weight:inherit;color:inherit;border:0;background:none;padding:0;margin:0;cursor:pointer;outline:none}
+img{display:block}
+.screen{display:none;position:absolute;left:0;top:0;right:0;bottom:0;padding:3vmin 4vmin;overflow:hidden;z-index:1}
+.screen.on{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.paper{background:#F7F9FF;color:#1F2A44;border:0.5vmin solid #1F2A44;border-radius:2.8vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A}
+.press{-webkit-transition:-webkit-transform .08s,box-shadow .08s,background .15s;transition:transform .08s,box-shadow .08s,background .15s}
+.press:active{-webkit-transform:translate(0.5vmin,0.5vmin);transform:translate(0.5vmin,0.5vmin);box-shadow:0.3vmin 0.3vmin 0 #05081A}
+.flex{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+
+/* the sound colors: one color per vowel; long = bar on top; silent e = gray; teams underlined */
+.v-a{color:#E5484D}.v-e{color:#E8890C}.v-i{color:#1FA463}.v-o{color:#2F7FE0}.v-u{color:#9B4DE0}
+.long{display:inline-block;border-top:0.9vmin solid currentColor;line-height:1;padding-top:.3vmin}
+.silent{color:#B4BBCF}
+.team{display:inline-block;line-height:1;padding-bottom:.4vmin;border-bottom:0.9vmin solid currentColor}
+.rr{display:inline-block;line-height:1;padding-bottom:.4vmin;color:#D6338A;border-bottom:0.9vmin dotted #D6338A}
+.syl{display:inline-block;padding:0 .6vmin;margin:0 .8vmin;border-bottom:1vmin solid #5CE1E6;border-radius:.6vmin}
+.syl.alt{border-bottom-color:#FFD93D}
+.word{font-family:"WHRead",sans-serif;font-weight:700;font-size:16vmin;line-height:1.15;padding:1vmin 6vmin 3.4vmin;-webkit-flex:none;flex:none;color:#1F2A44;white-space:nowrap}
+.word.mid{font-size:12vmin}
+.word.hidden{color:#B4BBCF}
+
+/* level list */
+.hero{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:2vmin 0 3vmin}
+.hero img{width:15vmin;height:15vmin;margin-right:3vmin}
+.hero h1{margin:0;font-size:12vmin;line-height:.95;font-weight:600;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.hero p{margin:1vmin 0 0;font-size:3.6vmin;color:#B9C3F2}
+.legend{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin:0 0 3vmin;padding:1.4vmin 3vmin;font-size:3vmin}
+.legend .lw{font-family:"WHRead",sans-serif;font-weight:700;font-size:6vmin;margin:0 1.4vmin}
+.legend .lt{color:#4F5F80;margin-right:3vmin}
+.path{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin:0 -1.2vmin}
+.stone{width:18%;margin:1.2vmin 1%;padding:2.2vmin 2.4vmin;text-align:left;min-height:24vmin;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.num{width:7vmin;height:7vmin;border-radius:50%;border:0.5vmin solid #1F2A44;font-size:3.6vmin;line-height:6vmin;text-align:center;color:#1F2A44}
+.sname{font-size:3.4vmin;margin-top:1.4vmin}
+.ex{font-family:"WHRead",sans-serif;font-weight:700;font-size:4vmin;margin-top:.6vmin;white-space:nowrap}
+.ex .syl{margin:0 .2vmin;padding:0 .3vmin;border-bottom-width:.7vmin}
+.best{margin-top:auto;padding-top:1vmin;font-size:2.6vmin;color:#4F5F80}
+.best b{color:#1F2A44}
+.foot{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-align-items:center;align-items:center;margin-top:auto;padding-top:2vmin}
+.foot > *{margin:0 2vmin 1.4vmin 0}
+.pill{padding:1.6vmin 2.8vmin;font-size:2.8vmin;border-radius:10vmin}
+.credit{font-size:1.8vmin;color:#7F8AC0;width:100%}
+
+/* game */
+.bar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:1vmin}
+.icon-btn{width:9vmin;height:9vmin;-webkit-flex:none;flex:none}
+.icon-btn img{width:5.5vmin;height:5.5vmin}
+.dots{-webkit-flex:1;flex:1;text-align:center;font-size:0}
+.dot{display:inline-block;width:3.2vmin;height:3.2vmin;border-radius:50%;border:0.45vmin solid #5CE1E6;background:#131A3D;margin:0 .6vmin}
+.dot.now{background:#5CE1E6}.dot.gold{background:#FFD93D;border-color:#FFD93D}.dot.ok{background:#7CFFB2;border-color:#7CFFB2}
+.stars{font-size:4vmin;min-width:13vmin;text-align:right;color:#FFD93D}
+.stage{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-around;justify-content:space-around}
+.hintrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+.hint{margin:0;font-size:4.2vmin;color:#B9C3F2;text-align:center}
+.sayb{width:8vmin;height:8vmin;border-radius:50%;background:#FFD93D;margin-left:2vmin;-webkit-flex:none;flex:none}
+.sayb img{width:5vmin;height:5vmin}
+.slot{display:inline-block;min-width:11vmin;border-bottom:1vmin dashed #5CE1E6;text-align:center}
+.choices{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap;width:100%}
+.choice{margin:0 1.4vmin;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;font-family:"WHRead",sans-serif;font-weight:700}
+.choice.vowel{width:17vmin;height:20vmin;font-size:11vmin;line-height:1}
+.choice.vowel small{font-size:3.4vmin;color:#4F5F80;margin-top:1vmin}
+.choice.wordc{min-width:34vmin;height:20vmin;font-size:10vmin;padding:0 3vmin}
+.choice.n{width:17vmin;height:15vmin;font-family:"WHFun",sans-serif;font-size:9vmin}
+.choice.sl{width:30vmin;height:20vmin;font-size:10vmin}
+.choice.sl small{font-family:"WHFun",sans-serif;font-size:4vmin;color:#4F5F80;margin-top:.6vmin}
+.choice.dim{opacity:.3;pointer-events:none}
+.choice.right{background:#7CFFB2}
+.tiles{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center}
+.tile{width:14vmin;height:18vmin;margin:0 .8vmin;font-family:"WHRead",sans-serif;font-weight:700;font-size:11vmin}
+.tile.found{background:#7CFFB2}
+.nope{-webkit-animation:shake .4s;animation:shake .4s}
+@-webkit-keyframes shake{20%{-webkit-transform:translateX(-1.4vmin)}40%{-webkit-transform:translateX(1.4vmin)}60%{-webkit-transform:translateX(-.8vmin)}80%{-webkit-transform:translateX(.8vmin)}}
+@keyframes shake{20%{transform:translateX(-1.4vmin)}40%{transform:translateX(1.4vmin)}60%{transform:translateX(-.8vmin)}80%{transform:translateX(.8vmin)}}
+.tip{font-size:3.2vmin;color:#B9C3F2;text-align:center;min-height:4vmin}
+
+/* end */
+.endbox{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;text-align:center}
+.endbox img{width:18vmin;height:18vmin}
+.endbox h2{margin:2vmin 0 1vmin;font-size:10vmin;font-weight:600;line-height:1;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.score{font-size:4.4vmin;color:#B9C3F2}
+.score b{color:#FFD93D}
+.endbtns{margin-top:4vmin;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center}
+.bigbtn{padding:2.4vmin 4vmin;font-size:3.8vmin;border-radius:2.6vmin;margin:1vmin 1.4vmin}
+.bigbtn.go{background:#7CFFB2;color:#14193A}
+
+.bit{position:fixed;width:1.8vmin;height:1.8vmin;border-radius:.4vmin;pointer-events:none;z-index:9;
+  -webkit-transition:-webkit-transform .9s ease-out,opacity .9s ease-out;transition:transform .9s ease-out,opacity .9s ease-out}
+#sky{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:0}
+.star{position:absolute;border-radius:50%;background:#fff;-webkit-animation:twinkle 3s ease-in-out infinite;animation:twinkle 3s ease-in-out infinite}
+@-webkit-keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@media (orientation: portrait){ .stone{width:48%} .word{font-size:13vmin} }
+</style>
+</head>
+<body>
+<div id="sky"></div>
+
+<section class="screen on" id="home">
+  <div class="hero">
+    <img src="emoji/1f9ea.svg" alt="">
+    <div><h1>Sound Lab</h1><p>See how letters make sounds. Tap any colored part to hear it.</p></div>
+  </div>
+  <div class="paper legend" id="legend"></div>
+  <div class="path" id="path"></div>
+  <div class="foot">
+    <button class="paper press pill" id="gamesBtn">&#8592; Word games</button>
+    <button class="paper press pill" id="soundBtn"></button>
+    <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0</span>
+  </div>
+</section>
+
+<section class="screen" id="game">
+  <div class="bar">
+    <button class="paper press icon-btn flex" id="homeBtn" aria-label="Back to levels"><img src="emoji/1f9ea.svg" alt=""></button>
+    <div class="dots" id="dots"></div>
+    <div class="stars" id="stars"></div>
+  </div>
+  <div class="stage" id="stage"></div>
+</section>
+
+<section class="screen" id="end">
+  <div class="endbox">
+    <img src="emoji/1f47d.svg" alt="">
+    <h2 id="endTitle"></h2>
+    <div class="score" id="endScore"></div>
+    <div class="endbtns" id="endBtns"></div>
+  </div>
+</section>
+
+<script src="speech.js"></script>
+<script>
+(function(){
+"use strict";
+
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, html){ var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+function shuffle(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ") >= 0; }
+function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
+function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
+function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); }
+function say(keys){ if (keys && keys.length) Speech.say(keys); }
+function wkey(w){ return "w_" + w; }
+
+/* ---------- word notation ----------
+   [a] short vowel   {a} long vowel   <e> silent e   (ai) vowel team   ^ar^ bossy R   - syllable break
+   anything else is a consonant (y counts as one here). */
+var VOWELS = ["a","e","i","o","u"];
+var EXAMPLE = { a:"cat", e:"bed", i:"pig", o:"dog", u:"bug" };
+var TEAM_VOWEL = { ai:"a", ay:"a", ee:"e", ea:"e", oa:"o", ow:"o", igh:"i", ie:"i", ue:"u" };
+var R_KEY = { ar:"r_ar", or:"r_or", er:"r_er", ir:"r_er", ur:"r_er" };
+
+function parse(spec){
+  var parts = [], syl = 0, i = 0, close = { "[":"]", "{":"}", "<":">", "(":")", "^":"^" };
+  var kind = { "[":"short", "{":"long", "<":"silent", "(":"team", "^":"r" };
+  while (i < spec.length){
+    var ch = spec.charAt(i);
+    if (ch === "-"){ syl++; i++; continue; }
+    if (close[ch]){
+      var end = spec.indexOf(close[ch], i + 1), txt = spec.substring(i + 1, end);
+      parts.push({ text:txt, kind:kind[ch], syl:syl });
+      i = end + 1;
+    } else { parts.push({ text:ch, kind:"c", syl:syl }); i++; }
+  }
+  return parts;
+}
+function plain(spec){ return spec.replace(/[\[\]{}<>()\^\-]/g, ""); }
+function vowelOf(p){ return p.kind === "team" ? TEAM_VOWEL[p.text] : p.text.charAt(0); }
+
+/* HTML for one part; tappable parts explain their sound */
+function partHtml(p, tappable){
+  var t = p.text, say = "", cls = "";
+  if (p.kind === "short"){ cls = "v-" + t; say = "v_" + t + "_short"; }
+  else if (p.kind === "long"){ cls = "long v-" + t; say = "v_" + t + "_long"; }
+  else if (p.kind === "silent"){ cls = "silent"; say = "x_silent_e"; }
+  else if (p.kind === "team"){ cls = "team v-" + TEAM_VOWEL[t]; say = "t_" + t; }
+  else if (p.kind === "r"){ cls = "rr"; say = R_KEY[t]; }
+  if (!cls) return t;
+  return '<span class="' + cls + (tappable && say ? ' tw" data-say="' + say : '') + '">' + t + '</span>';
+}
+/* the whole word, colored; with `sylls` it is split into tappable syllables.
+   noTap: inside an answer button the whole button is the target, so parts don't explain themselves. */
+function wordHtml(spec, sylls, noTap){
+  var parts = parse(spec);
+  if (!sylls) return parts.map(function(p){ return partHtml(p, !noTap); }).join("");
+  var out = "", cur = -1;
+  parts.forEach(function(p){
+    if (p.syl !== cur){
+      if (cur >= 0) out += '</span>';
+      cur = p.syl;
+      out += '<span class="syl tw' + (cur % 2 ? ' alt' : '') + '" data-say="' + sylKey(sylls[cur]) + '">';
+    }
+    out += partHtml(p, false);
+  });
+  return out + '</span>';
+}
+function sylKey(s){ return "sy_" + s.toLowerCase().replace(/[^a-z]/g, ""); }
+
+/* ---------- word lists ---------- */
+/* consonant frames: which vowels make a real word in the gap */
+var SWAP = ["b_g:aeiou","h_t:aiou","p_n:aei","b_d:aeiu","p_t:aeio","t_p:aio","c_t:aou","s_t:aei","m_p:ao","r_g:aiu","h_m:aiu","f_n:aiu","l_g:aeo","d_g:iou"];
+var CVC = ["c[a]t","h[a]t","m[a]p","b[e]d","h[e]n","p[e]n","p[i]g","s[i]t","l[i]p","d[o]g","h[o]t","t[o]p","b[u]g","s[u]n","c[u]p"];
+var MAGIC = [["c[a]p","c{a}p<e>"],["t[a]p","t{a}p<e>"],["m[a]d","m{a}d<e>"],["h[a]t","h{a}t<e>"],["k[i]t","k{i}t<e>"],["p[i]n","p{i}n<e>"],
+  ["b[i]t","b{i}t<e>"],["h[o]p","h{o}p<e>"],["n[o]t","n{o}t<e>"],["r[o]d","r{o}d<e>"],["c[u]b","c{u}b<e>"],["t[u]b","t{u}b<e>"],["c[u]t","c{u}t<e>"]];
+var TEAMS = ["r(ai)n","tr(ai)n","p(ai)l","d(ay)","pl(ay)","b(ee)","tr(ee)","s(ee)d","(ea)t","l(ea)f","b(oa)t","g(oa)t","c(oa)t","sn(ow)","gr(ow)","n(igh)t","l(igh)t","p(ie)","bl(ue)","gl(ue)"];
+var BOSSY = ["c^ar^","st^ar^","f^ar^m","p^ar^k","j^ar^","sh^ar^k","f^or^k","h^or^n","c^or^n","st^or^m","b^ir^d","g^ir^l","h^er^","f^er^n","t^ur^n","n^ur^s<e>","sh^ir^t","b^ur^n"];
+/* syllables: notation | how each part is said (for its clip) */
+var SYLL = [
+  "c[a]t|cat","d[o]g|dog","s[u]n|sun","f[i]sh|fish","fr[o]g|frog","sh[i]p|ship",
+  "r[a]b-b[i]t|rab bit","p[u]mp-k[i]n|pump kin","r[o]ck-[e]t|rock it","c[u]p-c{a}k<e>|cup cake","s[u]n-s[e]t|sun set","p[i]c-n[i]c|pick nick",
+  "h[o]t-d[o]g|hot dog","m[a]g-n[e]t|mag nit","k[i]t-t[e]n|kit in","n[a]p-k[i]n|nap kin",
+  "b[u]t-t^er^-fly|but ter fly","[e]l-[e]-ph[a]nt|ell uh fent","[o]c-t[o]-p[u]s|ock tuh puss","b[a]-n[a]-n[a]|buh nan uh","[u]m-br[e]l-l[a]|um brell uh","t[e]l-[e]-sc{o}p<e>|tell uh scope",
+  "w[a]-t^er^-m[e]l-[o]n|wah ter mel un","m[a]c-[a]-r{o}-ni|mack uh row nee","[a]l-l[i]-g[a]-t^or^|al ih gay ter","c[a]t-^er^-p[i]l-l^ar^|cat er pill er"
+];
+
+/* ---------- round makers: each returns { hint, say, build(stage) } ---------- */
+function rSwap(){
+  var f = pick(SWAP).split(":"), frame = f[0].split("_"), ok = f[1].split(""), target = pick(ok);
+  var targetWord = frame[0] + target + frame[1];
+  return { hint:"Tap a vowel to make the word you hear.", say:["i_swap", wkey(targetWord)], answer:targetWord, build:function(stage){
+    var w = el("div", "paper word", frame[0] + '<span class="slot" id="slot">&nbsp;</span>' + frame[1]);
+    stage.appendChild(w);
+    var tip = el("div", "tip"); stage.appendChild(tip);
+    var row = el("div", "choices");
+    VOWELS.forEach(function(v){
+      var real = ok.indexOf(v) >= 0;
+      var b = el("button", "paper press choice vowel" + (real ? "" : " dim"), '<span class="v-' + v + '">' + v + '</span>');
+      if (v === target) b.setAttribute("data-ok", "1");
+      b.onclick = function(){
+        if (G.locked) return;
+        var made = frame[0] + v + frame[1], slot = $("slot");
+        slot.innerHTML = '<span class="v-' + v + '">' + v + '</span>';
+        if (v === target){ tip.innerHTML = ""; correct(b, [wkey(made)]); }
+        else {
+          G.mistakes++;
+          tip.innerHTML = Speech.tapText("That makes " + made + ". Listen again!");
+          say([wkey(made)]);
+          removeClass(w, "nope"); void w.offsetWidth; addClass(w, "nope");
+        }
+      };
+      row.appendChild(b);
+    });
+    stage.appendChild(row);
+  }};
+}
+function rHearVowel(){
+  var spec = pick(CVC), word = plain(spec), v = parse(spec).filter(function(p){ return p.kind === "short"; })[0].text;
+  return { hint:"Which vowel sound do you hear?", say:["i_vowel", wkey(word)], answer:v, build:function(stage){
+    var w = el("div", "paper word hidden", word.replace(/./g, "?"));
+    stage.appendChild(w);
+    var row = el("div", "choices");
+    VOWELS.forEach(function(x){
+      var b = el("button", "paper press choice vowel", '<span class="v-' + x + '">' + x + '</span><small>' + EXAMPLE[x] + '</small>');
+      if (x === v) b.setAttribute("data-ok", "1");
+      b.onclick = function(){
+        if (G.locked) return;
+        if (x === v){ w.className = "paper word"; w.innerHTML = wordHtml(spec); correct(b, [wkey(word), "v_" + v + "_short"]); }
+        else wrong(b);
+      };
+      row.appendChild(b);
+    });
+    stage.appendChild(row);
+  }};
+}
+function rWhichWord(){
+  var pair = pick(MAGIC), target = pick(pair), word = plain(target);
+  return { hint:"Which word do you hear?", say:["i_which", wkey(word)], answer:word, build:function(stage){
+    var row = el("div", "choices");
+    shuffle(pair).forEach(function(spec){
+      var b = el("button", "paper press choice wordc", '<span>' + wordHtml(spec, null, true) + '</span>');
+      if (spec === target) b.setAttribute("data-ok", "1");
+      b.onclick = function(){
+        if (G.locked) return;
+        if (spec === target) correct(b, [wkey(word)].concat(spec.indexOf("<e>") >= 0 ? ["x_silent_e"] : []));
+        else wrong(b);
+      };
+      row.appendChild(b);
+    });
+    stage.appendChild(el("div", "tip", Speech.tapText("Tip: the magic e is silent. It makes the vowel say its name.")));
+    stage.appendChild(row);
+  }};
+}
+function rShortLong(pool){
+  var spec = pick(pool), word = plain(spec), parts = parse(spec);
+  var vp = parts.filter(function(p){ return p.kind !== "c" && p.kind !== "silent"; })[0];
+  var isLong = vp.kind === "long" || vp.kind === "team", v = vowelOf(vp);
+  return { hint:"Is the vowel sound short or long?", say:["i_shortlong", wkey(word)], answer:isLong ? "long" : "short", build:function(stage){
+    var w = el("div", "paper word", word);
+    stage.appendChild(w);
+    var row = el("div", "choices");
+    [["short", '<span class="v-' + v + '">' + v + '</span>'], ["long", '<span class="long v-' + v + '">' + v + '</span>']].forEach(function(o){
+      var b = el("button", "paper press choice sl", o[1] + '<small>' + o[0] + '</small>');
+      if ((o[0] === "long") === isLong) b.setAttribute("data-ok", "1");
+      b.onclick = function(){
+        if (G.locked) return;
+        if ((o[0] === "long") === isLong){ w.innerHTML = wordHtml(spec); correct(b, [wkey(word), "v_" + v + (isLong ? "_long" : "_short")]); }
+        else wrong(b);
+      };
+      row.appendChild(b);
+    });
+    stage.appendChild(row);
+  }};
+}
+function rFindTeam(pool, hint){
+  var spec = pick(pool), word = plain(spec), parts = parse(spec);
+  var target = parts.filter(function(p){ return p.kind === "team" || p.kind === "r"; })[0];
+  var teamKey = target.kind === "team" ? "t_" + target.text : R_KEY[target.text];
+  return { hint:hint, say:["i_team", wkey(word)], answer:target.text, build:function(stage){
+    var w = el("div", "paper word mid", word);
+    stage.appendChild(w);
+    var row = el("div", "tiles"), tiles = [];
+    parts.forEach(function(p){
+      p.text.split("").forEach(function(ch){
+        var t = el("button", "paper press tile", ch);
+        t.letterOf = p; tiles.push(t);
+        if (p === target) t.setAttribute("data-ok", "1");
+        t.onclick = function(){
+          if (G.locked) return;
+          if (p === target){
+            tiles.forEach(function(x){ if (x.letterOf === target) addClass(x, "found"); });
+            w.innerHTML = wordHtml(spec);
+            correct(t, [wkey(word), teamKey]);
+          } else wrong(t);
+        };
+        row.appendChild(t);
+      });
+    });
+    stage.appendChild(row);
+  }};
+}
+function rSyllables(){
+  var s = pick(SYLL).split("|"), spec = s[0], sylls = s[1].split(" "), word = plain(spec), count = sylls.length;
+  return { hint:"How many syllables? Clap and count!", say:["i_syll", wkey(word)], answer:count, build:function(stage){
+    var w = el("div", "paper word" + (word.length > 7 ? " mid" : ""), wordHtml(spec));
+    stage.appendChild(w);
+    stage.appendChild(el("div", "tip", Speech.tapText("Each part you clap has one vowel sound.")));
+    var row = el("div", "choices");
+    [1,2,3,4].forEach(function(k){
+      var b = el("button", "paper press choice n", String(k));
+      if (k === count) b.setAttribute("data-ok", "1");
+      b.onclick = function(){
+        if (G.locked) return;
+        if (k === count){
+          w.innerHTML = wordHtml(spec, sylls);
+          correct(b, sylls.map(sylKey).concat([wkey(word)]));
+        } else wrong(b);
+      };
+      row.appendChild(b);
+    });
+    stage.appendChild(row);
+  }};
+}
+function rWhichR(){
+  var spec = pick(BOSSY), word = plain(spec), r = parse(spec).filter(function(p){ return p.kind === "r"; })[0].text;
+  var ans = R_KEY[r];
+  return { hint:"Which bossy R sound do you hear?", say:["i_r", wkey(word)], answer:ans, build:function(stage){
+    var w = el("div", "paper word hidden", word.replace(/./g, "?"));
+    stage.appendChild(w);
+    var row = el("div", "choices");
+    [["r_ar","ar"],["r_or","or"],["r_er","er ir ur"]].forEach(function(o){
+      var b = el("button", "paper press choice wordc", '<span class="rr">' + o[1] + '</span>');
+      if (o[0] === ans) b.setAttribute("data-ok", "1");
+      b.onclick = function(){
+        if (G.locked) return;
+        if (o[0] === ans){ w.className = "paper word"; w.innerHTML = wordHtml(spec); correct(b, [wkey(word), ans]); }
+        else wrong(b);
+      };
+      row.appendChild(b);
+    });
+    stage.appendChild(row);
+  }};
+}
+
+function x(fn, n){ var a = []; for (var i = 0; i < n; i++) a.push(fn); return a; }
+var MAGIC_ALL = [].concat.apply([], MAGIC);
+var TEAMS_AND_SHORT = TEAMS.concat(CVC.slice(0, 8));
+var LEVELS = [
+  { name:"Short vowels", ex:'b<span class="v-a">a</span>g, b<span class="v-u">u</span>g', rounds:x(rSwap, 6).concat(x(rHearVowel, 4)) },
+  { name:"Magic e", ex:'c<span class="v-a">a</span>p, c<span class="long v-a">a</span>p<span class="silent">e</span>', rounds:x(rWhichWord, 5).concat(x(function(){ return rShortLong(MAGIC_ALL); }, 5)) },
+  { name:"Vowel teams", ex:'r<span class="team v-a">ai</span>n, b<span class="team v-o">oa</span>t', rounds:x(function(){ return rFindTeam(TEAMS, "Tap the letters that make the vowel sound."); }, 6).concat(x(function(){ return rShortLong(TEAMS_AND_SHORT); }, 4)) },
+  { name:"Syllables", ex:'<span class="syl">but</span><span class="syl alt">ter</span><span class="syl">fly</span>', rounds:x(rSyllables, 10) },
+  { name:"Bossy R", ex:'c<span class="rr">ar</span>, b<span class="rr">ir</span>d', rounds:x(rWhichR, 6).concat(x(function(){ return rFindTeam(BOSSY, "Tap the letters that make the bossy R sound."); }, 4)) }
+];
+var COLORS = ["#FFC93C","#FF8A3D","#E5487A","#3FB37F","#4BA3D9"];
+var ROUNDS = 10;
+
+function load(k, d){ try { var v = localStorage.getItem("sound:" + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } }
+function save(k, v){ try { localStorage.setItem("sound:" + k, JSON.stringify(v)); } catch(e){} }
+var best = load("best", {});
+
+/* ---------- level list ---------- */
+function renderHome(){
+  $("legend").innerHTML = '<span class="lt">Vowels:</span>' +
+    VOWELS.map(function(v){ return '<span class="lw v-' + v + ' tw" data-say="v_' + v + '_short">' + v + '</span>'; }).join("") +
+    '<span class="lt"></span><span class="lt">Long:</span><span class="lw long v-a tw" data-say="v_a_long">a</span>' +
+    '<span class="lt"></span><span class="lt">Silent:</span><span class="lw silent tw" data-say="x_silent_e">e</span>';
+  var path = $("path"); path.innerHTML = "";
+  LEVELS.forEach(function(lv, i){
+    var b = el("button", "paper press stone"), got = best[i];
+    b.innerHTML = '<span class="num" style="background:' + COLORS[i] + '">' + (i + 1) + '</span>' +
+      '<span class="sname">' + lv.name + '</span><span class="ex">' + lv.ex + '</span>' +
+      '<span class="best">' + (got === undefined ? "Not played yet" : 'Best: <b>&#9733; ' + got + '</b> of ' + ROUNDS) + '</span>';
+    b.onclick = function(){ startLevel(i); };
+    path.appendChild(b);
+  });
+  $("soundBtn").textContent = Speech.soundOn() ? "Talking: on" : "Talking: off";
+}
+Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
+$("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
+$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "words.html"; };
+$("homeBtn").onclick = function(){ Speech.stop(); renderHome(); show("home"); };
+
+/* ---------- playing ---------- */
+var G = null;
+function startLevel(i){
+  G = { level:i, makers:shuffle(LEVELS[i].rounds), round:0, stars:0, results:[] };
+  show("game");
+  renderRound();
+}
+function renderDots(){
+  var d = $("dots"); d.innerHTML = "";
+  for (var i = 0; i < ROUNDS; i++){
+    var r = G.results[i];
+    d.appendChild(el("span", "dot" + (r === "gold" ? " gold" : r === "ok" ? " ok" : i === G.round ? " now" : "")));
+  }
+  $("stars").innerHTML = "&#9733; " + G.stars;
+}
+function renderRound(){
+  var R = G.makers[G.round]();
+  G.R = R; G.mistakes = 0; G.locked = false;
+  renderDots();
+  var stage = $("stage"); stage.innerHTML = "";
+  var hr = el("div", "hintrow");
+  hr.appendChild(el("p", "hint", Speech.tapText(R.hint)));
+  if (Speech.canTalk()){
+    var sb = el("button", "paper press sayb flex", '<img src="emoji/1f50a.svg" alt="">');
+    sb.onclick = function(){ say(R.say); };
+    hr.appendChild(sb);
+  }
+  stage.appendChild(hr);
+  R.build(stage);
+  setTimeout(function(){ if (G && G.R === R) say(R.say); }, 400);
+}
+function correct(target, sayKeys){
+  if (G.locked) return;
+  G.locked = true;
+  var clean = G.mistakes === 0;
+  if (clean) G.stars++;
+  G.results[G.round] = clean ? "gold" : "ok";
+  addClass(target, "right");
+  renderDots();
+  confetti(target);
+  say(sayKeys.concat(["p_praise_" + Math.floor(Math.random()*6)]));
+  setTimeout(nextRound, 2400 + 500*sayKeys.length);
+}
+function wrong(target){
+  G.mistakes++;
+  removeClass(target, "nope"); void target.offsetWidth; addClass(target, "nope");
+  setTimeout(function(){ if (hasClass(target, "choice")) addClass(target, "dim"); }, 400);
+  say(["p_try"]);
+}
+function nextRound(){
+  G.round++;
+  if (G.round >= ROUNDS) showEnd(); else renderRound();
+}
+function showEnd(){
+  var i = G.level, s = G.stars;
+  G.R = null;
+  if (best[i] === undefined || s > best[i]){ best[i] = s; save("best", best); }
+  $("endTitle").textContent = s === ROUNDS ? "Perfect!" : s >= 7 ? "Super sounding out!" : "Level done!";
+  $("endScore").innerHTML = "You earned <b>&#9733; " + s + "</b> of " + ROUNDS + " stars.";
+  var btns = $("endBtns"); btns.innerHTML = "";
+  var again = el("button", "paper press bigbtn", "Play again"); again.onclick = function(){ startLevel(i); }; btns.appendChild(again);
+  if (i < LEVELS.length - 1){
+    var nx = el("button", "paper press bigbtn go", "Next: " + LEVELS[i + 1].name); nx.onclick = function(){ startLevel(i + 1); }; btns.appendChild(nx);
+  }
+  var all = el("button", "paper press bigbtn", "All levels"); all.onclick = function(){ renderHome(); show("home"); }; btns.appendChild(all);
+  show("end");
+  say([s === ROUNDS ? "p_perfect" : "p_stars_" + s]);
+}
+
+function confetti(target){
+  var r = target.getBoundingClientRect();
+  for (var i = 0; i < 16; i++){
+    (function(i){
+      var b = el("span", "bit");
+      b.style.left = (r.left + r.width/2) + "px";
+      b.style.top = (r.top + r.height/2) + "px";
+      b.style.background = COLORS[i % COLORS.length];
+      document.body.appendChild(b);
+      var dx = Math.random()*360 - 180, dy = -(Math.random()*260 + 40), rot = Math.random()*540;
+      setTimeout(function(){
+        var t = "translate(" + dx + "px," + dy + "px) rotate(" + rot + "deg)";
+        b.style.webkitTransform = t; b.style.transform = t; b.style.opacity = "0";
+      }, 20);
+      setTimeout(function(){ if (b.parentNode) b.parentNode.removeChild(b); }, 1000);
+    })(i);
+  }
+}
+
+(function(){
+  var sky = $("sky");
+  for (var i = 0; i < 70; i++){
+    var st = el("span", "star"), size = Math.random() < 0.15 ? 0.6 : 0.3;
+    st.style.left = (Math.random()*100) + "%"; st.style.top = (Math.random()*100) + "%";
+    st.style.width = st.style.height = size + "vmin";
+    st.style.webkitAnimationDelay = st.style.animationDelay = (Math.random()*3) + "s";
+    sky.appendChild(st);
+  }
+})();
+
+/* hook for automated tests (harmless on the frame) */
+window.SoundLab = { levels:LEVELS, state:function(){ return G; }, start:startLevel,
+  data:{ SWAP:SWAP, CVC:CVC, MAGIC:MAGIC, TEAMS:TEAMS, BOSSY:BOSSY, SYLL:SYLL }, plain:plain, sylKey:sylKey, wordHtml:wordHtml };
+
+document.addEventListener("touchstart", function(){}, true);
+renderHome();
+})();
+</script>
+</body>
+</html>

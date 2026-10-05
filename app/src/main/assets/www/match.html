@@ -234,7 +234,7 @@ function renderBoard(){
   renderDots();
   var stage = $("stage"); stage.innerHTML = "";
   var hr = el("div", "hintrow");
-  hr.appendChild(el("p", "hint", GAME.hint));
+  hr.appendChild(el("p", "hint", Speech.tapText(GAME.hint)));
   if (Speech.canTalk()){
     var sb = el("button", "paper press sayb flex", '<img src="emoji/1f50a.svg" alt="">');
     sb.onclick = function(){ say([GAME.instr]); };

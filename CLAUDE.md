@@ -18,6 +18,17 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   the same sound). 5 levels x 5 boards of 3-5 pairs; lines drawn with inline SVG. Stars:
   localStorage match:<g>:best.
 
+- **Sound Lab** (sound-lab.html): pronunciation. Word notation `[a]` short, `{a}` long (bar on
+  top), `<e>` silent, `(ai)` vowel team, `^ar^` bossy R, `-` syllable break; vowel colors a red,
+  e orange, i green, o blue, u purple. Levels: short vowels (vowel swap), magic e, vowel teams,
+  syllables (sy_* clips are respellings, e.g. "ell uh fent"), bossy R. Stars: localStorage sound:best.
+- **Tap any word to hear it** (all games): `Speech.tapText(text)` wraps words in
+  `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element
+  with `data-say`. Words map to w_*, numbers to n_*, + - x / = to m_*. Every tappable word needs a
+  clip (web-test.js checks what it sees on screen). Answer choices are never tappable words.
+- Don't store objects on DOM elements under names modern Chromium owns (`el.part` is a built-in
+  there and silently breaks tests even though Chromium 39 doesn't have it).
+
 Pickers: index.html (Word games / Math games) -> words.html or math.html -> game. Each page
 declares `<meta name="parent">`; the Android Back key follows it. Shared picker look: hub.css/hub.js.
 
@@ -76,7 +87,7 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
 On the frame, clips play natively through the `AndroidAudio` bridge (GameActivity, MediaPlayer):
 Chromium 39 hands `<audio>` to Android's MediaPlayer, which bypasses shouldInterceptRequest, so
 web audio from https://wordhop.local is silent there. mp3s are kept uncompressed in the APK.
-`phrases.json` maps every spoken key to its text (about 630; numbers are n_0..n_100, math prompts
+`phrases.json` maps every spoken key to its text (about 870; numbers are n_0..n_100, math prompts
 m_*). To add spoken text:
 1. Add the key to `phrases.json`, then run `python3 tools/sync_phrases.py` to update speech.js.
    Every round reads its instructions aloud (i_* keys in the word games, R.say in math).
@@ -89,7 +100,7 @@ The repo must stay **private**: the clips come from an unofficial Microsoft TTS 
 
 ## Build and check
 - `node tools/check-es5.js`: ES5 and Chromium 39 checks for all web code.
-- `node tools/web-test.js [shot-dir]`: plays every math and match level in headless Chromium at 1280x800,
+- `node tools/web-test.js [shot-dir]`: plays every math, match and Sound Lab level in headless Chromium at 1280x800,
   checks generated questions and speech keys, optional screenshots. Modern Chromium, so run
   check-es5 too. `python3 tools/sync_phrases.py --check`: speech.js matches phrases.json.
 - PowerShell scripts can be syntax-checked with a portable pwsh (GitHub release tarball).

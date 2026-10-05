@@ -129,7 +129,7 @@ const server = http.createServer((req, res) => {
     await shot(w.replace(".html", "") + "-round");
   }
   const literalKeys = [];
-  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html"]) {
     const src = fs.readFileSync(path.join(WWW, w), "utf8"), re = /"((?:[pmi])_[a-z_]+)"/g; let m;
     while ((m = re.exec(src))) if (!/_$/.test(m[1])) literalKeys.push(m[1]);
   }
@@ -186,6 +186,63 @@ const server = http.createServer((req, res) => {
     });
     wrongOk ? ok(g + ": wrong pair shakes and counts a mistake") : fail(g + ": wrong pair not handled");
   }
+  // Sound Lab: play every level by tapping the marked answer.
+  await page.goto(base + "sound-lab.html"); await page.waitForTimeout(150); await shot("sound-levels");
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate(i => SoundLab.start(i), i);
+    for (let r = 0; r < 10; r++) {
+      if (r === 0) await shot("sound-L" + (i + 1));
+      await page.locator("[data-ok]").first().click();
+      if (r === 0) { await page.waitForTimeout(120); await shot("sound-L" + (i + 1) + "-answered"); }
+      await page.waitForFunction(r => { const s = SoundLab.state(); return s.round > r || document.getElementById("end").className.indexOf("on") >= 0; }, r, { timeout: 4000 });
+    }
+    const end = await page.evaluate(() => [document.getElementById("end").className.indexOf("on") >= 0, SoundLab.state().stars]);
+    end[0] && end[1] === 10 ? ok("sound lab level " + (i + 1) + ": 10 rounds, 10 stars") : fail("sound lab level " + (i + 1) + " ended " + JSON.stringify(end));
+  }
+  // Swap round: a wrong vowel says the word it made and costs the gold star.
+  for (let t = 0; t < 30; t++) {
+    await page.evaluate(() => SoundLab.start(0));
+    const isSwap = await page.evaluate(() => /make the word/.test(SoundLab.state().R.hint));
+    if (!isSwap) continue;
+    const wrongBtn = page.locator(".choice.vowel:not(.dim):not([data-ok])").first();
+    if (await wrongBtn.count() === 0) continue;
+    await wrongBtn.click();
+    const tip = await page.evaluate(() => document.querySelector(".tip").textContent);
+    await shot("sound-swap-wrong");
+    await page.locator("[data-ok]").first().click();
+    const res = await page.evaluate(tip => [SoundLab.state().results[0], tip], tip);
+    res[0] === "ok" && /That makes/.test(res[1]) ? ok("swap: wrong vowel explains itself and costs the gold star") : fail("swap wrong vowel: " + JSON.stringify(res));
+    break;
+  }
+
+  // Tap any word: every tappable piece on screen has a clip.
+  const tapKeys = new Set();
+  const collect = async () => (await page.evaluate(() => Array.prototype.map.call(document.querySelectorAll("[data-say]"), e => e.getAttribute("data-say")))).forEach(k => tapKeys.add(k));
+  for (const g of ["count", "ops", "pattern"]) {
+    await page.goto(base + "math-game.html?g=" + g);
+    for (let i = 0; i < 5; i++) for (let t = 0; t < 8; t++) { await page.evaluate(i => MathGame.start(i), i); await collect(); }
+  }
+  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html"]) {
+    await page.goto(base + w); await page.waitForTimeout(100); await collect();
+    const n = await page.locator("#path button").count();
+    for (let i = 0; i < n; i++) for (let t = 0; t < 6; t++) {
+      await page.goto(base + w); await page.waitForTimeout(60);
+      await page.locator("#path button").nth(i).click(); await page.waitForTimeout(60); await collect();
+    }
+  }
+  const tapMissing = [...tapKeys].filter(k => !(k in phrases));
+  tapMissing.length ? fail("tappable words without clips: " + tapMissing.join(", ")) : ok("all " + tapKeys.size + " tappable words seen on screen have clips");
+
+  // Saucer sentences: each word is tappable; Picture Planet's prompt word costs the gold star.
+  await page.goto(base + "saucer.html"); await page.locator("#path button").first().click();
+  for (let t = 0; t < 12; t++) {
+    if (await page.locator(".sentence .tw").count()) break;
+    await page.goto(base + "saucer.html"); await page.locator("#path button").first().click(); await page.waitForTimeout(50);
+  }
+  const sentWords = await page.locator(".sentence .tw").count();
+  sentWords > 2 ? ok("saucer sentence has " + sentWords + " tappable words") : fail("saucer sentence words not tappable");
+  await shot("saucer-sentence");
+
   await page.goto(base + "words.html"); await page.waitForTimeout(150); await shot("words-after");
 
   // Hubs show star totals after playing.

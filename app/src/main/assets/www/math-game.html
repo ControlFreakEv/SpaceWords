@@ -235,7 +235,7 @@ function rCount(lo, hi){
 function rFindGroup(lo, hi){
   var k = ri(lo, hi), t = pick(THINGS), set = [k], guard = 0;
   while (set.length < 3 && guard++ < 100){ var o = k + pick([-3,-2,-1,1,2,3]); if (o >= 1 && o <= hi && set.indexOf(o) < 0) set.push(o); }
-  return { hint:"Tap the group with " + k + ".", say:["m_find_group", n(k)], prompt:'<div class="bignum">' + k + '</div>',
+  return { hint:"Tap the group with " + k + ".", say:["m_find_group", n(k)], prompt:'<div class="bignum tw" data-say="n_' + k + '">' + k + '</div>',
     kind:"choice", options:shuffle(set).map(function(v){ return { html:'<div class="sm">' + frames(v, t[0]) + '</div>', val:v, cls:"g" }; }),
     answer:k, answerSay:[n(k)] };
 }
@@ -262,7 +262,8 @@ function bubbles(values, hideIndex, asImages){
   var out = '<div class="seq">';
   for (var i = 0; i < values.length; i++){
     if (i === hideIndex) out += '<div class="paper bub q" id="entry">?</div>';
-    else out += '<div class="paper bub">' + (asImages ? img(values[i]) : values[i]) + '</div>';
+    else if (asImages) out += '<div class="paper bub">' + img(values[i]) + '</div>';
+    else out += '<div class="paper bub tw" data-say="n_' + values[i] + '">' + values[i] + '</div>';
   }
   return out + '</div>';
 }
@@ -289,11 +290,16 @@ function rPlaceValue(pad){
 function rTenMoreLess(pad){
   var more = Math.random() < 0.5, k = more ? ri(10, 89) : ri(20, 99), ans = more ? k + 10 : k - 10;
   return { hint:"What is 10 " + (more ? "more" : "less") + " than " + k + "?", say:[more ? "m_ten_more" : "m_ten_less", n(k)],
-    prompt:'<div class="eq small"><span>10 ' + (more ? "more" : "less") + ' than ' + k + ' is</span>' + Q + '</div>',
+    prompt:'<div class="eq small"><span>' + Speech.tapText("10 " + (more ? "more" : "less") + " than " + k + " is") + '</span>' + Q + '</div>',
     kind:pad ? "pad" : "choice", options:pad ? null : numOpts(ans, 0, 100, [k + 1, k - 1, more ? k - 10 : k + 10]), answer:ans, answerSay:[n(ans)] };
 }
 
-function eqHtml(a, op, b){ return '<div class="eq"><span>' + a + '</span><span>' + op + '</span><span>' + b + '</span><span>=</span>' + Q + '</div>'; }
+/* numbers and signs in a question read themselves when tapped */
+function num(v){ return '<span class="tw" data-say="n_' + v + '">' + v + '</span>'; }
+var OP_KEY = { "+":"m_plus" }; OP_KEY[MINUS] = "m_minus"; OP_KEY[TIMES] = "m_times"; OP_KEY[DIVIDE] = "m_div";
+function opSpan(op){ return '<span class="tw" data-say="' + OP_KEY[op] + '">' + op + '</span>'; }
+var EQUALS = '<span class="tw" data-say="m_equals">=</span>';
+function eqHtml(a, op, b){ return '<div class="eq">' + num(a) + opSpan(op) + num(b) + EQUALS + Q + '</div>'; }
 
 function rAdd(maxSum, pics, pad){
   var a = ri(1, maxSum - 1), b = ri(1, maxSum - a), s = a + b, t = pick(THINGS);
@@ -310,7 +316,7 @@ function rSub(max, pics, pad){
 function rMissing(max, pad){
   var a = ri(1, max - 1), b = ri(1, max - a), s = a + b, first = Math.random() < 0.5;
   var q = Q;
-  var html = '<div class="eq">' + (first ? q + '<span>+</span><span>' + b + '</span>' : '<span>' + a + '</span><span>+</span>' + q) + '<span>=</span><span>' + s + '</span></div>';
+  var html = '<div class="eq">' + (first ? q + opSpan("+") + num(b) : num(a) + opSpan("+") + q) + EQUALS + num(s) + '</div>';
   var ans = first ? a : b;
   return { hint:"What number is missing?", say:["m_missing"], prompt:html, kind:pad ? "pad" : "choice",
     options:pad ? null : numOpts(ans, 0, max, [s, first ? b : a]), answer:ans, answerSay:[n(ans)] };
@@ -492,7 +498,7 @@ function renderRound(){
   renderDots();
   var stage = $("stage"); stage.innerHTML = "";
   var hr = el("div", "hintrow");
-  hr.appendChild(el("p", "hint", R.hint));
+  hr.appendChild(el("p", "hint", Speech.tapText(R.hint)));
   if (Speech.canTalk()){
     var sb = el("button", "paper press sayb flex", img("1f50a"));
     sb.onclick = function(){ say(R.say); };
