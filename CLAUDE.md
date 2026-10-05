@@ -33,8 +33,16 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - Don't store objects on DOM elements under names modern Chromium owns (`el.part` is a built-in
   there and silently breaks tests even though Chromium 39 doesn't have it).
 
-Pickers: index.html (Word games / Math games) -> words.html or math.html -> game. Each page
-declares `<meta name="parent">`; the Android Back key follows it. Shared picker look: hub.css/hub.js.
+Pickers: index.html (Word games / Math games) -> words.html or math.html -> game. Shared picker
+look: hub.css/hub.js.
+
+**One Back button everywhere** (the owner asked for this; keep it): a yellow "<- Back" pill, fixed
+top-left (back.css, `id="backBtn"`), on every page and every screen (level list, game, end).
+Each page defines `window.goBack()`: game/end screen -> level list -> picker (`<meta name="parent">`)
+-> "Pick a mission" -> photos (`AndroidApp.backToPhotos()`, which calls backToSkylight()). The
+Android Back key calls the same goBack(). New pages must include back.css, the button, and
+goBack(); the first row of each screen leaves room with `.backroom` / `.barspace`. web-test.js
+checks the button is in the identical spot on every screen.
 
 The owner is a controls engineer who is new to Android. Explain Android Studio and adb steps plainly.
 
@@ -76,10 +84,9 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   Gradle 8.7 (needs JVM 21, not 25). The owner declined the AGP upgrade on purpose; don't upgrade.
 - applicationId `com.wordhop.app`: never change it, or reinstalls lose her stars.
 - `GameActivity.kt`: full-screen WebView serving assets/www/* from https://wordhop.local/ via
-  shouldInterceptRequest. AndroidTTS JS bridge (used only if a TTS engine exists). "Back to photos"
-  shows only on index.html and calls backToSkylight(), which launches com.skylight before
-  finishing (a bare finish() leaves a black screen until the watchdog reacts). Back on a game
-  returns to the picker.
+  shouldInterceptRequest. AndroidTTS JS bridge (used only if a TTS engine exists). Back on
+  "Pick a mission" calls backToSkylight() through the AndroidApp bridge; it launches com.skylight
+  before finishing (a bare finish() leaves a black screen until the watchdog reacts).
 - `BubbleService.kt`: floating UFO overlay (TYPE_PHONE below API 26), draggable, position saved,
   hidden while the games are open. `BootReceiver.kt` restarts it on boot and after an app update
   (MY_PACKAGE_REPLACED). `Compat.kt`: API helpers.

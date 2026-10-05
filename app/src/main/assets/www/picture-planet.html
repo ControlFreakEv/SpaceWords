@@ -107,18 +107,19 @@ img{display:block}
   .hero h1{font-size:15vmin}
 }
 </style>
+<link rel="stylesheet" href="back.css">
 </head>
 <body>
 <div id="sky"></div>
+<button class="backbtn" id="backBtn" aria-label="Back"><b>&#8592;</b>Back</button>
 
 <section class="screen on" id="home">
-  <div class="hero">
+  <div class="hero backroom">
     <img src="emoji/1f680.svg" alt="">
     <div><h1>Picture Planet</h1><p>Pick a level. Read the words to fly your rocket!</p></div>
   </div>
   <div class="path" id="path"></div>
   <div class="foot">
-    <button class="paper press pill" id="gamesBtn">&#8592; Games</button>
     <button class="paper press pill" id="soundBtn"></button>
     <label class="voicebox" id="voiceBox" style="display:none">Voice <select id="voiceSel"></select></label>
     <button class="paper press pill" id="testBtn" style="display:none">Test voice</button>
@@ -129,7 +130,7 @@ img{display:block}
 
 <section class="screen" id="game">
   <div class="bar">
-    <button class="paper press icon-btn" id="homeBtn" aria-label="Back to levels"><img src="emoji/1f680.svg" alt=""></button>
+    <span class="barspace"></span>
     <div class="dots" id="dots"></div>
     <div class="stars" id="stars"></div>
   </div>
@@ -210,7 +211,6 @@ function renderHome(){
 $("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
 $("voiceSel").onchange = function(){ Speech.setVoice(this.value); say(["p_hi"]); };
 $("testBtn").onclick = function(){ say(["w_butterfly","p_praise_0"]); };
-$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "words.html"; };
 
 /* game */
 var G = null;
@@ -222,7 +222,10 @@ function startLevel(i){
   show("game");
   renderRound();
 }
-$("homeBtn").onclick = function(){ stopTalking(); renderHome(); show("home"); };
+/* Back: from a game or the end screen to the level list; from the level list to the picker */
+function goBack(){ Speech.stop(); if (hasClass($("home"), "on")) location.href = "words.html"; else { renderHome(); show("home"); } }
+$("backBtn").onclick = goBack;
+window.goBack = goBack;
 
 function renderDots(){
   var d = $("dots"); d.innerHTML = "";

@@ -136,18 +136,19 @@ img{display:block}
   .hero h1{font-size:15vmin}
 }
 </style>
+<link rel="stylesheet" href="back.css">
 </head>
 <body>
 <div id="sky"></div>
+<button class="backbtn" id="backBtn" aria-label="Back"><b>&#8592;</b>Back</button>
 
 <section class="screen on" id="home">
-  <div class="hero">
+  <div class="hero backroom">
     <img id="heroImg" src="emoji/1f31f.svg" alt="">
     <div><h1 id="heroTitle"></h1><p id="heroSub"></p></div>
   </div>
   <div class="path" id="path"></div>
   <div class="foot">
-    <button class="paper press pill" id="gamesBtn">&#8592; Math games</button>
     <button class="paper press pill" id="soundBtn"></button>
     <span class="note" id="speechNote" style="display:none">Talking isn't set up on this device yet. Questions are still written on screen.</span>
     <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0</span>
@@ -156,7 +157,7 @@ img{display:block}
 
 <section class="screen" id="game">
   <div class="bar">
-    <button class="paper press icon-btn flex" id="homeBtn" aria-label="Back to levels"><img id="barImg" src="emoji/1f31f.svg" alt=""></button>
+    <span class="barspace"></span>
     <div class="dots" id="dots"></div>
     <div class="stars" id="stars"></div>
   </div>
@@ -456,7 +457,7 @@ Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
 
 /* ---------- level list ---------- */
 function renderHome(){
-  $("heroImg").src = $("barImg").src = "emoji/" + GAME.icon + ".svg";
+  $("heroImg").src = "emoji/" + GAME.icon + ".svg";
   $("heroTitle").textContent = GAME.title;
   $("heroSub").textContent = GAME.sub;
   var path = $("path"); path.innerHTML = "";
@@ -472,8 +473,10 @@ function renderHome(){
   $("speechNote").style.display = Speech.mode() === "none" ? "" : "none";
 }
 $("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
-$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "math.html"; };
-$("homeBtn").onclick = function(){ Speech.stop(); renderHome(); show("home"); };
+/* Back: from a game or the end screen to the level list; from the level list to the picker */
+function goBack(){ Speech.stop(); if (hasClass($("home"), "on")) location.href = "math.html"; else { renderHome(); show("home"); } }
+$("backBtn").onclick = goBack;
+window.goBack = goBack;
 
 /* ---------- playing ---------- */
 var G = null;

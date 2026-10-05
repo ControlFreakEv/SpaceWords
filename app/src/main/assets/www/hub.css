@@ -8,10 +8,6 @@ body{background:#0B1026;background-image:radial-gradient(circle at 50% 0%, #2A1E
 button{font-family:inherit;font-weight:inherit;border:0;padding:0;margin:0;cursor:pointer;outline:none;text-align:left}
 .top{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:0 0 4vmin}
 h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
-.back{background:#F7F9FF;color:#1F2A44;border:0.5vmin solid #1F2A44;border-radius:10vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A;
-  padding:1.6vmin 3vmin;font-size:3.4vmin;margin-right:3vmin;-webkit-flex:none;flex:none;
-  -webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s}
-.back:active{-webkit-transform:translate(0.5vmin,0.5vmin);transform:translate(0.5vmin,0.5vmin);box-shadow:0.3vmin 0.3vmin 0 #05081A}
 .games{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;margin:0 -1.6vmin 6vmin}
 .game{-webkit-flex:1;flex:1;min-width:0;margin:0 1.6vmin;border:0.6vmin solid #5CE1E6;border-radius:3.4vmin;box-shadow:1vmin 1vmin 0 #05081A;color:#F3F6FF;
   padding:4vmin;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-justify-content:flex-end;justify-content:flex-end;

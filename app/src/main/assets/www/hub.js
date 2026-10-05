@@ -27,5 +27,13 @@ try {
     document.body.appendChild(note);
   }
 } catch(e){}
+/* Back: picker -> its parent page; on "Pick a mission" it returns to the photos (through the app). */
+function goBack(){
+  var m = document.querySelector('meta[name="parent"]');
+  if (m) location.href = m.getAttribute("content");
+  else if (window.AndroidApp) window.AndroidApp.backToPhotos();
+}
+document.getElementById("backBtn").onclick = goBack;
+window.goBack = goBack;
 document.addEventListener("touchstart", function(){}, true);
 })();

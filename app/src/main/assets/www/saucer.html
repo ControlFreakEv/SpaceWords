@@ -124,18 +124,19 @@ img{display:block}
   .hero h1{font-size:12vmin}
 }
 </style>
+<link rel="stylesheet" href="back.css">
 </head>
 <body>
 <div id="sky"></div>
+<button class="backbtn" id="backBtn" aria-label="Back"><b>&#8592;</b>Back</button>
 
 <section class="screen on" id="home">
-  <div class="hero">
+  <div class="hero backroom">
     <img class="hover" src="emoji/1f6f8.svg" alt="">
     <div><h1>Sight Word Saucer</h1><p>Pick a planet. Beam up the words you know!</p></div>
   </div>
   <div class="path" id="path"></div>
   <div class="foot">
-    <button class="panel press pill" id="gamesBtn">&#8592; Games</button>
     <button class="panel press pill" id="soundBtn"></button>
     <span class="note" id="speechNote" style="display:none">Talking isn't set up yet, so it uses reading and spelling rounds only.</span>
     <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0. Word lists: Dolch sight words.</span>
@@ -144,7 +145,7 @@ img{display:block}
 
 <section class="screen" id="game">
   <div class="bar">
-    <button class="panel press icon-btn" id="homeBtn" aria-label="Back to planets"><img src="emoji/1f680.svg" alt=""></button>
+    <span class="barspace"></span>
     <div class="dots" id="dots"></div>
     <div class="stars" id="stars"></div>
   </div>
@@ -243,7 +244,6 @@ function renderHome(){
   $("speechNote").style.display = Speech.mode() === "none" ? "" : "none";
 }
 $("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
-$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "words.html"; };
 Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
 
 /* game */
@@ -272,7 +272,10 @@ function startLevel(i){
   show("game");
   renderRound();
 }
-$("homeBtn").onclick = function(){ Speech.stop(); renderHome(); show("home"); };
+/* Back: from a game or the end screen to the level list; from the level list to the picker */
+function goBack(){ Speech.stop(); if (hasClass($("home"), "on")) location.href = "words.html"; else { renderHome(); show("home"); } }
+$("backBtn").onclick = goBack;
+window.goBack = goBack;
 
 function renderDots(){
   var d = $("dots"); d.innerHTML = "";

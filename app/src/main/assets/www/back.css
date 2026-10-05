@@ -1,0 +1,12 @@
+/* The one Back button: same look, same top-left spot, on every page and every screen. */
+.backbtn{position:fixed;left:3vmin;top:3vmin;z-index:30;height:10vmin;padding:0 3.6vmin 0 2.6vmin;margin:0;
+  display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;
+  background:#FFD93D;color:#1F2A44;border:0.6vmin solid #1F2A44;border-radius:5vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A;
+  font-family:"WHFun","Trebuchet MS",sans-serif;font-weight:600;font-size:4.6vmin;line-height:1;cursor:pointer;outline:none;
+  -webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s}
+.backbtn:active{-webkit-transform:translate(0.5vmin,0.5vmin);transform:translate(0.5vmin,0.5vmin);box-shadow:0.3vmin 0.3vmin 0 #05081A}
+.backbtn b{font-size:6vmin;font-weight:600;margin-right:1.4vmin}
+/* the first row of each screen leaves room for it */
+.backroom{margin-left:27vmin !important}
+.barspace{width:27vmin;height:10vmin;-webkit-flex:none;flex:none}
+.bar .stars{min-width:27vmin}

@@ -275,6 +275,40 @@ const server = http.createServer((req, res) => {
 
   await page.goto(base + "words.html"); await page.waitForTimeout(150); await shot("words-after");
 
+  // One Back button: same place on every page and screen, one step up each time.
+  const boxes = {};
+  const box = async label => { boxes[label] = JSON.stringify(await page.evaluate(() => { const r = document.getElementById("backBtn").getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(Math.round); })); };
+  await page.goto(base + "index.html"); await page.evaluate(() => { window.AndroidApp = { backToPhotos: () => { window.__photos = true; } }; });
+  await box("index"); await page.click("#backBtn");
+  (await page.evaluate(() => window.__photos === true)) ? ok("Back on Pick a mission returns to the photos") : fail("Back on Pick a mission did nothing");
+  for (const hub of ["words.html", "math.html"]) {
+    await page.goto(base + hub); await box(hub); await page.click("#backBtn"); await page.waitForURL(/index\.html/);
+    ok("Back on " + hub + " goes to Pick a mission");
+  }
+  const games = { "picture-planet.html": "words", "saucer.html": "words", "match.html?g=connect": "words", "match.html?g=rhyme": "words",
+    "sound-lab.html": "words", "compound.html": "words", "math-game.html?g=count": "math", "math-game.html?g=ops": "math", "math-game.html?g=pattern": "math" };
+  for (const g of Object.keys(games)) {
+    await page.goto(base + g); await page.waitForTimeout(80); await box(g + " levels");
+    await page.locator("#path button").first().click(); await page.waitForTimeout(80); await box(g + " game");
+    await page.click("#backBtn");
+    const onLevels = await page.evaluate(() => document.getElementById("home").className.indexOf("on") >= 0);
+    await page.click("#backBtn"); await page.waitForURL(new RegExp(games[g] + "\\.html"));
+    onLevels ? ok(g + ": Back goes game -> levels -> " + games[g] + ".html") : fail(g + ": Back from the game didn't show the levels");
+  }
+  // end screen
+  await page.goto(base + "math-game.html?g=count"); await page.evaluate(() => MathGame.start(0));
+  for (let r = 0; r < 10; r++) {
+    const v = await page.evaluate(() => { const R = MathGame.state().R; return R.options.map(o => o.val).indexOf(R.answer); });
+    await page.locator(".choice").nth(v).click();
+    await page.waitForFunction(r => MathGame.state().round > r || document.getElementById("end").className.indexOf("on") >= 0, r);
+  }
+  await box("math end screen"); await shot("end-with-back");
+  await page.click("#backBtn");
+  (await page.evaluate(() => document.getElementById("home").className.indexOf("on") >= 0)) ? ok("Back on an end screen goes to the levels") : fail("Back on the end screen failed");
+  const distinct = new Set(Object.values(boxes));
+  distinct.size === 1 ? ok("Back button is in the identical spot on all " + Object.keys(boxes).length + " screens checked " + [...distinct][0])
+    : fail("Back button moves around: " + JSON.stringify(boxes));
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();

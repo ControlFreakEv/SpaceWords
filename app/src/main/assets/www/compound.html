@@ -115,18 +115,19 @@ img{display:block}
 .gap.cut{width:8vmin;background:#FFD93D}
 .small .lt{font-size:7.4vmin}.small .gap{width:4.6vmin;height:11vmin}
 </style>
+<link rel="stylesheet" href="back.css">
 </head>
 <body>
 <div id="sky"></div>
+<button class="backbtn" id="backBtn" aria-label="Back"><b>&#8592;</b>Back</button>
 
 <section class="screen on" id="home">
-  <div class="hero">
+  <div class="hero backroom">
     <img src="emoji/1f9e9.svg" alt="">
     <div><h1>Compound Words</h1><p>Two small words snap together to make a new word: sun + flower = sunflower.</p></div>
   </div>
   <div class="path" id="path"></div>
   <div class="foot">
-    <button class="paper press pill" id="gamesBtn">&#8592; Word games</button>
     <button class="paper press pill" id="soundBtn"></button>
     <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0</span>
   </div>
@@ -134,7 +135,7 @@ img{display:block}
 
 <section class="screen" id="game">
   <div class="bar">
-    <button class="paper press icon-btn flex" id="homeBtn" aria-label="Back to levels"><img src="emoji/1f9e9.svg" alt=""></button>
+    <span class="barspace"></span>
     <div class="dots" id="dots"></div>
     <div class="stars" id="stars"></div>
   </div>
@@ -349,8 +350,10 @@ function renderHome(){
 }
 Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
 $("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
-$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "words.html"; };
-$("homeBtn").onclick = function(){ Speech.stop(); renderHome(); show("home"); };
+/* Back: from a game or the end screen to the level list; from the level list to the picker */
+function goBack(){ Speech.stop(); if (hasClass($("home"), "on")) location.href = "words.html"; else { renderHome(); show("home"); } }
+$("backBtn").onclick = goBack;
+window.goBack = goBack;
 
 /* ---------- playing ---------- */
 var G = null;

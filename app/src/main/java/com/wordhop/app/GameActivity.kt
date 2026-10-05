@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
@@ -14,7 +13,6 @@ import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import android.util.Log
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -23,7 +21,6 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
-import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -37,7 +34,6 @@ import java.io.File
 class GameActivity : Activity() {
 
     private lateinit var web: WebView
-    private lateinit var closeBtn: View
     private var tts: TextToSpeech? = null
     private var player: MediaPlayer? = null
     @Volatile private var ttsReady = false
@@ -54,15 +50,11 @@ class GameActivity : Activity() {
             webViewClient = AssetClient()
             addJavascriptInterface(TtsBridge(), "AndroidTTS")
             addJavascriptInterface(AudioBridge(), "AndroidAudio")
+            addJavascriptInterface(AppBridge(), "AndroidApp")
         }
 
         val root = FrameLayout(this)
         root.addView(web, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        closeBtn = closeButton()
-        root.addView(closeBtn, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.BOTTOM or Gravity.END
-        ).apply { val m = dp(20); setMargins(m, m, m, m) })
         setContentView(root)
         volumeControlStream = AudioManager.STREAM_MUSIC
         hideSystemBars()
@@ -88,11 +80,6 @@ class GameActivity : Activity() {
 
         @Deprecated("Deprecated in Java")
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean = !url.contains(HOST)
-
-        /** The "Back to photos" button only shows on the game picker. */
-        override fun onPageFinished(view: WebView, url: String) {
-            closeBtn.visibility = if (isHome(url)) View.VISIBLE else View.GONE
-        }
     }
 
     private fun mimeFor(path: String) = when {
@@ -107,19 +94,6 @@ class GameActivity : Activity() {
         else -> "application/octet-stream"
     }
 
-    private fun closeButton(): View = TextView(this).apply {
-        text = "\u2190  Back to photos"
-        textSize = 18f
-        setTextColor(Color.parseColor("#1F2A44"))
-        setPadding(dp(20), dp(12), dp(20), dp(12))
-        background = GradientDrawable().apply {
-            cornerRadius = dp(999).toFloat()
-            setColor(Color.WHITE)
-            setStroke(dp(3), Color.parseColor("#1F2A44"))
-        }
-        elevation = dp(6).toFloat()
-        setOnClickListener { backToSkylight() }
-    }
 
     @Suppress("DEPRECATION")
     private fun hideSystemBars() {
@@ -150,10 +124,20 @@ class GameActivity : Activity() {
         if (canOverlay(this)) showBubble(this, true)
     }
 
-    /** Back steps up one level: game -> its hub (from <meta name="parent">) -> picker -> photos. */
+    /**
+     * The Back key does exactly what the on-screen Back button does (each page's goBack()):
+     * game -> level list -> picker -> "Pick a mission" -> photos.
+     */
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (isHome(web.url)) backToSkylight() else web.evaluateJavascript(GO_TO_PARENT_JS, null)
+        val url = web.url
+        if (url == null || !url.contains(HOST)) backToSkylight() else web.evaluateJavascript(GO_BACK_JS, null)
+    }
+
+    /** Lets "Back" on the "Pick a mission" page return to the photos. */
+    inner class AppBridge {
+        @JavascriptInterface
+        fun backToPhotos() { runOnUiThread { backToSkylight() } }
     }
 
     /**
@@ -177,7 +161,6 @@ class GameActivity : Activity() {
         finish()
     }
 
-    private fun isHome(url: String?) = url == null || url.endsWith("/index.html") || url.endsWith("$HOST/")
 
     override fun onDestroy() {
         stopClip()
@@ -328,8 +311,9 @@ class GameActivity : Activity() {
         const val HOME_URL = "https://$HOST/index.html"
         const val SKYLIGHT_PKG = "com.skylight"
         private val CLIP_KEY = Regex("[a-z0-9_]+")
-        private const val GO_TO_PARENT_JS = "(function(){if(window.Speech)Speech.stop();" +
+        private const val GO_BACK_JS = "(function(){if(window.goBack){goBack();return;}" +
+            "if(window.Speech)Speech.stop();" +
             "var m=document.querySelector('meta[name=parent]');" +
-            "location.href=m?m.getAttribute('content'):'index.html';})()"
+            "if(m)location.href=m.getAttribute('content');else if(window.AndroidApp)AndroidApp.backToPhotos();})()"
     }
 }
