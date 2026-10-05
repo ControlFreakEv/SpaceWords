@@ -116,7 +116,7 @@ class GameActivity : Activity() {
             setStroke(dp(3), Color.parseColor("#1F2A44"))
         }
         elevation = dp(6).toFloat()
-        setOnClickListener { finish() }
+        setOnClickListener { backToSkylight() }
     }
 
     @Suppress("DEPRECATION")
@@ -150,7 +150,28 @@ class GameActivity : Activity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (isHome(web.url)) finish() else web.loadUrl(HOME_URL)
+        if (isHome(web.url)) backToSkylight() else web.loadUrl(HOME_URL)
+    }
+
+    /**
+     * Brings the Skylight app back to the front, then closes the game.
+     * A bare finish() leaves a black screen for about a minute until skylight.watchdog
+     * notices and relaunches Skylight, so we launch it ourselves first.
+     */
+    private fun backToSkylight() {
+        val pm = packageManager
+        val launch = pm.getLaunchIntentForPackage(SKYLIGHT_PKG)
+            ?: pm.getLeanbackLaunchIntentForPackage(SKYLIGHT_PKG)
+            ?: Intent(Intent.ACTION_MAIN).setPackage(SKYLIGHT_PKG)
+                .takeIf { it.resolveActivity(pm) != null }
+            ?: Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        try {
+            startActivity(launch)
+        } catch (e: Exception) {
+            // Nothing could be launched; finishing still hands control back to the watchdog.
+        }
+        finish()
     }
 
     private fun isHome(url: String?) = url == null || url.endsWith("/index.html") || url.endsWith("$HOST/")
@@ -215,5 +236,6 @@ class GameActivity : Activity() {
     companion object {
         const val HOST = "wordhop.local"
         const val HOME_URL = "https://$HOST/index.html"
+        const val SKYLIGHT_PKG = "com.skylight"
     }
 }

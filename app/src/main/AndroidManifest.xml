@@ -6,8 +6,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- Required on Android 11+ for the app to find the text-to-speech engine -->
+    <!-- Android 11+ hides other apps unless they are listed here: the text-to-speech engine,
+         and the Skylight app that "Back to photos" relaunches. -->
     <queries>
+        <package android:name="com.skylight" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
