@@ -127,8 +127,7 @@ img{display:block}
     <div><h1>Compound Words</h1><p>Two small words snap together to make a new word: sun + flower = sunflower.</p></div>
   </div>
   <div class="path" id="path"></div>
-  <div class="foot">
-    <button class="paper press pill" id="soundBtn"></button>
+  <div class="foot volroom">
     <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0</span>
   </div>
 </section>
@@ -163,7 +162,7 @@ function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ") >= 0; }
 function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
 function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
-function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); }
+function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); }
 function say(keys){ if (keys && keys.length) Speech.say(keys); }
 function wk(w){ return "w_" + w; }
 function tapWord(w, cls){ return '<span class="' + (cls || "") + ' tw" data-say="' + wk(w) + '">' + w + '</span>'; }
@@ -346,10 +345,8 @@ function renderHome(){
     b.onclick = function(){ startLevel(i); };
     path.appendChild(b);
   });
-  $("soundBtn").textContent = Speech.soundOn() ? "Talking: on" : "Talking: off";
 }
 Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
-$("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
 /* Back: from a game or the end screen to the level list; from the level list to the picker */
 function goBack(){ Speech.stop(); if (hasClass($("home"), "on")) location.href = "words.html"; else { renderHome(); show("home"); } }
 $("backBtn").onclick = goBack;

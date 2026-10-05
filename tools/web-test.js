@@ -309,6 +309,29 @@ const server = http.createServer((req, res) => {
   distinct.size === 1 ? ok("Back button is in the identical spot on all " + Object.keys(boxes).length + " screens checked " + [...distinct][0])
     : fail("Back button moves around: " + JSON.stringify(boxes));
 
+  // Volume control: on pickers and level lists, hidden while playing; -, +, bars; 0 means silent.
+  for (const pg of ["index.html", "words.html", "math.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=ops"]) {
+    await page.goto(base + pg); await page.waitForTimeout(80);
+    const v = await page.evaluate(() => { const b = document.querySelector(".volbox"); return !!b && b.offsetWidth > 0 && !document.getElementById("soundBtn"); });
+    v ? ok(pg + ": volume control shown, no talking toggle") : fail(pg + ": volume control missing or talking toggle still there");
+  }
+  await page.goto(base + "math-game.html?g=ops");
+  await page.evaluate(() => Speech.setLevel(3));
+  await page.click('.volb[data-step="1"]');
+  const up = await page.evaluate(() => Speech.level());
+  await page.click('.volbar[data-level="1"]'); await page.click('.volb[data-step="-1"]');
+  const off = await page.evaluate(() => [Speech.level(), Speech.canTalk(), document.querySelectorAll(".volbar.on").length]);
+  await page.click('.volbar[data-level="6"]');
+  const boost = await page.evaluate(() => [Speech.level(), document.querySelectorAll(".volbar.boost.on").length]);
+  up === 4 && off[0] === 0 && !off[1] && off[2] === 0 && boost[0] === 6 && boost[1] === 2
+    ? ok("volume: + and - step, bars set the level, 0 is silent, top two bars are the boost") : fail("volume control: " + JSON.stringify([up, off, boost]));
+  await page.reload(); const kept = await page.evaluate(() => Speech.level());
+  kept === 6 ? ok("volume level is remembered") : fail("volume level not remembered: " + kept);
+  await shot("volume-levels");
+  await page.locator("#path button").first().click(); await page.waitForTimeout(80);
+  (await page.evaluate(() => document.querySelector(".volbox").offsetWidth === 0)) ? ok("volume control hidden while playing") : fail("volume control shows during play");
+  await page.evaluate(() => Speech.setLevel(5));
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();

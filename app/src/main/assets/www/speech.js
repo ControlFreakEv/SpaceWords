@@ -9,11 +9,13 @@ function save(k, v){ try { localStorage.setItem("speech:" + k, JSON.stringify(v)
 
 var bridge = window.AndroidTTS || null;
 var nativeAudio = window.AndroidAudio || null;   // the app plays clips natively (old WebViews can't)
+/* volume level 0 (off) .. 6; 5 and 6 boost past the frame's maximum (see GameActivity) */
+var MAX_LEVEL = 6, level = 5;
+try { level = nativeAudio && nativeAudio.level ? nativeAudio.level() : load("level", 5); } catch(e){ level = 5; }
 var clipToken = 0;
 var browserTTS = !bridge && ("speechSynthesis" in window) ? window.speechSynthesis : null;
 var clips = null;            // keys with recorded audio
 var voices = [], voice = null;
-var soundOn = load("sound", true);
 var savedVoice = load("voice", "");
 var listeners = [];
 var queue = [], playing = null;
@@ -91,6 +93,7 @@ function playNext(){
   }
   var a = new Audio("audio/" + key + ".mp3");
   playing = a;
+  try { a.volume = Math.min(1, level / 4); } catch(e){}
   a.onended = playNext;
   a.onerror = playNext;
   try { var p = a.play(); if (p && p["catch"]) p["catch"](function(){ playNext(); }); } catch(e){ playNext(); }
@@ -113,7 +116,7 @@ function sayTTS(texts){
 
 /* keys: list of phrase keys, e.g. ["w_cat","p_praise_0"] */
 function say(keys){
-  if (!soundOn) return;
+  if (level <= 0) return;
   stop();
   var m = mode();
   if (m === "audio"){
@@ -171,24 +174,68 @@ document.addEventListener("click", function(e){
   (document.head || document.documentElement).appendChild(st);
 })();
 
+/* ---- volume control: speaker, -, six bars, + ; fixed bottom-left on pickers and level lists ---- */
+function setLevel(n){
+  n = Math.max(0, Math.min(MAX_LEVEL, n));
+  level = n;
+  try { if (nativeAudio && nativeAudio.setLevel) nativeAudio.setLevel(n); } catch(e){}
+  save("level", n);
+  drawVolume();
+  if (n > 0) say(["p_praise_0"]); else stop();
+  notify();
+}
+var volBox = null;
+function drawVolume(){
+  if (!volBox) return;
+  volBox.querySelector(".volicon").src = "emoji/" + (level === 0 ? "1f507" : level < 4 ? "1f508" : "1f50a") + ".svg";
+  var bars = volBox.querySelectorAll(".volbar");
+  for (var i = 0; i < bars.length; i++) bars[i].className = "volbar" + (i < level ? " on" : "") + (i >= 4 ? " boost" : "");
+}
+(function(){
+  var st = document.createElement("style");
+  st.textContent =
+    ".volbox{position:fixed;left:3vmin;bottom:3vmin;z-index:30;height:11vmin;padding:0 1.2vmin;display:-webkit-flex;display:flex;" +
+    "-webkit-align-items:center;align-items:center;background:#F7F9FF;border:0.6vmin solid #1F2A44;border-radius:5.5vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A}" +
+    "body[data-screen=game] .volbox,body[data-screen=end] .volbox{display:none}" +
+    ".volicon{width:6.4vmin;height:6.4vmin;margin:0 1vmin}" +
+    ".volb{width:8.4vmin;height:8.4vmin;border-radius:50%;border:0.5vmin solid #1F2A44;background:#FFD93D;color:#1F2A44;" +
+    "font-family:\"WHFun\",\"Trebuchet MS\",sans-serif;font-weight:600;font-size:6vmin;line-height:1;padding:0;cursor:pointer;outline:none;text-align:center;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}" +
+    ".volb:active{background:#FFC000}" +
+    ".volbars{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;height:8vmin;margin:0 1.4vmin}" +
+    ".volbar{width:3.6vmin;margin:0 .5vmin;border-radius:.8vmin;background:#D5DBEA;cursor:pointer}" +
+    ".volbar.on{background:#3FB37F}.volbar.boost.on{background:#FF8A3D}" +
+    ".volroom{padding-left:65vmin}";
+  (document.head || document.documentElement).appendChild(st);
+  volBox = document.createElement("div");
+  volBox.className = "volbox";
+  var bars = "";
+  for (var i = 0; i < MAX_LEVEL; i++) bars += '<span class="volbar" data-level="' + (i + 1) + '" style="height:' + (2.4 + i*1.1) + 'vmin"></span>';
+  volBox.innerHTML = '<img class="volicon" alt="">' +
+    '<button class="volb" data-step="-1" aria-label="Quieter">&#8722;</button><span class="volbars">' + bars + '</span>' +
+    '<button class="volb" data-step="1" aria-label="Louder">+</button>';
+  volBox.onclick = function(e){
+    var t = e.target, step = t.getAttribute("data-step"), lv = t.getAttribute("data-level");
+    if (step) setLevel(level + parseInt(step, 10));
+    else if (lv) setLevel(parseInt(lv, 10) === level ? level - 1 : parseInt(lv, 10));
+  };
+  document.body.appendChild(volBox);
+  drawVolume();
+})();
+
 window.Speech = {
   tapText: tapText,
   tokenKey: tokenKey,
   say: say,
   stop: stop,
   mode: mode,
-  canTalk: function(){ return soundOn && mode() !== "none"; },
-  soundOn: function(){ return soundOn; },
-  setSound: function(on){ soundOn = !!on; save("sound", soundOn); if (!soundOn) stop(); notify(); },
+  canTalk: function(){ return level > 0 && mode() !== "none"; },
+  soundOn: function(){ return level > 0; },
+  level: function(){ return level; },
+  setLevel: setLevel,
   voices: function(){ return voices; },
   voice: function(){ return voice; },
   setVoice: function(id){ for (var i = 0; i < voices.length; i++) if (voices[i].id === id) voice = voices[i]; savedVoice = id; save("voice", id); },
   onChange: function(fn){ listeners.push(fn); },
-  key: function(word){ return "w_" + String(word).toLowerCase().replace(/[^a-z0-9]/g, ""); },
-  /* true when the frame's media volume is turned all the way down */
-  muted: function(){
-    try { if (nativeAudio && nativeAudio.volume) return /^0\//.test(nativeAudio.volume()); } catch(e){}
-    return false;
-  }
+  key: function(word){ return "w_" + String(word).toLowerCase().replace(/[^a-z0-9]/g, ""); }
 };
 })();

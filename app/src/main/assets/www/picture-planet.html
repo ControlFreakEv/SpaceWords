@@ -119,8 +119,7 @@ img{display:block}
     <div><h1>Picture Planet</h1><p>Pick a level. Read the words to fly your rocket!</p></div>
   </div>
   <div class="path" id="path"></div>
-  <div class="foot">
-    <button class="paper press pill" id="soundBtn"></button>
+  <div class="foot volroom">
     <label class="voicebox" id="voiceBox" style="display:none">Voice <select id="voiceSel"></select></label>
     <button class="paper press pill" id="testBtn" style="display:none">Test voice</button>
     <span class="note" id="speechNote" style="display:none">Talking isn't set up on this device yet, so listening rounds are skipped.</span>
@@ -164,7 +163,7 @@ function $(id){ return document.getElementById(id); }
 function el(tag, cls, html){ var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
 function shuffle(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
-function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); }
+function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); }
 function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ") >= 0; }
 function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
 function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
@@ -191,11 +190,10 @@ function renderHome(){
     b.onclick = function(){ startLevel(i); };
     path.appendChild(b);
   });
-  $("soundBtn").textContent = Speech.soundOn() ? "Talking: on" : "Talking: off";
   var m = Speech.mode();
   var showVoices = Speech.soundOn() && m === "tts";
   $("voiceBox").style.display = showVoices ? "" : "none";
-  $("testBtn").style.display = (Speech.soundOn() && m !== "none") ? "" : "none";
+  $("testBtn").style.display = (showVoices) ? "" : "none";
   $("speechNote").style.display = m === "none" ? "" : "none";
   if (showVoices){
     var sel = $("voiceSel"); sel.innerHTML = "";
@@ -208,7 +206,6 @@ function renderHome(){
     });
   }
 }
-$("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
 $("voiceSel").onchange = function(){ Speech.setVoice(this.value); say(["p_hi"]); };
 $("testBtn").onclick = function(){ say(["w_butterfly","p_praise_0"]); };
 

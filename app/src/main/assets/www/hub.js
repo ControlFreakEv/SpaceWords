@@ -18,15 +18,6 @@ for (var i = 0; i < cards.length; i++){
     if (got) got.innerHTML = n > 0 ? "&#9733; " + n + " stars" : "";
   })(cards[i]);
 }
-/* Say so when the frame's media volume is all the way down (the games would be silent). */
-try {
-  if (window.AndroidAudio && /^0\//.test(window.AndroidAudio.volume())){
-    var note = document.createElement("div");
-    note.className = "muted";
-    note.innerHTML = "&#128263; The frame's sound is turned all the way down.";
-    document.body.appendChild(note);
-  }
-} catch(e){}
 /* Back: picker -> its parent page; on "Pick a mission" it returns to the photos (through the app). */
 function goBack(){
   var m = document.querySelector('meta[name="parent"]');

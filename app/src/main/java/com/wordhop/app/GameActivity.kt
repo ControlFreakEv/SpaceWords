@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -36,6 +37,11 @@ class GameActivity : Activity() {
     private lateinit var web: WebView
     private var tts: TextToSpeech? = null
     private var player: MediaPlayer? = null
+    private var enhancer: LoudnessEnhancer? = null
+    private val am by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
+    private val audioPrefs by lazy { getSharedPreferences("audio", MODE_PRIVATE) }
+    /** The frame's own media volume, put back when the game closes so Skylight is unchanged. */
+    private var frameVolume = -1
     @Volatile private var ttsReady = false
 
     @SuppressLint("SetJavaScriptEnabled", "AddJavascriptInterface")
@@ -115,12 +121,18 @@ class GameActivity : Activity() {
         super.onResume()
         hideSystemBars()
         if (canOverlay(this)) showBubble(this, false)   // hide the UFO while the game is open (starts it if needed)
+        if (frameVolume < 0) frameVolume = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+        applyLevel()
     }
 
     override fun onPause() {
         super.onPause()
         tts?.stop()
         stopClip()
+        if (frameVolume >= 0) {
+            try { am.setStreamVolume(AudioManager.STREAM_MUSIC, frameVolume, 0) } catch (e: Exception) {}
+            frameVolume = -1
+        }
         if (canOverlay(this)) showBubble(this, true)
     }
 
@@ -191,6 +203,14 @@ class GameActivity : Activity() {
             mp.setOnCompletionListener { finishClip(it, token) }
             mp.setOnErrorListener { p, _, _ -> finishClip(p, token); true }
             mp.prepare()
+            val gain = boostGain()
+            if (gain > 0) {
+                try {
+                    enhancer = LoudnessEnhancer(mp.audioSessionId).apply { setTargetGain(gain); enabled = true }
+                } catch (e: Throwable) {
+                    Log.w("SpaceWords", "Volume boost isn't available on this device", e)
+                }
+            }
             mp.start()
             player = mp
         } catch (e: Exception) {
@@ -208,8 +228,13 @@ class GameActivity : Activity() {
         return f
     }
 
+    private fun releaseEnhancer() {
+        enhancer?.let { try { it.release() } catch (e: Exception) {} }
+        enhancer = null
+    }
+
     private fun finishClip(mp: MediaPlayer, token: Int) {
-        if (player === mp) { player = null; mp.release() }
+        if (player === mp) { player = null; releaseEnhancer(); mp.release() }
         clipDone(token)
     }
 
@@ -217,6 +242,7 @@ class GameActivity : Activity() {
         val p = player ?: return
         player = null
         try { p.stop() } catch (e: Exception) {}
+        releaseEnhancer()
         p.release()
     }
 
@@ -232,14 +258,34 @@ class GameActivity : Activity() {
         @JavascriptInterface
         fun stop() { runOnUiThread { stopClip() } }
 
-        /** Media volume as "current/max", so the games can say when the frame is muted. */
+        /** The game's volume level, 0 (off) to MAX_LEVEL. */
         @JavascriptInterface
-        fun volume(): String {
-            val am = getSystemService(AUDIO_SERVICE) as AudioManager
-            return am.getStreamVolume(AudioManager.STREAM_MUSIC).toString() + "/" +
-                am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        fun level(): Int = savedLevel()
+
+        @JavascriptInterface
+        fun setLevel(n: Int) {
+            audioPrefs.edit().putInt("level", n.coerceIn(0, MAX_LEVEL)).apply()
+            runOnUiThread { applyLevel() }
         }
     }
+
+    /*
+     * Volume levels: 0 is off; 1-4 set the frame's media volume to a quarter, half, three quarters
+     * and full; 5 and 6 keep it full and boost the voice clips further (LoudnessEnhancer, +6 and
+     * +12 dB) for when the frame's maximum still isn't loud enough.
+     */
+    private fun savedLevel() = audioPrefs.getInt("level", DEFAULT_LEVEL).coerceIn(0, MAX_LEVEL)
+
+    private fun applyLevel() {
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val l = savedLevel()
+        val v = if (l >= 4) max else (max * l + 3) / 4
+        try { am.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0) } catch (e: Exception) {
+            Log.w("SpaceWords", "Couldn't set the volume", e)
+        }
+    }
+
+    private fun boostGain() = when (savedLevel()) { 5 -> 600; 6 -> 1200; else -> 0 }
 
     /**
      * Text-to-speech is only a fallback for when the recorded clips are missing, so it starts
@@ -310,6 +356,8 @@ class GameActivity : Activity() {
         const val HOST = "wordhop.local"
         const val HOME_URL = "https://$HOST/index.html"
         const val SKYLIGHT_PKG = "com.skylight"
+        const val MAX_LEVEL = 6
+        const val DEFAULT_LEVEL = 5
         private val CLIP_KEY = Regex("[a-z0-9_]+")
         private const val GO_BACK_JS = "(function(){if(window.goBack){goBack();return;}" +
             "if(window.Speech)Speech.stop();" +

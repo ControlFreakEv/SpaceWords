@@ -28,7 +28,6 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
 .got{font-size:3.2vmin;margin-top:1.4vmin;color:#FFD93D}
 .three .t{font-size:6vmin}
 .three .game img{width:20vmin;height:20vmin}
-.muted{position:absolute;left:5vmin;bottom:3vmin;font-size:3vmin;color:#FFD93D}
 /* four games: a 2 x 2 grid, picture beside the words */
 .four{-webkit-flex-wrap:wrap;flex-wrap:wrap;margin-bottom:2vmin;-webkit-align-content:stretch;align-content:stretch}
 .four .game{-webkit-flex:0 0 46%;flex:0 0 46%;margin:1.4vmin 2%;padding:2.6vmin 3vmin;-webkit-flex-direction:row;flex-direction:row;-webkit-align-items:center;align-items:center;-webkit-justify-content:flex-start;justify-content:flex-start}
@@ -51,3 +50,7 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
   .four .game img{width:13vmin;height:13vmin}
   .nums{font-size:11vmin}
 }
+
+/* room for the volume control at the bottom */
+body{padding-bottom:16vmin}
+.games,.four{margin-bottom:0}

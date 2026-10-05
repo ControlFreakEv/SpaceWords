@@ -148,8 +148,7 @@ img{display:block}
     <div><h1 id="heroTitle"></h1><p id="heroSub"></p></div>
   </div>
   <div class="path" id="path"></div>
-  <div class="foot">
-    <button class="paper press pill" id="soundBtn"></button>
+  <div class="foot volroom">
     <span class="note" id="speechNote" style="display:none">Talking isn't set up on this device yet. Questions are still written on screen.</span>
     <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0</span>
   </div>
@@ -187,7 +186,7 @@ function ri(lo, hi){ return lo + Math.floor(Math.random()*(hi - lo + 1)); }
 function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ") >= 0; }
 function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
 function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
-function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); }
+function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); }
 function n(k){ return "n_" + k; }
 var MINUS = "&#8722;", TIMES = "&#215;", DIVIDE = "&#247;";
 
@@ -469,10 +468,8 @@ function renderHome(){
     b.onclick = function(){ startLevel(i); };
     path.appendChild(b);
   });
-  $("soundBtn").textContent = Speech.soundOn() ? "Talking: on" : "Talking: off";
   $("speechNote").style.display = Speech.mode() === "none" ? "" : "none";
 }
-$("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
 /* Back: from a game or the end screen to the level list; from the level list to the picker */
 function goBack(){ Speech.stop(); if (hasClass($("home"), "on")) location.href = "math.html"; else { renderHome(); show("home"); } }
 $("backBtn").onclick = goBack;

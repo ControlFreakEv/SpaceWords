@@ -26,6 +26,13 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   words. PIC/MID/BIG lists of "first second"; KNOWN (all of them plus EXTRA real compounds) makes
   sure wrong choices never form a real word and match boards pair up one way only. Stars:
   localStorage compound:best.
+- **Volume control** (speech.js, every page; the owner asked for it in place of "Talking: on/off"):
+  fixed bottom-left on pickers and level lists, hidden in play (`body[data-screen=game|end]`, set by
+  each page's show()). Levels 0 (off) to 6, default 5: 1-4 set the frame's media volume to 1/4..full,
+  5-6 keep it full and add a LoudnessEnhancer boost of +6/+12 dB on each clip (GameActivity,
+  `AndroidAudio.level()/setLevel()`, SharedPreferences "audio"). The frame's own volume is saved in
+  onResume and restored in onPause, so Skylight's volume doesn't change. Level pages keep room with
+  `.volroom`; hubs with body padding-bottom.
 - **Tap any word to hear it** (all games): `Speech.tapText(text)` wraps words in
   `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element
   with `data-say`. Words map to w_*, numbers to n_*, + - x / = to m_*. Every tappable word needs a
