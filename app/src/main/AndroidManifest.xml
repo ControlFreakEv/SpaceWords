@@ -26,20 +26,21 @@
         android:allowBackup="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar.Fullscreen">
 
+        <!-- Launcher icon only: opens the floating game window (GameWindow) and closes at once. -->
         <activity
             android:name=".GameActivity"
             android:exported="true"
-            android:launchMode="singleTask"
-            android:taskAffinity="com.wordhop.app.game"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode">
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.wordhop.app.game">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- The UFO runs in its own process: the frame kills the game's process whenever
-             another app comes to the front, and the UFO has to survive that. -->
+        <!-- The UFO and the floating game window run in their own process (":ufo"). -->
         <service
             android:name=".BubbleService"
             android:process=":ufo"

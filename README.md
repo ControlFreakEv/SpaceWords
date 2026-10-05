@@ -35,7 +35,9 @@ as a hint, like Peek, and costs the round's gold star.
 - **Alien Patterns** - picture patterns, counting up and down, skip counting,
   number rules, and brain busters like 1, 2, 4, 8.
 
-Every screen has the same yellow Back button in the top-left corner. It goes back one
+The games open in a full-screen window floating over the slideshow, so Skylight keeps running
+underneath and "Back to photos" is instant. The game closes by itself after 10 minutes without
+a touch. Every screen has the same yellow Back button in the top-left corner. It goes back one
 step at a time, and on "Pick a mission" it returns to the photos. The frame's Back key does the same. Drag the UFO to move it.
 It comes back automatically after a restart. Works on Android 5.1 (Skylight frame) and newer.
 Everything is bundled in app/src/main/assets/www, so it runs offline.

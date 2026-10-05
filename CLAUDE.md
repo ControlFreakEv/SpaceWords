@@ -30,8 +30,8 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   fixed bottom-left on pickers and level lists, hidden in play (`body[data-screen=game|end]`, set by
   each page's show()). Levels 0 (off) to 6, default 5: 1-4 set the frame's media volume to 1/4..full,
   5-6 keep it full and add a LoudnessEnhancer boost of +6/+12 dB on each clip (GameActivity,
-  `AndroidAudio.level()/setLevel()`, SharedPreferences "audio"). The frame's own volume is saved in
-  onResume and restored in onPause, so Skylight's volume doesn't change. Level pages keep room with
+  `AndroidAudio.level()/setLevel()`, SharedPreferences "audio"). The frame's own volume is saved when
+  the game window opens and restored when it closes, so Skylight's volume doesn't change. Level pages keep room with
   `.volroom`; hubs with body padding-bottom.
 - **Tap any word to hear it** (all games): `Speech.tapText(text)` wraps words in
   `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element
@@ -46,7 +46,7 @@ look: hub.css/hub.js.
 **One Back button everywhere** (the owner asked for this; keep it): a yellow "<- Back" pill, fixed
 top-left (back.css, `id="backBtn"`), on every page and every screen (level list, game, end).
 Each page defines `window.goBack()`: game/end screen -> level list -> picker (`<meta name="parent">`)
--> "Pick a mission" -> photos (`AndroidApp.backToPhotos()`, which calls backToSkylight()). The
+-> "Pick a mission" -> photos (`AndroidApp.backToPhotos()`, which closes the game window). The
 Android Back key calls the same goBack(). New pages must include back.css, the button, and
 goBack(); the first row of each screen leaves room with `.backroom` / `.barspace`. web-test.js
 checks the button is in the identical spot on every screen.
@@ -70,11 +70,15 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`. Cloud sessions cannot reach the frame.
   The owner deploys with `tools\deploy.ps1` (see README).
 - **The firmware kills the previous app whenever another app comes to the front** (low-RAM
-  policy): Skylight dies when the game opens (so "Back to photos" cold-starts it, about 7 s), and
-  the game's process dies 2 ms after its onPause ("user request after error", counted as a crash).
-  That is why BubbleService and BootReceiver run in their own process (`:ufo`); GameActivity
-  shows/hides the UFO with ACTION_SHOW/ACTION_HIDE intents (`showBubble()` in Compat.kt), and
-  the service re-shows itself if the game process is no longer in front.
+  policy): when the games were an activity, Skylight died as they opened, so "Back to photos"
+  cold-started it (about 7 s), and the game's process died 2 ms after its onPause.
+  **So the games run in a floating window, never as an activity in front** (GameWindow.kt, owned
+  by BubbleService in the `:ufo` process): TYPE_PHONE, full screen, focusable for the Back key.
+  Skylight stays the top activity underneath, so it isn't killed and "Back to photos" just removes
+  the window. Never open the games with an activity start; use `openGameWindow()` (Compat.kt) or
+  `am startservice -n com.wordhop.app/.BubbleService -a com.wordhop.app.OPEN_GAME`. GameActivity is
+  only a translucent launcher trampoline. The WebView is created on open and destroyed on close
+  (low RAM); the window closes itself after 10 minutes without a touch.
 - `ro.config.low_ram=true`. On 2026-10-05 the old build froze on "Back to photos" and Android
   silently killed it ("user request after error": the frame shows no ANR dialog), which explains
   both the long black screen and the vanished UFO. Prime suspect: WebView's media player stuck
@@ -90,19 +94,20 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
 - Kotlin, no third-party dependencies. minSdk 22, targetSdk 33, compileSdk 34, AGP 8.5.2,
   Gradle 8.7 (needs JVM 21, not 25). The owner declined the AGP upgrade on purpose; don't upgrade.
 - applicationId `com.wordhop.app`: never change it, or reinstalls lose her stars.
-- `GameActivity.kt`: full-screen WebView serving assets/www/* from https://wordhop.local/ via
-  shouldInterceptRequest. AndroidTTS JS bridge (used only if a TTS engine exists). Back on
-  "Pick a mission" calls backToSkylight() through the AndroidApp bridge; it launches com.skylight
-  before finishing (a bare finish() leaves a black screen until the watchdog reacts).
+- `GameWindow.kt`: the floating full-screen WebView serving assets/www/* from
+  https://wordhop.local/ via shouldInterceptRequest, plus the JS bridges: AndroidAudio (clips,
+  volume), AndroidTTS (only if clips are missing), AndroidApp (backToPhotos() closes the window).
+  The WebView's localStorage (her stars) lives in the app's data folder, shared by both processes;
+  only ever run one WebView at a time.
 - `BubbleService.kt`: floating UFO overlay (TYPE_PHONE below API 26), draggable, position saved,
-  hidden while the games are open. `BootReceiver.kt` restarts it on boot and after an app update
+  hidden while the game window is open. `BootReceiver.kt` restarts it on boot and after an app update
   (MY_PACKAGE_REPLACED). `Compat.kt`: API helpers.
 - `assets/www`: index.html (picker), picture-planet.html, saucer.html, speech.js, phrases.json,
   fonts/ (Andika subset, Fredoka SemiBold), emoji/, audio/.
 
 ## Speech
 `speech.js` plays `audio/<key>.mp3` for keys listed in `audio/index.json`, falling back to TTS.
-On the frame, clips play natively through the `AndroidAudio` bridge (GameActivity, MediaPlayer):
+On the frame, clips play natively through the `AndroidAudio` bridge (GameWindow, MediaPlayer):
 Chromium 39 hands `<audio>` to Android's MediaPlayer, which bypasses shouldInterceptRequest, so
 web audio from https://wordhop.local is silent there. mp3s are kept uncompressed in the APK.
 `phrases.json` maps every spoken key to its text (about 1,020; numbers are n_0..n_100, math prompts

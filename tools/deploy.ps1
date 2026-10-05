@@ -84,14 +84,14 @@ if ($LASTEXITCODE -ne 0) {
 Start-Sleep -Seconds 2
 $running = (& $adb -s $Frame shell ps | Where-Object { $_ -match 'com\.wordhop\.app' }).Count -gt 0
 
-if ($Open -or -not $running) {
-    # Opening the game directly is always allowed, and it starts the UFO too.
+if ($Open -and $running) {
+    # Opens the floating game window over the photos (Skylight stays on screen underneath).
+    & $adb -s $Frame shell am startservice -n com.wordhop.app/.BubbleService -a com.wordhop.app.OPEN_GAME | Out-Null
+    Write-Host "Opened Space Words on the frame."
+} elseif (-not $running) {
+    # Starting the launcher activity from the front is always allowed; it opens the game and the UFO.
     & $adb -s $Frame shell am start -n com.wordhop.app/.GameActivity | Out-Null
-    if ($running) {
-        Write-Host "Opened Space Words on the frame."
-    } else {
-        Write-Host "Opened Space Words on the frame to bring the UFO back. Tap Back there to return to the photos." -ForegroundColor Yellow
-    }
+    Write-Host "Opened Space Words on the frame to bring the UFO back. Tap Back there to return to the photos." -ForegroundColor Yellow
 }
 # Over USB, switch Wi-Fi adb back on so the next update can skip the cable.
 if ($viaUsb) {

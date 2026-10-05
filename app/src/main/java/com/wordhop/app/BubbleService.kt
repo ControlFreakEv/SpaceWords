@@ -1,7 +1,6 @@
 package com.wordhop.app
 
 import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,8 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
@@ -26,65 +23,37 @@ import kotlin.math.abs
  * Keeps a draggable UFO button floating over the Skylight app.
  * Tap it to open Space Words; drag it wherever you want it (position is remembered).
  *
- * Runs in its own process (":ufo" in the manifest). The frame's low-memory firmware kills the
- * game's process as soon as another app comes to the front, and with the UFO in that process
- * the button vanished every time "Back to photos" was tapped.
+ * Tapping it opens the games in a floating window (GameWindow) above the slideshow, so Skylight
+ * never leaves the screen. Runs in its own process (":ufo" in the manifest).
  */
 class BubbleService : Service() {
 
     companion object {
         private const val CHANNEL = "bubble"
         private const val TAG = "SpaceWords"
-        const val ACTION_SHOW = "com.wordhop.app.UFO_SHOW"
-        const val ACTION_HIDE = "com.wordhop.app.UFO_HIDE"
-        private const val CHECK_MS = 5000L
+        const val ACTION_OPEN_GAME = "com.wordhop.app.OPEN_GAME"
     }
 
     private var wm: WindowManager? = null
     private var bubble: View? = null
-    private val handler = Handler(Looper.getMainLooper())
-
-    /** While hidden, bring the UFO back if the game is no longer in front (e.g. it was killed). */
-    private val watchGame = object : Runnable {
-        override fun run() {
-            if (bubble?.visibility != View.VISIBLE) {
-                if (gameInFront()) handler.postDelayed(this, CHECK_MS) else setShown(true)
-            }
-        }
-    }
+    private var game: GameWindow? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_SHOW -> setShown(true)
-            ACTION_HIDE -> setShown(false)
-        }
+        if (intent?.action == ACTION_OPEN_GAME) openGame()
         return START_STICKY
     }
 
-    private fun setShown(visible: Boolean) {
-        val b = bubble ?: return
-        b.visibility = if (visible) View.VISIBLE else View.GONE
-        handler.removeCallbacks(watchGame)
-        if (!visible) handler.postDelayed(watchGame, CHECK_MS * 2)
+    /** Opens the games in their floating window; the UFO hides until the window closes. */
+    private fun openGame() {
+        if (!canOverlay(this)) return
+        val g = game ?: GameWindow(this) { bubble?.visibility = View.VISIBLE }.also { game = it }
+        if (g.isShowing) return
+        bubble?.visibility = View.GONE
+        g.show()
     }
 
-    /** Is the game's own process (not this ":ufo" one) the app in front? */
-    private fun gameInFront(): Boolean {
-        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val procs = try { am.runningAppProcesses } catch (e: Exception) { null } ?: return false
-        return procs.any {
-            it.processName == packageName &&
-                it.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
-        }
-    }
-
-    /**
-     * Never let a failure here crash the app: Android restarts a crashed sticky service, and two
-     * crashes within a minute get the app marked "bad", after which it won't even start at boot.
-     * Log the reason and stop instead.
-     */
     override fun onCreate() {
         super.onCreate()
         try {
@@ -191,13 +160,9 @@ class BubbleService : Service() {
         bubble = view
     }
 
-    private fun openGame() {
-        setShown(false)
-        startActivity(Intent(this, GameActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }
-
     override fun onDestroy() {
-        handler.removeCallbacks(watchGame)
+        game?.hide()
+        game = null
         bubble?.let { try { wm?.removeView(it) } catch (e: Exception) { Log.w(TAG, "Couldn't remove the UFO window", e) } }
         bubble = null
         super.onDestroy()

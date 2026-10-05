@@ -15,14 +15,9 @@ fun startBubble(context: Context) {
     if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
 }
 
-/**
- * Shows or hides the UFO. It runs in its own process (":ufo"), so this goes through Android
- * rather than a direct call; it also starts the UFO service if it isn't running.
- * Only call it while the game is in front (background starts are restricted on newer Android).
- */
-fun showBubble(context: Context, visible: Boolean) {
-    val intent = Intent(context, BubbleService::class.java)
-        .setAction(if (visible) BubbleService.ACTION_SHOW else BubbleService.ACTION_HIDE)
+/** Opens the games in their floating window (starting the UFO service if needed). */
+fun openGameWindow(context: Context) {
+    val intent = Intent(context, BubbleService::class.java).setAction(BubbleService.ACTION_OPEN_GAME)
     try {
         context.startService(intent)
     } catch (e: Exception) {

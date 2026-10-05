@@ -125,11 +125,12 @@ if ($ufoRunning) {
 $answer = if ($ufoRunning) { Read-Host } else { "o" }
 if ($answer -match '^[oO]') {
     $log += "", "===== game opened from the PC ====="
-    $log += A shell am start -W -n com.wordhop.app/.GameActivity | ForEach-Object { "$_".TrimEnd() }
+    $log += A shell am startservice -n com.wordhop.app/.BubbleService -a com.wordhop.app.OPEN_GAME | ForEach-Object { "$_".TrimEnd() }
     Write-Host "Opening the game on the frame. When 'Pick a mission' shows, press Enter."
     Read-Host | Out-Null
 }
-$gameUp = (A shell dumpsys activity activities | Where-Object { $_ -match 'mFocusedActivity.*wordhop' }).Count -gt 0
+# The games are a full-screen floating window now, not an activity.
+$gameUp = (A shell dumpsys window windows | Where-Object { $_ -match 'fillxfill.*packageName=com\.wordhop\.app' }).Count -gt 0
 if (-not $gameUp) {
     $log += "", "===== WARNING: the game was not on screen after STEP 1 ====="
     Write-Host "The game doesn't seem to be on screen. Carrying on so the log still gets saved." -ForegroundColor Red
