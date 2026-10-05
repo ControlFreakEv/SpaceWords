@@ -42,13 +42,36 @@ function Snapshot([string]$label) {
     return $s
 }
 
+function Get-CrashReports {
+    # Android keeps app crash reports on disk ("dropbox"), so they survive reboots.
+    $c = @("", "===== Space Words crash reports (saved on the frame, newest last) =====")
+    $box = @(A shell dumpsys dropbox --print data_app_crash | ForEach-Object { "$_".TrimEnd() })
+    $starts = @()
+    for ($i = 0; $i -lt $box.Count; $i++) { if ($box[$i] -match '^Process: com\.wordhop\.app') { $starts += $i } }
+    if ($starts.Count -eq 0) { $c += "(none found)" }
+    foreach ($st in ($starts | Select-Object -Last 3)) {
+        $c += "-----"
+        $from = [math]::Max($st - 2, 0)
+        $to = [math]::Min($st + 45, $box.Count - 1)
+        for ($k = $from; $k -le $to; $k++) {
+            if ($k -gt $st -and $box[$k] -match '^={10,}') { break }
+            $c += $box[$k]
+        }
+    }
+    $c += "", "===== crash log buffer ====="
+    $c += A logcat -b crash -d -v time | Select-Object -Last 80 | ForEach-Object { "$_".TrimEnd() }
+    $c += "", "===== processes Android has marked bad ====="
+    $c += A shell dumpsys activity processes | Where-Object { $_ -match 'Bad process|crashed at|wordhop.*bad' } | ForEach-Object { "$_".TrimEnd() }
+    return $c
+}
+
 function Get-FrameHistory([string]$label) {
     $h = @("", "===== ${label}: app deaths, crashes, restarts =====")
     $h += A logcat -d -v time | Where-Object {
-        $_ -match 'wordhop|FATAL|AndroidRuntime|has died|Scheduling restart|lowmemorykiller|Killing |Force stopping|force-stop'
+        $_ -match 'wordhop|SpaceWords|FATAL|AndroidRuntime|has died|crashed too many|Scheduling restart|lowmemorykiller|Killing |Force stopping|force-stop'
     } | Select-Object -Last 80 | ForEach-Object { "$_".TrimEnd() }
     $h += "", "===== ${label}: process events ====="
-    $h += A logcat -b events -d -v time | Where-Object { $_ -match 'am_proc_died|am_kill|am_crash|am_proc_start|am_low_memory' } |
+    $h += A logcat -b events -d -v time | Where-Object { $_ -match 'am_proc_died|am_kill|am_crash|am_proc_bad|am_process_crashed_too_much|am_proc_start|am_low_memory' } |
         Select-Object -Last 60 | ForEach-Object { "$_".TrimEnd() }
     $h += "", "===== ${label}: kernel low-memory kills ====="
     $h += A shell dmesg | Where-Object { $_ -match 'lowmemorykiller|lowmem|oom' } | Select-Object -Last 30 | ForEach-Object { "$_".TrimEnd() }
@@ -66,22 +89,35 @@ $log += "===== memory ====="
 $log += A shell cat /proc/meminfo | Select-Object -First 4 | ForEach-Object { "$_".TrimEnd() }
 $log += Snapshot "1 photos showing"
 $log += Get-FrameHistory "1 before the test (recent history)"
+$log += Get-CrashReports
 
+$ufoRunning = (A shell ps | Where-Object { $_ -match 'com\.wordhop\.app' }).Count -gt 0
 Write-Host ""
-Write-Host "STEP 1: On the frame, tap the UFO to open Space Words." -ForegroundColor Yellow
-Write-Host "        If the UFO is missing, type O and press Enter to open the game from here."
-Write-Host "        When the 'Pick a mission' screen shows, press Enter here."
+if ($ufoRunning) {
+    Write-Host "STEP 1: On the frame, tap the UFO to open Space Words." -ForegroundColor Yellow
+    Write-Host "        (If you can't see the UFO, type O and press Enter to open the game from here.)"
+    Write-Host "        When the 'Pick a mission' screen shows, press Enter here."
+} else {
+    Write-Host "STEP 1: Space Words isn't running on the frame, so the UFO is gone." -ForegroundColor Yellow
+    Write-Host "        Type O and press Enter to open the game from here."
+}
 $answer = Read-Host
 if ($answer -match '^[oO]') {
-    $log += "", "===== game opened from the PC (UFO was missing) ====="
-    A shell am start -n com.wordhop.app/.GameActivity | Out-Null
+    $log += "", "===== game opened from the PC ====="
+    $log += A shell am start -W -n com.wordhop.app/.GameActivity | ForEach-Object { "$_".TrimEnd() }
     Write-Host "Opening the game on the frame. When 'Pick a mission' shows, press Enter."
     Read-Host | Out-Null
+}
+$gameUp = (A shell dumpsys activity activities | Where-Object { $_ -match 'mFocusedActivity.*wordhop' }).Count -gt 0
+if (-not $gameUp) {
+    $log += "", "===== WARNING: the game was not on screen after STEP 1 ====="
+    Write-Host "The game doesn't seem to be on screen. Carrying on so the log still gets saved." -ForegroundColor Red
 }
 
 $log += Snapshot "2 game open"
 A logcat -c | Out-Null
 A logcat -b events -c | Out-Null
+A logcat -b crash -c | Out-Null
 
 Write-Host ""
 Write-Host "STEP 2: Tap 'Back to photos' on the frame." -ForegroundColor Yellow
@@ -93,11 +129,13 @@ $log += "", "===== about $secs s from STEP 2 prompt to Enter ====="
 
 $log += Snapshot "3 back on photos"
 $log += "", "===== ActivityManager log ====="
-$log += A logcat -d -v time -s ActivityManager:I | Select-Object -Last 80 | ForEach-Object { "$_".TrimEnd() }
+$log += A logcat -d -v time | Where-Object { $_ -match 'ActivityManager' } | Select-Object -Last 80 | ForEach-Object { "$_".TrimEnd() }
 $log += "", "===== activity events ====="
 $log += A logcat -b events -d -v time | Where-Object { $_ -match 'am_|wm_task' } |
     Select-Object -Last 80 | ForEach-Object { "$_".TrimEnd() }
 $log += Get-FrameHistory "4 during the test"
+$log += "", "===== crashes during the test ====="
+$log += A logcat -b crash -d -v time | Select-Object -Last 80 | ForEach-Object { "$_".TrimEnd() }
 Start-Sleep -Seconds 5
 $log += Snapshot "5 five seconds later"
 $log += "", "===== Skylight app log (last 60 lines) ====="

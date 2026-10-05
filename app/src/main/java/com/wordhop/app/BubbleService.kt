@@ -10,6 +10,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -27,6 +28,7 @@ class BubbleService : Service() {
     companion object {
         private var instance: BubbleService? = null
         private const val CHANNEL = "bubble"
+        private const val TAG = "SpaceWords"
 
         fun setVisible(visible: Boolean) {
             instance?.bubble?.visibility = if (visible) View.VISIBLE else View.GONE
@@ -40,12 +42,31 @@ class BubbleService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
+    /**
+     * Never let a failure here crash the app: Android restarts a crashed sticky service, and two
+     * crashes within a minute get the app marked "bad", after which it won't even start at boot.
+     * Log the reason and stop instead.
+     */
     override fun onCreate() {
         super.onCreate()
         instance = this
-        startForeground(1, notification())
-        if (!canOverlay(this)) { stopSelf(); return }
-        addBubble()
+        try {
+            startForeground(1, notification())
+        } catch (e: Exception) {
+            Log.e(TAG, "Couldn't start the UFO service in the foreground", e)
+        }
+        if (!canOverlay(this)) {
+            Log.w(TAG, "No permission to draw over other apps; UFO button not shown")
+            stopSelf()
+            return
+        }
+        try {
+            addBubble()
+        } catch (e: Exception) {
+            Log.e(TAG, "Couldn't add the UFO button window", e)
+            bubble = null
+            stopSelf()
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -138,7 +159,7 @@ class BubbleService : Service() {
     }
 
     override fun onDestroy() {
-        bubble?.let { wm?.removeView(it) }
+        bubble?.let { try { wm?.removeView(it) } catch (e: Exception) { Log.w(TAG, "Couldn't remove the UFO window", e) } }
         bubble = null
         instance = null
         super.onDestroy()
