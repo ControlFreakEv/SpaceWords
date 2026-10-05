@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="parent" content="math.html">
+<title>Math games</title>
+<style>
+@font-face{font-family:"WHFun";src:url("fonts/fredoka.ttf") format("truetype");font-weight:600}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:#0B1026;background-image:radial-gradient(circle at 75% 15%, #2A1E5C 0%, #131A3D 45%, #0B1026 80%);color:#F3F6FF;font-family:"WHFun","Trebuchet MS",sans-serif;font-weight:600;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0);overflow:hidden;
+}
+button{font-family:inherit;font-weight:inherit;color:inherit;border:0;background:none;padding:0;margin:0;cursor:pointer;outline:none}
+img{display:block}
+.screen{display:none;position:absolute;left:0;top:0;right:0;bottom:0;padding:3vmin 4vmin;overflow:hidden;z-index:1}
+.screen.on{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.paper{background:#F7F9FF;color:#1F2A44;border:0.5vmin solid #1F2A44;border-radius:2.8vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A}
+.press{-webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s}
+.press:active{-webkit-transform:translate(0.5vmin,0.5vmin);transform:translate(0.5vmin,0.5vmin);box-shadow:0.3vmin 0.3vmin 0 #05081A}
+.flex{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+
+/* level list */
+.hero{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:2vmin 0 4vmin}
+.hero img{width:15vmin;height:15vmin;margin-right:3vmin;-webkit-animation:hop 1.6s ease-out 1;animation:hop 1.6s ease-out 1}
+@-webkit-keyframes hop{0%{-webkit-transform:translateY(5vmin) scale(.6);opacity:0}35%{-webkit-transform:translateY(-5vmin) scale(1.05);opacity:1}55%{-webkit-transform:translateY(0) scaleY(.88)}70%{-webkit-transform:translateY(-1.5vmin)}100%{-webkit-transform:none}}
+@keyframes hop{0%{transform:translateY(5vmin) scale(.6);opacity:0}35%{transform:translateY(-5vmin) scale(1.05);opacity:1}55%{transform:translateY(0) scaleY(.88)}70%{transform:translateY(-1.5vmin)}100%{transform:none}}
+.hero h1{margin:0;font-size:12vmin;line-height:.95;font-weight:600;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.hero p{margin:1vmin 0 0;font-size:3.6vmin;color:#B9C3F2}
+.path{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin:0 -1.2vmin}
+.stone{width:18%;margin:1.2vmin 1%;padding:2.2vmin 2.4vmin;text-align:left;min-height:26vmin;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.num{width:7vmin;height:7vmin;border-radius:50%;border:0.5vmin solid #1F2A44;font-size:3.6vmin;line-height:6vmin;text-align:center;color:#1F2A44}
+.sname{font-size:3.4vmin;margin-top:1.4vmin}
+.ex{font-size:3vmin;color:#4F5F80;margin-top:.6vmin}
+.grade{font-size:2.4vmin;color:#7F8AC0;margin-top:.4vmin}
+.best{margin-top:auto;padding-top:1vmin;font-size:2.6vmin;color:#4F5F80}
+.best b{color:#1F2A44}
+.foot{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-align-items:center;align-items:center;margin-top:auto;padding-top:2vmin}
+.foot > *{margin:0 2vmin 1.4vmin 0}
+.pill{padding:1.6vmin 2.8vmin;font-size:2.8vmin;border-radius:10vmin}
+.note{font-size:2.4vmin;color:#B9C3F2}
+.credit{font-size:1.8vmin;color:#7F8AC0;width:100%}
+
+/* game */
+.bar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:1.4vmin}
+.icon-btn{width:9vmin;height:9vmin;-webkit-flex:none;flex:none}
+.icon-btn img{width:5.5vmin;height:5.5vmin}
+.dots{-webkit-flex:1;flex:1;text-align:center;font-size:0}
+.dot{display:inline-block;width:3.2vmin;height:3.2vmin;border-radius:50%;border:0.45vmin solid #5CE1E6;background:#131A3D;margin:0 .6vmin}
+.dot.now{background:#5CE1E6}.dot.gold{background:#FFD93D;border-color:#FFD93D}.dot.ok{background:#7CFFB2;border-color:#7CFFB2}
+.stars{font-size:4vmin;min-width:13vmin;text-align:right;color:#FFD93D}
+.stage{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-around;justify-content:space-around}
+.hintrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+.hint{margin:0;font-size:4.2vmin;color:#B9C3F2;text-align:center}
+.sayb{width:8vmin;height:8vmin;border-radius:50%;background:#FFD93D;margin-left:2vmin;-webkit-flex:none;flex:none}
+.sayb img{width:5vmin;height:5vmin}
+.prompt{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.prompt.col{-webkit-flex-direction:column;flex-direction:column}
+.op{font-size:10vmin;margin:0 2vmin;color:#FFD93D}
+
+/* ten-frames */
+.frame{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;width:39.6vmin;margin:1vmin;background:#131A3D;border:0.5vmin solid #5CE1E6;border-radius:1.6vmin;padding:.4vmin}
+.cell{position:relative;width:7vmin;height:7vmin;margin:.2vmin;border:0.25vmin dashed rgba(92,225,230,.35);border-radius:1vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.cell img{width:5.6vmin;height:5.6vmin}
+.cell.x img{opacity:.35}
+.cell.x:after{content:"";position:absolute;left:8%;right:8%;top:46%;height:.8vmin;border-radius:.4vmin;background:#FF5C7A;-webkit-transform:rotate(-40deg);transform:rotate(-40deg)}
+.sm .frame{width:31.6vmin;padding:.3vmin;margin:.6vmin}
+.sm .cell{width:5.6vmin;height:5.6vmin;margin:.15vmin}
+.sm .cell img{width:4.6vmin;height:4.6vmin}
+.groups{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center;max-width:120vmin}
+.grp{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center;width:19vmin;min-height:13vmin;margin:1vmin;padding:1vmin;border:0.5vmin solid #FF9ED8;border-radius:50%;background:#131A3D;-webkit-align-content:center;align-content:center}
+.grp img{width:5.4vmin;height:5.4vmin;margin:.3vmin}
+
+/* place value */
+.pv{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;padding:2vmin;background:#131A3D;border:0.5vmin solid #5CE1E6;border-radius:2vmin}
+.rod{margin:0 .7vmin}
+.rod span,.ones span{display:block;width:4vmin;height:2.6vmin;background:#FFD93D;border:0.3vmin solid #1F2A44;margin-top:-.3vmin}
+.ones{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap-reverse;flex-wrap:wrap-reverse;width:9vmin;margin-left:3vmin}
+.ones span{width:4vmin;height:4vmin;background:#7CFFB2;margin:.2vmin;border-radius:.6vmin}
+.pvkey{font-size:3vmin;color:#B9C3F2;margin-top:1.4vmin}
+
+/* equations, sequences */
+.eq{font-size:12vmin;line-height:1.1;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;margin:1vmin 0}
+.eq.small{font-size:8vmin}
+.eq span{margin:0 1.4vmin}
+.q{display:inline-block;min-width:13vmin;padding:0 1.6vmin;text-align:center;border-radius:2vmin;background:#FFD93D;color:#1F2A44;border:0.5vmin solid #1F2A44}
+.q.reveal{background:#FF9E5C}
+.bignum{font-size:20vmin;line-height:1;color:#FFD93D;text-shadow:0.8vmin 0.8vmin 0 #05081A}
+.seq{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.bub{min-width:13vmin;height:13vmin;margin:1vmin;padding:0 1.6vmin;font-size:7.5vmin;border-radius:6.5vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.bub img{width:9vmin;height:9vmin}
+.bub.q{background:#FFD93D;color:#1F2A44;min-width:13vmin}
+
+/* answers */
+.choices{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap;width:100%}
+.choice{margin:0 1.6vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.choice.n{width:19vmin;height:15vmin;font-size:8.5vmin}
+.choice.g{padding:1vmin;background:#1B2457;border-color:#5CE1E6}
+.choice.e{width:16vmin;height:16vmin}
+.choice.e img{width:11vmin;height:11vmin}
+.choice.dim{opacity:.35;pointer-events:none}
+.choice.right{background:#7CFFB2;color:#14193A}
+.nope{-webkit-animation:shake .4s;animation:shake .4s}
+@-webkit-keyframes shake{20%{-webkit-transform:translateX(-1.4vmin)}40%{-webkit-transform:translateX(1.4vmin)}60%{-webkit-transform:translateX(-.8vmin)}80%{-webkit-transform:translateX(.8vmin)}}
+@keyframes shake{20%{transform:translateX(-1.4vmin)}40%{transform:translateX(1.4vmin)}60%{transform:translateX(-.8vmin)}80%{transform:translateX(.8vmin)}}
+
+/* keypad rounds */
+.padrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-around;justify-content:space-around;width:100%;-webkit-flex:1;flex:1}
+.padleft{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-around;justify-content:space-around;-webkit-flex:1;flex:1;height:100%}
+.pad{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;width:44vmin;-webkit-flex:none;flex:none}
+.key{width:12.6vmin;height:12vmin;margin:.8vmin;font-size:6.4vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.key.go{background:#7CFFB2}
+.key.del{background:#FFD9E6}
+
+/* end */
+.endbox{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;text-align:center}
+.endbox img{width:18vmin;height:18vmin}
+.endbox h2{margin:2vmin 0 1vmin;font-size:10vmin;font-weight:600;line-height:1;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.score{font-size:4.4vmin;color:#B9C3F2}
+.score b{color:#FFD93D}
+.endbtns{margin-top:4vmin;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center}
+.bigbtn{padding:2.4vmin 4vmin;font-size:3.8vmin;border-radius:2.6vmin;margin:1vmin 1.4vmin}
+.bigbtn.go{background:#7CFFB2;color:#14193A}
+
+.bit{position:fixed;width:1.8vmin;height:1.8vmin;border-radius:.4vmin;pointer-events:none;z-index:9;
+  -webkit-transition:-webkit-transform .9s ease-out,opacity .9s ease-out;transition:transform .9s ease-out,opacity .9s ease-out}
+#sky{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:0}
+.star{position:absolute;border-radius:50%;background:#fff;-webkit-animation:twinkle 3s ease-in-out infinite;animation:twinkle 3s ease-in-out infinite}
+@-webkit-keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@media (orientation: portrait){
+  .stone{width:48%}
+  .padrow{-webkit-flex-direction:column;flex-direction:column}
+  .hero h1{font-size:15vmin}
+}
+</style>
+</head>
+<body>
+<div id="sky"></div>
+
+<section class="screen on" id="home">
+  <div class="hero">
+    <img id="heroImg" src="emoji/1f31f.svg" alt="">
+    <div><h1 id="heroTitle"></h1><p id="heroSub"></p></div>
+  </div>
+  <div class="path" id="path"></div>
+  <div class="foot">
+    <button class="paper press pill" id="gamesBtn">&#8592; Math games</button>
+    <button class="paper press pill" id="soundBtn"></button>
+    <span class="note" id="speechNote" style="display:none">Talking isn't set up on this device yet. Questions are still written on screen.</span>
+    <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0</span>
+  </div>
+</section>
+
+<section class="screen" id="game">
+  <div class="bar">
+    <button class="paper press icon-btn flex" id="homeBtn" aria-label="Back to levels"><img id="barImg" src="emoji/1f31f.svg" alt=""></button>
+    <div class="dots" id="dots"></div>
+    <div class="stars" id="stars"></div>
+  </div>
+  <div class="stage" id="stage"></div>
+</section>
+
+<section class="screen" id="end">
+  <div class="endbox">
+    <img src="emoji/1f47d.svg" alt="">
+    <h2 id="endTitle"></h2>
+    <div class="score" id="endScore"></div>
+    <div class="endbtns" id="endBtns"></div>
+  </div>
+</section>
+
+<script src="speech.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ---------- helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, html){ var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+function shuffle(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function ri(lo, hi){ return lo + Math.floor(Math.random()*(hi - lo + 1)); }
+function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ") >= 0; }
+function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
+function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
+function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); }
+function n(k){ return "n_" + k; }
+var MINUS = "&#8722;", TIMES = "&#215;", DIVIDE = "&#247;";
+
+/* things to count: emoji code and plural name */
+var THINGS = [["2b50","stars"],["1f47d","aliens"],["1f680","rockets"],["1f319","moons"],["1fa90","planets"],["1f6f8","flying saucers"],
+  ["1f34e","apples"],["1f36a","cookies"],["1f41e","ladybugs"],["1f388","balloons"],["1f6f0","satellites"],["1f320","shooting stars"]];
+function img(code){ return '<img src="emoji/' + code + '.svg" alt="">'; }
+
+/* n objects in ten-frames; the last `cross` of them crossed out (taken away) */
+function frames(count, code, cross){
+  var out = "", frameCount = Math.max(1, Math.ceil(count / 10));
+  for (var f = 0; f < frameCount; f++){
+    out += '<div class="frame">';
+    for (var c = 0; c < 10; c++){
+      var i = f*10 + c, x = cross && i >= count - cross && i < count;
+      out += '<div class="cell' + (x ? " x" : "") + '">' + (i < count ? img(code) : "") + '</div>';
+    }
+    out += '</div>';
+  }
+  return out;
+}
+
+/* four answer choices around the right one, kept inside lo..hi */
+function numOpts(ans, lo, hi, extras, count){
+  var want = count || 4, set = [ans];
+  var cands = shuffle((extras || []).concat([ans+1, ans-1, ans+2, ans-2, ans+10, ans-10]));
+  for (var i = 0; i < cands.length && set.length < want; i++){
+    var c = cands[i];
+    if (c >= lo && c <= hi && set.indexOf(c) < 0) set.push(c);
+  }
+  var guard = 0;
+  while (set.length < want && guard++ < 200){ var r = ri(lo, hi); if (set.indexOf(r) < 0) set.push(r); }
+  return shuffle(set).map(function(v){ return { html:String(v), val:v, cls:"n" }; });
+}
+
+/* ---------- round makers ----------
+   Each returns { hint, say, prompt, kind:"choice"|"pad", options, answer, answerSay }.
+   For keypad rounds the prompt contains <span class="q" id="entry">?</span>. */
+var Q = '<span class="q" id="entry">?</span>';
+
+function rCount(lo, hi){
+  var k = ri(lo, hi), t = pick(THINGS);
+  return { hint:"How many " + t[1] + "?", say:["m_how_many"], prompt:frames(k, t[0]),
+    kind:"choice", options:numOpts(k, 0, hi + 2), answer:k, answerSay:[n(k)] };
+}
+function rFindGroup(lo, hi){
+  var k = ri(lo, hi), t = pick(THINGS), set = [k], guard = 0;
+  while (set.length < 3 && guard++ < 100){ var o = k + pick([-3,-2,-1,1,2,3]); if (o >= 1 && o <= hi && set.indexOf(o) < 0) set.push(o); }
+  return { hint:"Tap the group with " + k + ".", say:["m_find_group", n(k)], prompt:'<div class="bignum">' + k + '</div>',
+    kind:"choice", options:shuffle(set).map(function(v){ return { html:'<div class="sm">' + frames(v, t[0]) + '</div>', val:v, cls:"g" }; }),
+    answer:k, answerSay:[n(k)] };
+}
+function rCompareGroups(lo, hi){
+  var a = ri(lo, hi), b, guard = 0;
+  do { b = ri(lo, hi); } while ((b === a || Math.abs(a - b) > 6) && guard++ < 100);
+  if (b === a) b = a === hi ? a - 1 : a + 1;
+  var more = Math.random() < 0.6, t = pick(THINGS), ans = more ? Math.max(a, b) : Math.min(a, b);
+  return { hint:"Which group has " + (more ? "more" : "fewer") + " " + t[1] + "?", say:[more ? "m_more" : "m_fewer"], prompt:"",
+    kind:"choice", options:[a, b].map(function(v){ return { html:'<div class="sm">' + frames(v, t[0]) + '</div>', val:v, cls:"g" }; }),
+    answer:ans, answerSay:[n(ans)] };
+}
+function rCompareNums(lo, hi){
+  var a = ri(lo, hi), b;
+  var tens = Math.floor(a / 10), ones = a % 10;
+  if (a >= 10 && ones !== 0 && ones !== tens && Math.random() < 0.4) b = ones*10 + tens;   // 46 vs 64
+  else { var guard = 0; do { b = ri(lo, hi); } while (b === a && guard++ < 100); }
+  if (b === a) b = a + 1;
+  var big = Math.random() < 0.6, ans = big ? Math.max(a, b) : Math.min(a, b);
+  return { hint:"Which number is " + (big ? "bigger" : "smaller") + "?", say:[big ? "m_bigger" : "m_smaller"], prompt:"",
+    kind:"choice", options:[a, b].map(function(v){ return { html:String(v), val:v, cls:"n" }; }), answer:ans, answerSay:[n(ans)] };
+}
+function bubbles(values, hideIndex, asImages){
+  var out = '<div class="seq">';
+  for (var i = 0; i < values.length; i++){
+    if (i === hideIndex) out += '<div class="paper bub q" id="entry">?</div>';
+    else out += '<div class="paper bub">' + (asImages ? img(values[i]) : values[i]) + '</div>';
+  }
+  return out + '</div>';
+}
+function rNeighbor(lo, hi, pad){
+  var type = pick(["after","before","between"]), k, vals, hide, say, hint;
+  if (type === "after"){ k = ri(lo, hi - 1); vals = [k, k + 1]; hide = 1; hint = "What comes after " + k + "?"; say = ["m_after", n(k)]; }
+  else if (type === "before"){ k = ri(lo + 1, hi); vals = [k - 1, k]; hide = 0; hint = "What comes before " + k + "?"; say = ["m_before", n(k)]; }
+  else { k = ri(lo + 1, hi - 1); vals = [k - 1, k, k + 1]; hide = 1; hint = "What number is between " + (k-1) + " and " + (k+1) + "?"; say = ["m_between", n(k-1), "m_and", n(k+1)]; }
+  var ans = vals[hide];
+  return { hint:hint, say:say, prompt:bubbles(vals, hide), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(ans, 0, 100), answer:ans, answerSay:[n(ans)] };
+}
+function placeValue(k){
+  var tens = Math.floor(k / 10), ones = k % 10, out = '<div class="pv">';
+  for (var t = 0; t < tens; t++){ out += '<div class="rod">'; for (var s = 0; s < 10; s++) out += '<span></span>'; out += '</div>'; }
+  out += '<div class="ones">'; for (var o = 0; o < ones; o++) out += '<span></span>'; out += '</div></div>';
+  return out + '<div class="pvkey">Each tall stack is 10. Each green square is 1.</div>';
+}
+function rPlaceValue(pad){
+  var k = ri(11, 99), tens = Math.floor(k / 10), ones = k % 10;
+  return { hint:"What number is this?", say:["m_what_number"], prompt:'<div class="prompt col">' + placeValue(k) + (pad ? '<div class="eq small">' + Q + '</div>' : '') + '</div>',
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(k, 10, 99, ones > 0 ? [ones*10 + tens] : []), answer:k, answerSay:[n(k)] };
+}
+function rTenMoreLess(pad){
+  var more = Math.random() < 0.5, k = more ? ri(10, 89) : ri(20, 99), ans = more ? k + 10 : k - 10;
+  return { hint:"What is 10 " + (more ? "more" : "less") + " than " + k + "?", say:[more ? "m_ten_more" : "m_ten_less", n(k)],
+    prompt:'<div class="eq small"><span>10 ' + (more ? "more" : "less") + ' than ' + k + ' is</span>' + Q + '</div>',
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(ans, 0, 100, [k + 1, k - 1, more ? k - 10 : k + 10]), answer:ans, answerSay:[n(ans)] };
+}
+
+function eqHtml(a, op, b){ return '<div class="eq"><span>' + a + '</span><span>' + op + '</span><span>' + b + '</span><span>=</span>' + Q + '</div>'; }
+
+function rAdd(maxSum, pics, pad){
+  var a = ri(1, maxSum - 1), b = ri(1, maxSum - a), s = a + b, t = pick(THINGS);
+  var p = (pics ? '<div class="prompt">' + frames(a, t[0]) + '<span class="op">+</span>' + frames(b, t[0]) + '</div>' : '') + eqHtml(a, "+", b);
+  return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:'<div class="prompt col">' + p + '</div>',
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(s, 0, maxSum + 3, [a, b]), answer:s, answerSay:[n(s)] };
+}
+function rSub(max, pics, pad){
+  var a = ri(2, max), b = ri(1, a), d = a - b, t = pick(THINGS);
+  var p = (pics ? '<div class="prompt">' + frames(a, t[0], b) + '</div>' : '') + eqHtml(a, MINUS, b);
+  return { hint:"What is " + a + " " + "−" + " " + b + "?", say:["m_what_is", n(a), "m_minus", n(b)], prompt:'<div class="prompt col">' + p + '</div>',
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(d, 0, max, [a + b <= max + 5 ? a + b : a]), answer:d, answerSay:[n(d)] };
+}
+function rMissing(max, pad){
+  var a = ri(1, max - 1), b = ri(1, max - a), s = a + b, first = Math.random() < 0.5;
+  var q = Q;
+  var html = '<div class="eq">' + (first ? q + '<span>+</span><span>' + b + '</span>' : '<span>' + a + '</span><span>+</span>' + q) + '<span>=</span><span>' + s + '</span></div>';
+  var ans = first ? a : b;
+  return { hint:"What number is missing?", say:["m_missing"], prompt:html, kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(ans, 0, max, [s, first ? b : a]), answer:ans, answerSay:[n(ans)] };
+}
+function rAdd2(pad){
+  var type = pick(["tens","easy","carry"]), a, b;
+  if (type === "tens"){ a = ri(1, 8)*10; b = ri(1, 9 - a/10)*10; }
+  else if (type === "easy"){ var ta = ri(1, 7), tb = ri(1, 8 - ta), oa = ri(0, 8), ob = ri(0, 9 - oa); a = ta*10 + oa; b = tb*10 + ob; if (b < 10) b += 10; }
+  else { var oa2 = ri(2, 9), ob2 = ri(10 - oa2, 9), ta2 = ri(1, 6), tb2 = ri(0, 7 - ta2); a = ta2*10 + oa2; b = tb2*10 + ob2; }
+  var s = a + b;
+  return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:eqHtml(a, "+", b), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(s, 0, 100, [s - 10, s + 10]), answer:s, answerSay:[n(s)] };
+}
+function rSub2(pad){
+  var type = pick(["tens","easy","borrow"]), a, b;
+  if (type === "tens"){ a = ri(3, 9)*10; b = ri(1, a/10 - 1)*10; }
+  else if (type === "easy"){ var ta = ri(3, 9), oa = ri(2, 9); a = ta*10 + oa; b = ri(1, ta - 1)*10 + ri(0, oa); }
+  else { var ta2 = ri(3, 9), oa2 = ri(0, 7); a = ta2*10 + oa2; b = ri(1, ta2 - 2)*10 + ri(oa2 + 1, 9); }
+  var d = a - b;
+  return { hint:"What is " + a + " − " + b + "?", say:["m_what_is", n(a), "m_minus", n(b)], prompt:eqHtml(a, MINUS, b), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(d, 0, 100, [d + 10, d - 10]), answer:d, answerSay:[n(d)] };
+}
+function rGroups(pad){
+  var g = ri(2, 5), each = ri(2, 5), t = pick(THINGS), out = '<div class="groups">';
+  for (var i = 0; i < g; i++){ out += '<div class="grp">'; for (var j = 0; j < each; j++) out += img(t[0]); out += '</div>'; }
+  out += '</div>';
+  var s = g*each;
+  return { hint:g + " groups of " + each + ". How many in all?", say:[n(g), "m_groups_of", n(each), "m_in_all"],
+    prompt:'<div class="prompt col">' + out + eqHtml(g, TIMES, each).replace('class="eq"', 'class="eq small"') + '</div>',
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(s, 0, 30, [g + each, s + each, s - each]), answer:s, answerSay:[n(s)] };
+}
+function rTimes(pad){
+  var a = pick([2,3,4,5,10,2,5,10,6,7,8,9]), b = ri(1, a > 5 && a < 10 ? 6 : 10), p = a*b;
+  if (Math.random() < 0.5){ var tmp = a; a = b; b = tmp; }
+  return { hint:"What is " + a + " × " + b + "?", say:["m_what_is", n(a), "m_times", n(b)], prompt:eqHtml(a, TIMES, b), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(p, 0, 100, [a + b, p + a, p - b]), answer:p, answerSay:[n(p)] };
+}
+function rDivide(pad){
+  var b = pick([2,3,4,5,10]), q = ri(1, 10), a = b*q;
+  return { hint:"What is " + a + " ÷ " + b + "?", say:["m_what_is", n(a), "m_div", n(b)], prompt:eqHtml(a, DIVIDE, b), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(q, 0, 20, [q + 1, q - 1, b]), answer:q, answerSay:[n(q)] };
+}
+
+/* sequences */
+var UNITS = ["AB","AAB","ABB","ABC","AABB","ABAC"];
+function rPicturePattern(){
+  var unit = pick(UNITS), letters = [], codes = {}, pool = shuffle(THINGS);
+  for (var i = 0; i < unit.length; i++){ var L = unit.charAt(i); if (!codes[L]){ codes[L] = pool[letters.length][0]; letters.push(L); } }
+  var shown = unit.length*2 + ri(0, unit.length - 1), seq = [];
+  for (var s = 0; s <= shown; s++) seq.push(codes[unit.charAt(s % unit.length)]);
+  var ans = seq[shown];
+  var opts = letters.map(function(L){ return codes[L]; });
+  if (opts.length < 3) opts.push(pool[letters.length][0]);
+  return { hint:"What comes next?", say:["m_next"], prompt:bubbles(seq, shown, true), kind:"choice",
+    options:shuffle(opts).map(function(c){ return { html:img(c), val:c, cls:"e" }; }), answer:ans, answerHtml:img(ans), answerSay:[] };
+}
+function seqRound(vals, missing, pad){
+  var hide = missing ? ri(1, vals.length - 2) : vals.length - 1, ans = vals[hide], step = vals[1] - vals[0];
+  var say = [];
+  if (!missing) for (var i = 0; i < hide; i++) say.push(n(vals[i]));
+  say.push(missing ? "m_missing" : "m_next");
+  return { hint:missing ? "What number is missing?" : "What comes next?", say:say, prompt:bubbles(vals, hide), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(ans, 0, 100, [ans + step, ans - step, ans + 1, ans - 1]), answer:ans, answerSay:[n(ans)] };
+}
+function arith(start, step, len){ var v = []; for (var i = 0; i < len; i++) v.push(start + i*step); return v; }
+function rCountUpDown(missing){
+  var len = ri(4, 5), down = Math.random() < 0.4, vals;
+  if (down){ var top = ri(len + 2, 30); vals = arith(top, -1, len); }
+  else vals = arith(ri(0, 25), 1, len);
+  return seqRound(vals, missing, false);
+}
+function rSkip(missing){
+  var step = pick([2,5,10]), len = 5, start = step*ri(0, Math.floor((100 - step*(len - 1)) / step / 2));
+  return seqRound(arith(start, step, len), missing, false);
+}
+function rRule(missing, pad){
+  var step = pick([3,4,6,-2,-3,-5,-10,11]), len = 5, span = Math.abs(step)*(len - 1), start;
+  start = step > 0 ? ri(0, 100 - span) : ri(span, 100);
+  return seqRound(arith(start, step, len), missing, pad);
+}
+function rBuster(pad){
+  var type = pick(["double","halve","grow","by25","odd","alt","square"]), v = [], i;
+  if (type === "double"){ var s = pick([1,2,3]); v = [s]; while (v.length < 5) v.push(v[v.length - 1]*2); }
+  else if (type === "halve"){ v = [pick([64,96,80])]; while (v.length < 5) v.push(v[v.length - 1]/2); }
+  else if (type === "grow"){ v = [ri(1, 5)]; for (i = 1; i < 6; i++) v.push(v[i - 1] + i); }
+  else if (type === "by25"){ v = arith(pick([0,25]), 25, 4); }
+  else if (type === "odd"){ v = arith(2*ri(0, 20) + 1, 2, 5); }
+  else if (type === "alt"){ var a = ri(1, 20); v = [a]; for (i = 1; i < 6; i++) v.push(v[i - 1] + (i % 2 ? 2 : -1)); }
+  else { var b = ri(1, 3); for (i = b; i < b + 5; i++) v.push(i*i); }
+  var ans = v[v.length - 1], say = [];
+  for (i = 0; i < v.length - 1; i++) say.push(n(v[i]));
+  say.push("m_next");
+  return { hint:"What comes next? Find the rule!", say:say, prompt:bubbles(v, v.length - 1), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(ans, 0, 100, [v[v.length - 2] + (v[v.length - 2] - v[v.length - 3]), ans + 1, ans - 1]), answer:ans, answerSay:[n(ans)] };
+}
+
+/* ---------- games and levels ----------
+   Each level lists 10 round makers; they are shuffled per play. */
+function x(fn, times){ var a = []; for (var i = 0; i < times; i++) a.push(fn); return a; }
+var GAMES = {
+  count: { title:"Star Count", icon:"1f31f", sub:"Count the space things. Pick a level!", levels:[
+    { name:"Count to 10", ex:"How many stars?", grade:"Starter", rounds:x(function(){ return rCount(1, 10); }, 6).concat(x(function(){ return rFindGroup(1, 10); }, 4)) },
+    { name:"Count to 20", ex:"11 to 20", grade:"Kindergarten", rounds:x(function(){ return rCount(11, 20); }, 6).concat(x(function(){ return rNeighbor(1, 20, false); }, 4)) },
+    { name:"More or fewer", ex:"Which is bigger?", grade:"Kindergarten", rounds:x(function(){ return rCompareGroups(2, 15); }, 5).concat(x(function(){ return rCompareNums(1, 50); }, 5)) },
+    { name:"Numbers to 100", ex:"Before, after, between", grade:"1st grade", rounds:x(function(){ return rNeighbor(10, 100, false); }, 4).concat(x(function(){ return rNeighbor(10, 100, true); }, 3), x(function(){ return rCompareNums(10, 99); }, 3)) },
+    { name:"Tens and ones", ex:"4 tens 7 ones = 47", grade:"1st to 2nd grade", rounds:x(function(){ return rPlaceValue(false); }, 3).concat(x(function(){ return rPlaceValue(true); }, 3), x(function(){ return rTenMoreLess(false); }, 2), x(function(){ return rTenMoreLess(true); }, 2)) }
+  ]},
+  ops: { title:"Rocket Math", icon:"1f680", sub:"Add, take away, and more. Pick a level!", levels:[
+    { name:"Add to 5", ex:"2 + 1", grade:"Starter", rounds:x(function(){ return rAdd(5, true, false); }, 10) },
+    { name:"Add and take away", ex:"6 − 2", grade:"Kindergarten", rounds:x(function(){ return rAdd(10, true, false); }, 4).concat(x(function(){ return rSub(10, true, false); }, 4), [function(){ return rAdd(10, false, true); }, function(){ return rSub(10, false, true); }]) },
+    { name:"Facts to 20", ex:"8 + ? = 12", grade:"1st grade", rounds:x(function(){ return rAdd(20, false, false); }, 2).concat(x(function(){ return rSub(20, false, false); }, 2), x(function(){ return rMissing(20, false); }, 2), [function(){ return rAdd(20, false, true); }, function(){ return rSub(20, false, true); }, function(){ return rMissing(20, true); }, function(){ return rAdd(20, false, true); }]) },
+    { name:"Big numbers", ex:"34 + 25", grade:"2nd grade", rounds:x(function(){ return rAdd2(false); }, 2).concat(x(function(){ return rSub2(false); }, 2), x(function(){ return rAdd2(true); }, 3), x(function(){ return rSub2(true); }, 3)) },
+    { name:"Times and share", ex:"3 × 4, 12 ÷ 3", grade:"2nd to 3rd grade", rounds:x(function(){ return rGroups(false); }, 3).concat(x(function(){ return rTimes(false); }, 2), x(function(){ return rTimes(true); }, 2), [function(){ return rDivide(false); }, function(){ return rDivide(true); }, function(){ return rDivide(true); }]) }
+  ]},
+  pattern: { title:"Alien Patterns", icon:"1f47d", sub:"Crack the alien codes. Pick a level!", levels:[
+    { name:"Picture patterns", ex:"star, moon, star, ?", grade:"Starter", rounds:x(rPicturePattern, 10) },
+    { name:"Count up and down", ex:"7, 8, 9, ?", grade:"Kindergarten", rounds:x(function(){ return rCountUpDown(false); }, 6).concat(x(function(){ return rCountUpDown(true); }, 4)) },
+    { name:"Skip counting", ex:"5, 10, 15, ?", grade:"1st grade", rounds:x(function(){ return rSkip(false); }, 6).concat(x(function(){ return rSkip(true); }, 4)) },
+    { name:"Number rules", ex:"+3 or −2", grade:"2nd grade", rounds:x(function(){ return rRule(false, false); }, 4).concat(x(function(){ return rRule(true, false); }, 2), x(function(){ return rRule(false, true); }, 4)) },
+    { name:"Brain busters", ex:"1, 2, 4, 8, ?", grade:"3rd grade and up", rounds:x(function(){ return rBuster(false); }, 5).concat(x(function(){ return rBuster(true); }, 5)) }
+  ]}
+};
+var COLORS = ["#FFC93C","#FF8A3D","#E5487A","#3FB37F","#4BA3D9"];
+
+var gameId = (location.search.match(/[?&]g=([a-z]+)/) || [])[1];
+if (!GAMES[gameId]) gameId = "count";
+var GAME = GAMES[gameId];
+var ROUNDS = 10;
+document.title = GAME.title;
+
+/* ---------- storage and speech ---------- */
+function load(k, d){ try { var v = localStorage.getItem("math:" + gameId + ":" + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } }
+function save(k, v){ try { localStorage.setItem("math:" + gameId + ":" + k, JSON.stringify(v)); } catch(e){} }
+var best = load("best", {});
+function say(keys){ if (keys && keys.length) Speech.say(keys); }
+Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
+
+/* ---------- level list ---------- */
+function renderHome(){
+  $("heroImg").src = $("barImg").src = "emoji/" + GAME.icon + ".svg";
+  $("heroTitle").textContent = GAME.title;
+  $("heroSub").textContent = GAME.sub;
+  var path = $("path"); path.innerHTML = "";
+  GAME.levels.forEach(function(lv, i){
+    var b = el("button", "paper press stone"), got = best[i];
+    b.innerHTML = '<span class="num" style="background:' + COLORS[i] + '">' + (i + 1) + '</span>' +
+      '<span class="sname">' + lv.name + '</span><span class="ex">' + lv.ex + '</span><span class="grade">' + lv.grade + '</span>' +
+      '<span class="best">' + (got === undefined ? "Not played yet" : 'Best: <b>&#9733; ' + got + '</b> of ' + ROUNDS) + '</span>';
+    b.onclick = function(){ startLevel(i); };
+    path.appendChild(b);
+  });
+  $("soundBtn").textContent = Speech.soundOn() ? "Talking: on" : "Talking: off";
+  $("speechNote").style.display = Speech.mode() === "none" ? "" : "none";
+}
+$("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
+$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "math.html"; };
+$("homeBtn").onclick = function(){ Speech.stop(); renderHome(); show("home"); };
+
+/* ---------- playing ---------- */
+var G = null;
+function startLevel(i){
+  G = { level:i, makers:shuffle(GAME.levels[i].rounds).slice(0, ROUNDS), round:0, stars:0, results:[] };
+  show("game");
+  renderRound();
+}
+
+function renderDots(){
+  var d = $("dots"); d.innerHTML = "";
+  for (var i = 0; i < ROUNDS; i++){
+    var r = G.results[i];
+    d.appendChild(el("span", "dot" + (r === "gold" ? " gold" : r === "ok" ? " ok" : i === G.round ? " now" : "")));
+  }
+  $("stars").innerHTML = "&#9733; " + G.stars;
+}
+
+function renderRound(){
+  var R = G.makers[G.round]();
+  G.R = R; G.mistakes = 0; G.locked = false; G.typed = "";
+  renderDots();
+  var stage = $("stage"); stage.innerHTML = "";
+  var hr = el("div", "hintrow");
+  hr.appendChild(el("p", "hint", R.hint));
+  if (Speech.canTalk()){
+    var sb = el("button", "paper press sayb flex", img("1f50a"));
+    sb.onclick = function(){ say(R.say); };
+    hr.appendChild(sb);
+  }
+  stage.appendChild(hr);
+
+  if (R.kind === "pad"){
+    var row = el("div", "padrow"), left = el("div", "padleft", R.prompt);
+    row.appendChild(left);
+    row.appendChild(keypad());
+    stage.appendChild(row);
+  } else {
+    if (R.prompt) stage.appendChild(el("div", "prompt col", R.prompt));
+    var ch = el("div", "choices");
+    R.options.forEach(function(o){
+      var b = el("button", "paper press choice " + o.cls, o.html);
+      b.onclick = function(){ if (G.locked) return; if (o.val === R.answer) correct(b); else wrong(b); };
+      ch.appendChild(b);
+    });
+    stage.appendChild(ch);
+  }
+  setTimeout(function(){ if (G && G.R === R) say(R.say); }, 400);
+}
+
+function keypad(){
+  var pad = el("div", "pad");
+  ["1","2","3","4","5","6","7","8","9","del","0","go"].forEach(function(k){
+    var label = k === "del" ? "&#9003;" : k === "go" ? "&#10003;" : k;
+    var b = el("button", "paper press key" + (k === "del" ? " del" : k === "go" ? " go" : ""), label);
+    b.onclick = function(){ padKey(k, b); };
+    pad.appendChild(b);
+  });
+  return pad;
+}
+function entry(){ return $("entry"); }
+function padKey(k, btn){
+  if (G.locked) return;
+  if (k === "del"){ G.typed = G.typed.slice(0, -1); }
+  else if (k === "go"){
+    if (!G.typed) return;
+    if (parseInt(G.typed, 10) === G.R.answer){ correct(entry()); return; }
+    G.mistakes++;
+    var e = entry(); removeClass(e, "nope"); void e.offsetWidth; addClass(e, "nope");
+    G.typed = "";
+    if (G.mistakes >= 3){ revealAnswer(); return; }
+    say(["p_try"]);
+  }
+  else if (G.typed.length < 3){ G.typed = (G.typed === "0" ? "" : G.typed) + k; }
+  entry().textContent = G.typed || "?";
+}
+function revealAnswer(){
+  G.locked = true;
+  var e = entry(); e.textContent = String(G.R.answer); addClass(e, "reveal");
+  G.results[G.round] = "ok";
+  renderDots();
+  say(["m_answer_is"].concat(G.R.answerSay));
+  setTimeout(nextRound, 2600);
+}
+
+function correct(target){
+  if (G.locked) return;
+  G.locked = true;
+  var clean = G.mistakes === 0;
+  if (clean) G.stars++;
+  G.results[G.round] = clean ? "gold" : "ok";
+  if (hasClass(target, "choice")) addClass(target, "right");
+  var e = entry(); if (e && G.R.kind === "choice") e.innerHTML = G.R.answerHtml || String(G.R.answer);
+  renderDots();
+  confetti(target);
+  say(G.R.answerSay.concat(["m_praise_" + Math.floor(Math.random()*6)]));
+  setTimeout(nextRound, 1800);
+}
+function wrong(target){
+  G.mistakes++;
+  removeClass(target, "nope"); void target.offsetWidth; addClass(target, "nope");
+  setTimeout(function(){ addClass(target, "dim"); }, 400);
+  say(["p_try"]);
+}
+function nextRound(){
+  G.round++;
+  if (G.round >= ROUNDS) showEnd(); else renderRound();
+}
+
+function showEnd(){
+  var i = G.level, s = G.stars;
+  if (best[i] === undefined || s > best[i]){ best[i] = s; save("best", best); }
+  $("endTitle").textContent = s === ROUNDS ? "Perfect!" : s >= 7 ? "Out of this world!" : "Level done!";
+  $("endScore").innerHTML = "You earned <b>&#9733; " + s + "</b> of " + ROUNDS + " stars.";
+  var btns = $("endBtns"); btns.innerHTML = "";
+  var again = el("button", "paper press bigbtn", "Play again"); again.onclick = function(){ startLevel(i); }; btns.appendChild(again);
+  if (i < GAME.levels.length - 1){
+    var nx = el("button", "paper press bigbtn go", "Next: " + GAME.levels[i + 1].name); nx.onclick = function(){ startLevel(i + 1); }; btns.appendChild(nx);
+  }
+  var all = el("button", "paper press bigbtn", "All levels"); all.onclick = function(){ renderHome(); show("home"); }; btns.appendChild(all);
+  show("end");
+  G.R = null;
+  say([s === ROUNDS ? "p_perfect" : "p_stars_" + s]);
+}
+
+function confetti(target){
+  if (!target) return;
+  var r = target.getBoundingClientRect();
+  for (var i = 0; i < 16; i++){
+    (function(i){
+      var b = el("span", "bit");
+      b.style.left = (r.left + r.width/2) + "px";
+      b.style.top = (r.top + r.height/2) + "px";
+      b.style.background = COLORS[i % COLORS.length];
+      document.body.appendChild(b);
+      var dx = Math.random()*360 - 180, dy = -(Math.random()*260 + 40), rot = Math.random()*540;
+      setTimeout(function(){
+        var t = "translate(" + dx + "px," + dy + "px) rotate(" + rot + "deg)";
+        b.style.webkitTransform = t; b.style.transform = t; b.style.opacity = "0";
+      }, 20);
+      setTimeout(function(){ if (b.parentNode) b.parentNode.removeChild(b); }, 1000);
+    })(i);
+  }
+}
+
+(function(){
+  var sky = $("sky");
+  for (var i = 0; i < 70; i++){
+    var st = el("span", "star"), size = Math.random() < 0.15 ? 0.6 : 0.3;
+    st.style.left = (Math.random()*100) + "%"; st.style.top = (Math.random()*100) + "%";
+    st.style.width = st.style.height = size + "vmin";
+    st.style.webkitAnimationDelay = st.style.animationDelay = (Math.random()*3) + "s";
+    sky.appendChild(st);
+  }
+})();
+
+/* hook for automated tests (harmless on the frame) */
+window.MathGame = { game:function(){ return GAME; }, state:function(){ return G; }, start:startLevel, makers:{ rCount:rCount } };
+
+document.addEventListener("touchstart", function(){}, true);
+renderHome();
+})();
+</script>
+</body>
+</html>

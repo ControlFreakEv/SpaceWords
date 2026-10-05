@@ -9,6 +9,12 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Sight Word Saucer** (saucer.html): all 220 Dolch words over 5 planets (Pre-primer to Grade 3).
   Rounds: hear a word and beam it up from look-alikes, fill-in-the-blank sentences (67 curated,
   each with its own distractors), look-cover-spell with a Peek button.
+- **Math games** (math-game.html?g=count|ops|pattern): Star Count, Rocket Math, Alien Patterns.
+  5 levels each, kindergarten starter to about 3rd grade; she's advanced, so keep the range wide.
+  Choice rounds plus keypad rounds (3 misses reveal the answer). Stars: localStorage math:<g>:best.
+
+Pickers: index.html (Word games / Math games) -> words.html or math.html -> game. Each page
+declares `<meta name="parent">`; the Android Back key follows it. Shared picker look: hub.css/hub.js.
 
 The owner is a controls engineer who is new to Android. Explain Android Studio and adb steps plainly.
 
@@ -26,7 +32,11 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
 - ADB over USB (serial 0123456789ABCDEF) or Wi-Fi at 192.168.1.242:5555 (persist.adb.tcp.port set;
   ro.adb.secure=0, so Wi-Fi adb needs no approval). On the owner's Windows PC adb is not on PATH:
   `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`. Cloud sessions cannot reach the frame.
-  The owner deploys with `tools\deploy.ps1` (see README). `tools\diagnose-back.ps1` captures the
+  The owner deploys with `tools\deploy.ps1` (see README).
+- **The frame blocks background starts** of Space Words (and the Gallery app): BOOT_COMPLETED and
+  MY_PACKAGE_REPLACED fail with "process is bad" although nothing crashed and Android's bad-process
+  list is empty, so it looks like a vendor rule. Starting it from the foreground works (am start, or
+  `am startservice` from adb, which deploy.ps1 uses). `tools\inspect-autostart.ps1` gathers clues. `tools\diagnose-back.ps1` captures the
   frame's task stack, processes, UFO service/window state and kill/crash logs for debugging.
 
 ## Project
@@ -46,8 +56,12 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
 
 ## Speech
 `speech.js` plays `audio/<key>.mp3` for keys listed in `audio/index.json`, falling back to TTS.
-`phrases.json` maps every spoken key to its text (about 407). To add spoken text:
-1. Add the key to `phrases.json` **and** to the embedded PHRASES copy in `speech.js`.
+On the frame, clips play natively through the `AndroidAudio` bridge (GameActivity, MediaPlayer):
+Chromium 39 hands `<audio>` to Android's MediaPlayer, which bypasses shouldInterceptRequest, so
+web audio from https://wordhop.local is silent there. mp3s are kept uncompressed in the APK.
+`phrases.json` maps every spoken key to its text (about 540; numbers are n_0..n_100, math prompts
+m_*). To add spoken text:
+1. Add the key to `phrases.json`, then run `python3 tools/sync_phrases.py` to update speech.js.
 2. The owner re-runs `python tools\make_audio.py` on their PC (edge-tts, voice en-US-AvaNeural,
    rate -10%). It needs internet access to Microsoft's service, so it can't run in the cloud.
 New keys without a clip stay silent on the frame until the clips are regenerated, so list
@@ -57,6 +71,10 @@ The repo must stay **private**: the clips come from an unofficial Microsoft TTS 
 
 ## Build and check
 - `node tools/check-es5.js`: ES5 and Chromium 39 checks for all web code.
+- `node tools/web-test.js [shot-dir]`: plays every math level in headless Chromium at 1280x800,
+  checks generated questions and speech keys, optional screenshots. Modern Chromium, so run
+  check-es5 too. `python3 tools/sync_phrases.py --check`: speech.js matches phrases.json.
+- PowerShell scripts can be syntax-checked with a portable pwsh (GitHub release tarball).
 - `./gradlew assembleDebug`: APK at app/build/outputs/apk/debug/app-debug.apk.
 - `./gradlew lintDebug`: Android lint.
 - Cloud sessions: `.claude/hooks/session-start.sh` runs **in the background** at session start. It

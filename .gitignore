@@ -14,3 +14,4 @@ captures/
 
 # Diagnostics output
 tools/back-to-photos-log.txt
+tools/autostart-log.txt

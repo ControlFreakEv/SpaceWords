@@ -4,44 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Space Words</title>
-<style>
-@font-face{font-family:"WHFun";src:url("fonts/fredoka.ttf") format("truetype");font-weight:600}
-*{box-sizing:border-box}
-html,body{margin:0;height:100%}
-body{background:#0B1026;background-image:radial-gradient(circle at 50% 0%, #2A1E5C 0%, #131A3D 50%, #0B1026 90%);color:#F3F6FF;font-family:"WHFun","Trebuchet MS",sans-serif;font-weight:600;
-  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0);overflow:hidden;
-  display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;padding:4vmin 5vmin}
-button{font-family:inherit;font-weight:inherit;border:0;padding:0;margin:0;cursor:pointer;outline:none;text-align:left}
-h1{margin:0 0 4vmin;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
-.games{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;margin:0 -1.6vmin 6vmin}
-.game{-webkit-flex:1;flex:1;margin:0 1.6vmin;border:0.6vmin solid #5CE1E6;border-radius:3.4vmin;box-shadow:1vmin 1vmin 0 #05081A;
-  padding:4vmin;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-justify-content:flex-end;justify-content:flex-end;
-  -webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s}
-.game:active{-webkit-transform:translate(0.6vmin,0.6vmin);transform:translate(0.6vmin,0.6vmin);box-shadow:0.4vmin 0.4vmin 0 #05081A}
-.game img{width:26vmin;height:26vmin;margin-bottom:auto}
-.hop{background:#1B2457;background-image:radial-gradient(circle at 25% 25%, #3B2A7A 0%, #1B2457 60%);color:#F3F6FF}
-.hop .t{color:#7CFFB2}
-.saucer{background:#131A3D;background-image:radial-gradient(circle at 75% 25%, #2A1E5C 0%, #131A3D 60%);color:#F3F6FF}
-.saucer .t{color:#FFD93D}
-.t{font-size:7vmin;line-height:1}
-.d{font-size:3.6vmin;margin-top:1.4vmin;opacity:.8}
-@media (orientation: portrait){ .games{-webkit-flex-direction:column;flex-direction:column;margin:0 0 6vmin} .game{margin:1.6vmin 0} .game img{width:20vmin;height:20vmin} }
-</style>
+<link rel="stylesheet" href="hub.css">
 </head>
 <body>
-<h1>Pick a mission</h1>
+<div class="top"><h1>Pick a mission</h1></div>
 <div class="games">
-  <button class="game hop" onclick="location.href='picture-planet.html'">
-    <img src="emoji/1f680.svg" alt="">
-    <span class="t">Picture Planet</span>
-    <span class="d">Read, listen, and spell picture words</span>
+  <button class="game c1" data-go="words.html" data-stars="wordhop:best saucer:best">
+    <img src="emoji/1f4da.svg" alt="">
+    <span class="t">Word games</span>
+    <span class="d">Read, listen, and spell</span>
+    <span class="got"></span>
   </button>
-  <button class="game saucer" onclick="location.href='saucer.html'">
-    <img src="emoji/1f6f8.svg" alt="">
-    <span class="t">Sight Word Saucer</span>
-    <span class="d">Beam up the sight words you know</span>
+  <button class="game c2 alt" data-go="math.html" data-stars="math:count:best math:ops:best math:pattern:best">
+    <img src="emoji/1fa90.svg" alt="">
+    <span class="t">Math games</span>
+    <span class="d">Count, add, and crack the code</span>
+    <span class="got"></span>
   </button>
 </div>
-<script>document.addEventListener("touchstart", function(){}, true);</script>
+<script src="hub.js"></script>
 </body>
 </html>

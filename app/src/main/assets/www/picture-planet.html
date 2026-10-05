@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="parent" content="words.html">
 <title>Picture Planet</title>
 <style>
 @font-face{font-family:"WHRead";src:url("fonts/andika.ttf") format("truetype");font-weight:400}
@@ -209,7 +210,7 @@ function renderHome(){
 $("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
 $("voiceSel").onchange = function(){ Speech.setVoice(this.value); say(["p_hi"]); };
 $("testBtn").onclick = function(){ say(["w_butterfly","p_praise_0"]); };
-$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "index.html"; };
+$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "words.html"; };
 
 /* game */
 var G = null;

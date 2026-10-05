@@ -99,9 +99,9 @@ if ($ufoRunning) {
     Write-Host "        When the 'Pick a mission' screen shows, press Enter here."
 } else {
     Write-Host "STEP 1: Space Words isn't running on the frame, so the UFO is gone." -ForegroundColor Yellow
-    Write-Host "        Type O and press Enter to open the game from here."
+    Write-Host "        Opening the game on the frame for you now..."
 }
-$answer = Read-Host
+$answer = if ($ufoRunning) { Read-Host } else { "o" }
 if ($answer -match '^[oO]') {
     $log += "", "===== game opened from the PC ====="
     $log += A shell am start -W -n com.wordhop.app/.GameActivity | ForEach-Object { "$_".TrimEnd() }

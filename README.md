@@ -2,9 +2,17 @@
 
 A floating UFO button sits on top of the Skylight screen. Tap it to pick a mission:
 
+**Word games**
 - **Picture Planet** - picture words: read it, hear it, spell it.
 - **Sight Word Saucer** - Dolch sight words across five planets (Pre-primer to Grade 3):
   hear a word and beam it up, pick the word that fits a sentence, or look-cover-spell.
+
+**Math games** (five levels each, from kindergarten starter to about 3rd grade)
+- **Star Count** - count to 10 and 20, more or fewer, numbers to 100, tens and ones.
+- **Rocket Math** - add to 5 with pictures, add and take away, facts to 20, two-digit
+  numbers, times and sharing. Harder levels use a number keypad instead of choices.
+- **Alien Patterns** - picture patterns, counting up and down, skip counting,
+  number rules, and brain busters like 1, 2, 4, 8.
 
 "Back to photos" on the picker returns to the Skylight. Drag the UFO to move it.
 It comes back automatically after a restart. Works on Android 5.1 (Skylight frame) and newer.
@@ -17,7 +25,9 @@ Open Command Prompt in this SpaceWords folder (not platform-tools), then:
     pip install edge-tts
     python tools\make_audio.py
 
-That saves about 400 MP3 clips into app/src/main/assets/www/audio.
+That saves about 540 MP3 clips into app/src/main/assets/www/audio. It only records clips
+that are missing, so after an update that adds new spoken text (like the math games),
+run it again and then rebuild.
 To hear other voices:  python tools\make_audio.py --list
 To switch voices:      python tools\make_audio.py --voice en-US-AnaNeural --force
 
@@ -50,8 +60,12 @@ hardware address e0:cb:56:8c:bd:58). After building a new APK, from this folder 
 
     powershell -ExecutionPolicy Bypass -File tools\deploy.ps1
 
-Add -Open at the end to open the games afterwards for a quick test. The UFO button
-comes back on its own after an update.
+Add -Open at the end to open the games afterwards for a quick test. Installing closes the
+app, and this frame's software won't let it restart itself in the background, so the script
+starts the UFO again (opening the game on the frame if that's the only way).
+
+The same frame rule means the UFO doesn't come back on its own after the frame reboots.
+Open Space Words once (or run the deploy script) to bring it back.
 
 One-time setup so Wi-Fi adb survives reboots (frame plugged in by USB, or already connected):
 
@@ -64,6 +78,11 @@ One-time setup so Wi-Fi adb survives reboots (frame plugged in by USB, or alread
 Turn it off again with:  adb shell setprop persist.adb.tcp.port ""  then reboot.
 Note: this frame reports ro.adb.secure=0, so any device on your Wi-Fi can connect to it
 without a prompt while Wi-Fi adb is on.
+
+## Troubleshooting scripts (run from this folder)
+    powershell -ExecutionPolicy Bypass -File tools\diagnose-back.ps1     slow "Back to photos", missing UFO
+    powershell -ExecutionPolicy Bypass -File tools\inspect-autostart.ps1 why the app can't start itself
+Both only read from the frame, save a log in tools\, and copy it to the clipboard.
 
 ## If the Skylight app keeps jumping in front of the game
     adb shell pm disable-user --user 0 skylight.watchdog

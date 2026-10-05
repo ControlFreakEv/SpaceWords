@@ -25,6 +25,9 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 
+    // Voice clips must stay uncompressed so MediaPlayer can stream them straight from the APK.
+    androidResources { noCompress += "mp3" }
+
     lint {
         abortOnError = false
         checkReleaseBuilds = false

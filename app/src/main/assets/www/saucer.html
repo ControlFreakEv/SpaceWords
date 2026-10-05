@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="parent" content="words.html">
 <title>Sight Word Saucer</title>
 <style>
 @font-face{font-family:"WHRead";src:url("fonts/andika.ttf") format("truetype");font-weight:400}
@@ -242,7 +243,7 @@ function renderHome(){
   $("speechNote").style.display = Speech.mode() === "none" ? "" : "none";
 }
 $("soundBtn").onclick = function(){ Speech.setSound(!Speech.soundOn()); renderHome(); say(["p_sound_on"]); };
-$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "index.html"; };
+$("gamesBtn").onclick = function(){ Speech.stop(); location.href = "words.html"; };
 Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
 
 /* game */

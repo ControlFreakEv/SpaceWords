@@ -1,0 +1,35 @@
+/* Shared look for the mission pickers (index.html, words.html, math.html). Plain CSS for Chromium 39. */
+@font-face{font-family:"WHFun";src:url("fonts/fredoka.ttf") format("truetype");font-weight:600}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#0B1026;background-image:radial-gradient(circle at 50% 0%, #2A1E5C 0%, #131A3D 50%, #0B1026 90%);color:#F3F6FF;font-family:"WHFun","Trebuchet MS",sans-serif;font-weight:600;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0);overflow:hidden;
+  display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;padding:4vmin 5vmin}
+button{font-family:inherit;font-weight:inherit;border:0;padding:0;margin:0;cursor:pointer;outline:none;text-align:left}
+.top{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:0 0 4vmin}
+h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.back{background:#F7F9FF;color:#1F2A44;border:0.5vmin solid #1F2A44;border-radius:10vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A;
+  padding:1.6vmin 3vmin;font-size:3.4vmin;margin-right:3vmin;-webkit-flex:none;flex:none;
+  -webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s}
+.back:active{-webkit-transform:translate(0.5vmin,0.5vmin);transform:translate(0.5vmin,0.5vmin);box-shadow:0.3vmin 0.3vmin 0 #05081A}
+.games{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;margin:0 -1.6vmin 6vmin}
+.game{-webkit-flex:1;flex:1;margin:0 1.6vmin;border:0.6vmin solid #5CE1E6;border-radius:3.4vmin;box-shadow:1vmin 1vmin 0 #05081A;color:#F3F6FF;
+  padding:4vmin;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-justify-content:flex-end;justify-content:flex-end;
+  background:#1B2457;background-image:radial-gradient(circle at 25% 25%, #3B2A7A 0%, #1B2457 60%);
+  -webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s}
+.game:active{-webkit-transform:translate(0.6vmin,0.6vmin);transform:translate(0.6vmin,0.6vmin);box-shadow:0.4vmin 0.4vmin 0 #05081A}
+.game img{width:24vmin;height:24vmin;margin-bottom:auto}
+.game.alt{background:#131A3D;background-image:radial-gradient(circle at 75% 25%, #2A1E5C 0%, #131A3D 60%)}
+.game.c1 .t{color:#7CFFB2}.game.c2 .t{color:#FFD93D}.game.c3 .t{color:#FF9ED8}
+.game.c1{border-color:#5CE1E6}.game.c2{border-color:#FFD93D}.game.c3{border-color:#FF9ED8}
+.t{font-size:7vmin;line-height:1}
+.d{font-size:3.4vmin;margin-top:1.4vmin;opacity:.85}
+.got{font-size:3.2vmin;margin-top:1.4vmin;color:#FFD93D}
+.three .t{font-size:6vmin}
+.three .game img{width:20vmin;height:20vmin}
+.muted{position:absolute;left:5vmin;bottom:3vmin;font-size:3vmin;color:#FFD93D}
+@media (orientation: portrait){
+  .games{-webkit-flex-direction:column;flex-direction:column;margin:0 0 6vmin}
+  .game{margin:1.6vmin 0}
+  .game img,.three .game img{width:16vmin;height:16vmin}
+}

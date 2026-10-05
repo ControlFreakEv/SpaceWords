@@ -5,12 +5,15 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.media.AudioManager
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -23,6 +26,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * Full-screen host for the Space Words games.
@@ -35,6 +39,7 @@ class GameActivity : Activity() {
     private lateinit var web: WebView
     private lateinit var closeBtn: View
     private var tts: TextToSpeech? = null
+    private var player: MediaPlayer? = null
     @Volatile private var ttsReady = false
 
     @SuppressLint("SetJavaScriptEnabled", "AddJavascriptInterface")
@@ -48,6 +53,7 @@ class GameActivity : Activity() {
             setBackgroundColor(Color.parseColor("#0B1026"))
             webViewClient = AssetClient()
             addJavascriptInterface(TtsBridge(), "AndroidTTS")
+            addJavascriptInterface(AudioBridge(), "AndroidAudio")
         }
 
         tts = TextToSpeech(this) { status ->
@@ -63,6 +69,7 @@ class GameActivity : Activity() {
             Gravity.BOTTOM or Gravity.END
         ).apply { val m = dp(20); setMargins(m, m, m, m) })
         setContentView(root)
+        volumeControlStream = AudioManager.STREAM_MUSIC
         hideSystemBars()
         web.loadUrl(HOME_URL)
 
@@ -145,12 +152,14 @@ class GameActivity : Activity() {
     override fun onPause() {
         super.onPause()
         tts?.stop()
+        stopClip()
         BubbleService.setVisible(true)
     }
 
+    /** Back steps up one level: game -> its hub (from <meta name="parent">) -> picker -> photos. */
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (isHome(web.url)) backToSkylight() else web.loadUrl(HOME_URL)
+        if (isHome(web.url)) backToSkylight() else web.evaluateJavascript(GO_TO_PARENT_JS, null)
     }
 
     /**
@@ -177,12 +186,83 @@ class GameActivity : Activity() {
     private fun isHome(url: String?) = url == null || url.endsWith("/index.html") || url.endsWith("$HOST/")
 
     override fun onDestroy() {
+        stopClip()
         tts?.shutdown()
         web.destroy()
         super.onDestroy()
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+    /*
+     * Voice clips are played natively. The frame's old WebView (Chromium 39) hands <audio> to
+     * Android's MediaPlayer, which fetches the URL itself and never goes through
+     * shouldInterceptRequest, so https://wordhop.local/audio/... can't load and stays silent.
+     */
+    private fun playClip(key: String, token: Int) {
+        stopClip()
+        if (!CLIP_KEY.matches(key)) { clipDone(token); return }
+        val mp = MediaPlayer()
+        try {
+            mp.setAudioStreamType(AudioManager.STREAM_MUSIC)
+            try {
+                assets.openFd("www/audio/$key.mp3").use { mp.setDataSource(it.fileDescriptor, it.startOffset, it.length) }
+            } catch (e: java.io.FileNotFoundException) {
+                // The asset was stored compressed, so it has no file descriptor: play a cached copy.
+                mp.setDataSource(cachedClip(key).absolutePath)
+            }
+            mp.setOnCompletionListener { finishClip(it, token) }
+            mp.setOnErrorListener { p, _, _ -> finishClip(p, token); true }
+            mp.prepare()
+            mp.start()
+            player = mp
+        } catch (e: Exception) {
+            Log.w("SpaceWords", "Couldn't play clip $key", e)
+            mp.release()
+            clipDone(token)
+        }
+    }
+
+    private fun cachedClip(key: String): File {
+        val f = File(File(cacheDir, "audio").apply { mkdirs() }, "$key.mp3")
+        if (!f.exists() || f.length() == 0L) {
+            assets.open("www/audio/$key.mp3").use { input -> f.outputStream().use { input.copyTo(it) } }
+        }
+        return f
+    }
+
+    private fun finishClip(mp: MediaPlayer, token: Int) {
+        if (player === mp) { player = null; mp.release() }
+        clipDone(token)
+    }
+
+    private fun stopClip() {
+        val p = player ?: return
+        player = null
+        try { p.stop() } catch (e: Exception) {}
+        p.release()
+    }
+
+    private fun clipDone(token: Int) {
+        web.evaluateJavascript("window.__clipDone && window.__clipDone($token)", null)
+    }
+
+    inner class AudioBridge {
+        /** Plays audio/<key>.mp3; calls window.__clipDone(token) when it ends or fails. */
+        @JavascriptInterface
+        fun play(key: String, token: Int) { runOnUiThread { playClip(key, token) } }
+
+        @JavascriptInterface
+        fun stop() { runOnUiThread { stopClip() } }
+
+        /** Media volume as "current/max", so the games can say when the frame is muted. */
+        @JavascriptInterface
+        fun volume(): String {
+            val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            return am.getStreamVolume(AudioManager.STREAM_MUSIC).toString() + "/" +
+                am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        }
+    }
 
     inner class TtsBridge {
 
@@ -237,5 +317,9 @@ class GameActivity : Activity() {
         const val HOST = "wordhop.local"
         const val HOME_URL = "https://$HOST/index.html"
         const val SKYLIGHT_PKG = "com.skylight"
+        private val CLIP_KEY = Regex("[a-z0-9_]+")
+        private const val GO_TO_PARENT_JS = "(function(){if(window.Speech)Speech.stop();" +
+            "var m=document.querySelector('meta[name=parent]');" +
+            "location.href=m?m.getAttribute('content'):'index.html';})()"
     }
 }

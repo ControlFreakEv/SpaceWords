@@ -10,6 +10,8 @@
 
   Build the APK first in Android Studio: Build > Generate App Bundles or APKs > Generate APKs.
   Her stars are kept: install -r replaces the app without clearing its data.
+  Afterwards it restarts the UFO button (installing closes the app, and this frame won't let
+  the app restart itself), opening the game on the frame if that's the only way.
 #>
 param(
     [string]$Frame = "192.168.1.242:5555",
@@ -49,8 +51,19 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-if ($Open) {
+# Installing closes the app, and this frame's software won't let it restart itself in the
+# background, so start the UFO service from here.
+& $adb -s $Frame shell am startservice -n com.wordhop.app/.BubbleService | Out-Null
+Start-Sleep -Seconds 2
+$running = (& $adb -s $Frame shell ps | Where-Object { $_ -match 'com\.wordhop\.app' }).Count -gt 0
+
+if ($Open -or -not $running) {
+    # Opening the game directly is always allowed, and it starts the UFO too.
     & $adb -s $Frame shell am start -n com.wordhop.app/.GameActivity | Out-Null
-    Write-Host "Opened Space Words on the frame."
+    if ($running) {
+        Write-Host "Opened Space Words on the frame."
+    } else {
+        Write-Host "Opened Space Words on the frame to bring the UFO back. Tap 'Back to photos' there." -ForegroundColor Yellow
+    }
 }
-Write-Host "Done. The UFO button comes back on its own after an update." -ForegroundColor Green
+Write-Host "Done." -ForegroundColor Green
