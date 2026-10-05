@@ -1,5 +1,6 @@
 <#
-  Installs the latest Space Words build on the Skylight frame over Wi-Fi.
+  Installs the latest Space Words build on the Skylight frame, over Wi-Fi or, if Wi-Fi adb
+  isn't answering, over the USB cable (and then switches Wi-Fi adb back on).
 
   Run from the SpaceWords folder:
       powershell -ExecutionPolicy Bypass -File tools\deploy.ps1
@@ -35,14 +36,40 @@ if (-not (Test-Path $apk)) {
 $built = (Get-Item $apk).LastWriteTime
 Write-Host "APK built $built"
 
-Write-Host "Connecting to $Frame ..."
-& $adb connect $Frame
-& $adb -s $Frame get-state 2>$null | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Can't reach the frame at $Frame." -ForegroundColor Red
-    Write-Host "Check it's on Wi-Fi. If it just rebooted and Wi-Fi adb didn't come back, plug in USB and run: adb tcpip 5555"
+function State([string]$serial) { "$(& $adb -s $serial get-state 2>$null)".Trim() }
+
+# 1. Wi-Fi. "already connected" can be a stale link left over from a reboot or a Wi-Fi drop,
+#    so if the frame doesn't answer, drop the link and connect again.
+Write-Host "Connecting to $Frame over Wi-Fi ..."
+& $adb connect $Frame | Out-Null
+$target = $null
+if ((State $Frame) -eq "device") { $target = $Frame }
+else {
+    Write-Host "No answer; reconnecting ..."
+    & $adb disconnect $Frame | Out-Null
+    Start-Sleep -Seconds 1
+    & $adb connect $Frame | Out-Null
+    Start-Sleep -Seconds 2
+    if ((State $Frame) -eq "device") { $target = $Frame }
+}
+
+# 2. USB, if Wi-Fi didn't work and the frame is plugged in.
+$viaUsb = $false
+if (-not $target) {
+    $usb = & $adb devices | Where-Object { $_ -match "^(\S+)\s+device$" -and $_ -notmatch ":" } | ForEach-Object { ($_ -split "\s+")[0] } | Select-Object -First 1
+    if ($usb) { $target = $usb; $viaUsb = $true; Write-Host "Using the USB cable ($usb)." }
+}
+
+if (-not $target) {
+    Write-Host "Can't reach the frame at $Frame, and no frame is plugged in by USB." -ForegroundColor Red
+    Write-Host "adb sees:"
+    & $adb devices
+    Write-Host "Fix: plug the frame into this PC with the USB cable and run this script again."
+    Write-Host "It installs over USB and switches Wi-Fi adb back on for next time."
+    Write-Host "If the frame's Wi-Fi address changed, check it in the frame's Wi-Fi settings and add -Frame <address>:5555."
     exit 1
 }
+$Frame = $target
 
 Write-Host "Installing ..."
 & $adb -s $Frame install -r $apk
@@ -63,7 +90,12 @@ if ($Open -or -not $running) {
     if ($running) {
         Write-Host "Opened Space Words on the frame."
     } else {
-        Write-Host "Opened Space Words on the frame to bring the UFO back. Tap 'Back to photos' there." -ForegroundColor Yellow
+        Write-Host "Opened Space Words on the frame to bring the UFO back. Tap Back there to return to the photos." -ForegroundColor Yellow
     }
+}
+# Over USB, switch Wi-Fi adb back on so the next update can skip the cable.
+if ($viaUsb) {
+    & $adb -s $Frame tcpip 5555 | Out-Null
+    Write-Host "Wi-Fi adb is back on. You can unplug the cable."
 }
 Write-Host "Done." -ForegroundColor Green

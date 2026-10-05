@@ -163,7 +163,6 @@ function wkey(w){ return "w_" + w; }
    [a] short vowel   {a} long vowel   <e> silent e   (ai) vowel team   ^ar^ bossy R   - syllable break
    anything else is a consonant (y counts as one here). */
 var VOWELS = ["a","e","i","o","u"];
-var EXAMPLE = { a:"cat", e:"bed", i:"pig", o:"dog", u:"bug" };
 var TEAM_VOWEL = { ai:"a", ay:"a", ee:"e", ea:"e", oa:"o", ow:"o", igh:"i", ie:"i", ue:"u" };
 var R_KEY = { ar:"r_ar", or:"r_or", er:"r_er", ir:"r_er", ur:"r_er" };
 
@@ -267,7 +266,7 @@ function rHearVowel(){
     stage.appendChild(w);
     var row = el("div", "choices");
     VOWELS.forEach(function(x){
-      var b = el("button", "paper press choice vowel", '<span class="v-' + x + '">' + x + '</span><small>' + EXAMPLE[x] + '</small>');
+      var b = el("button", "paper press choice vowel", '<span class="v-' + x + '">' + x + '</span>');
       if (x === v) b.setAttribute("data-ok", "1");
       b.onclick = function(){
         if (G.locked) return;
