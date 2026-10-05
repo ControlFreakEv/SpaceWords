@@ -56,11 +56,6 @@ class GameActivity : Activity() {
             addJavascriptInterface(AudioBridge(), "AndroidAudio")
         }
 
-        tts = TextToSpeech(this) { status ->
-            ttsReady = status == TextToSpeech.SUCCESS
-            runOnUiThread { web.evaluateJavascript("window.__ttsReady && window.__ttsReady()", null) }
-        }
-
         val root = FrameLayout(this)
         root.addView(web, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         closeBtn = closeButton()
@@ -264,7 +259,23 @@ class GameActivity : Activity() {
         }
     }
 
+    /**
+     * Text-to-speech is only a fallback for when the recorded clips are missing, so it starts
+     * only when speech.js asks. The frame has the Pico engine; binding to it for nothing costs
+     * memory on a low-RAM device and adds slow calls to every pause and close.
+     */
+    private fun startTts() {
+        if (tts != null) return
+        tts = TextToSpeech(this) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            runOnUiThread { web.evaluateJavascript("window.__ttsReady && window.__ttsReady()", null) }
+        }
+    }
+
     inner class TtsBridge {
+        @JavascriptInterface
+        fun enable() { runOnUiThread { startTts() } }
+
 
         /** English voices as JSON, best quality first. */
         @JavascriptInterface

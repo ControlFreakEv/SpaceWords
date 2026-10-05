@@ -25,7 +25,8 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   NodeList.forEach. CSS: no variables, grid, gap, clamp(), min()/max(), env(); add -webkit-
   twins for animation, keyframes and transform. Flexbox is fine (with -webkit- prefixes).
   **Run `node tools/check-es5.js` after any web change.**
-- No text-to-speech engine. Speech plays pre-recorded MP3s (see Speech below).
+- Speech plays pre-recorded MP3s (see Speech below). The frame has only the Pico TTS engine, which
+  the app starts only when clips are missing (`AndroidTTS.enable()`), to keep it off the low-RAM frame.
 - Old emoji font, so pictures are bundled Twemoji SVGs in assets/www/emoji (CC-BY 4.0, credited).
 - Skylight packages: `com.skylight` (main app) and `skylight.watchdog` (relaunches Skylight if it
   leaves the screen). Never disable or uninstall either without asking the owner.
@@ -33,6 +34,11 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   ro.adb.secure=0, so Wi-Fi adb needs no approval). On the owner's Windows PC adb is not on PATH:
   `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`. Cloud sessions cannot reach the frame.
   The owner deploys with `tools\deploy.ps1` (see README).
+- `ro.config.low_ram=true`. On 2026-10-05 the old build froze on "Back to photos" and Android
+  silently killed it ("user request after error": the frame shows no ANR dialog), which explains
+  both the long black screen and the vanished UFO. Prime suspect: WebView's media player stuck
+  retrying https://wordhop.local clips (RockFFPlayer "Failed to resolve hostname"); fixed by native
+  clip playback and lazy TTS. diagnose-back.ps1 now saves data_app_anr and traces.txt to confirm.
 - **The frame blocks background starts** of Space Words (and the Gallery app): BOOT_COMPLETED and
   MY_PACKAGE_REPLACED fail with "process is bad" although nothing crashed and Android's bad-process
   list is empty, so it looks like a vendor rule. Starting it from the foreground works (am start, or

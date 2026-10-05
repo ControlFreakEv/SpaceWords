@@ -20,6 +20,12 @@ var queue = [], playing = null;
 
 function notify(){ for (var i = 0; i < listeners.length; i++){ try { listeners[i](); } catch(e){} } }
 
+/* The app's text-to-speech starts only if there are no recorded clips (see GameActivity.startTts). */
+function clipsChecked(){
+  if (!clips && bridge && bridge.enable){ try { bridge.enable(); } catch(e){} }
+  notify();
+}
+
 /* recorded clips */
 try {
   var x = new XMLHttpRequest();
@@ -28,9 +34,9 @@ try {
     if (x.status === 200){
       try { var arr = JSON.parse(x.responseText); clips = {}; for (var i = 0; i < arr.length; i++) clips[arr[i]] = true; } catch(e){ clips = null; }
     }
-    notify();
+    clipsChecked();
   };
-  x.onerror = notify;
+  x.onerror = clipsChecked;
   x.send();
 } catch(e){}
 
@@ -57,7 +63,7 @@ function loadVoices(){
 }
 window.__ttsReady = loadVoices;
 if (browserTTS){ browserTTS.onvoiceschanged = loadVoices; setTimeout(loadVoices, 300); }
-if (bridge) setTimeout(loadVoices, 300);
+
 
 function mode(){
   if (clips) return "audio";

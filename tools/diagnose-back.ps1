@@ -43,21 +43,42 @@ function Snapshot([string]$label) {
 }
 
 function Get-CrashReports {
-    # Android keeps app crash reports on disk ("dropbox"), so they survive reboots.
-    $c = @("", "===== Space Words crash reports (saved on the frame, newest last) =====")
-    $box = @(A shell dumpsys dropbox --print data_app_crash | ForEach-Object { "$_".TrimEnd() })
-    $starts = @()
-    for ($i = 0; $i -lt $box.Count; $i++) { if ($box[$i] -match '^Process: com\.wordhop\.app') { $starts += $i } }
-    if ($starts.Count -eq 0) { $c += "(none found)" }
-    foreach ($st in ($starts | Select-Object -Last 3)) {
-        $c += "-----"
-        $from = [math]::Max($st - 2, 0)
-        $to = [math]::Min($st + 45, $box.Count - 1)
-        for ($k = $from; $k -le $to; $k++) {
-            if ($k -gt $st -and $box[$k] -match '^={10,}') { break }
-            $c += $box[$k]
+    # Android keeps app crash and freeze ("not responding") reports on disk ("dropbox"),
+    # so they survive reboots.
+    $c = @()
+    foreach ($tag in "data_app_crash", "data_app_anr") {
+        $c += "", "===== Space Words $tag reports (saved on the frame, newest last) ====="
+        $box = @(A shell dumpsys dropbox --print $tag | ForEach-Object { "$_".TrimEnd() })
+        $starts = @()
+        for ($i = 0; $i -lt $box.Count; $i++) { if ($box[$i] -match '^Process: com\.wordhop\.app') { $starts += $i } }
+        if ($starts.Count -eq 0) { $c += "(none found)" }
+        foreach ($st in ($starts | Select-Object -Last 2)) {
+            $c += "-----"
+            $from = [math]::Max($st - 2, 0)
+            $to = [math]::Min($st + 70, $box.Count - 1)
+            for ($k = $from; $k -le $to; $k++) {
+                if ($k -gt $st -and $box[$k] -match '^={10,}') { break }
+                $c += $box[$k]
+            }
         }
     }
+    # The last freeze's thread dump: what the app's main thread was stuck on.
+    $c += "", "===== last freeze: Space Words main thread (/data/anr/traces.txt) ====="
+    $tr = @(A shell cat /data/anr/traces.txt | ForEach-Object { "$_".TrimEnd() })
+    $found = $false
+    for ($i = 0; $i -lt $tr.Count -and -not $found; $i++) {
+        if ($tr[$i] -match '^Cmd line: com\.wordhop\.app') {
+            if ($i -gt 0) { $c += $tr[$i - 1] }
+            for ($j = $i; $j -lt $tr.Count; $j++) {
+                if ($tr[$j] -match '^"main"') {
+                    for ($k = $j; $k -lt [math]::Min($j + 60, $tr.Count); $k++) { if ($tr[$k] -eq "") { break }; $c += $tr[$k] }
+                    break
+                }
+            }
+            $found = $true
+        }
+    }
+    if (-not $found) { $c += "(none found)" }
     $c += "", "===== crash log buffer ====="
     $c += A logcat -b crash -d -v time | Select-Object -Last 80 | ForEach-Object { "$_".TrimEnd() }
     $c += "", "===== processes Android has marked bad ====="

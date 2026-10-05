@@ -51,8 +51,11 @@ foreach ($pkg in "com.wordhop.app", "skylight.watchdog", "com.android.gallery3d"
 }
 $log += "", "===== activity manager: anything about bad, forbidden or listed processes ====="
 $log += A shell dumpsys activity processes | Where-Object { $_ -match 'bad|forbid|white|black|wordhop|gallery3d' } | Select-Object -First 40
-$log += "", "===== media volume (stream 3 is what the games use) ====="
-$log += A shell media volume --stream 3 --get
+$log += "", "===== media volume (STREAM_MUSIC is what the games use) ====="
+$audio = @(A shell dumpsys audio)
+for ($i = 0; $i -lt $audio.Count; $i++) {
+    if ($audio[$i] -match 'STREAM_MUSIC') { $log += $audio[$i..([math]::Min($i + 4, $audio.Count - 1))]; break }
+}
 $log += "", "===== recent log lines about blocked starts ====="
 $log += A logcat -d -v time | Where-Object { $_ -match 'process is bad|wordhop|forbid|whitelist|blacklist|autostart|not allowed' } | Select-Object -Last 40
 
