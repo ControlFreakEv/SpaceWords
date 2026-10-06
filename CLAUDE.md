@@ -54,12 +54,12 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   ws_ twin) or, if missing, the word at 0.7x. Instructions, sentences, praise and silly voices are
   never slowed (the speech queue carries a rate per clip).
 - **Volume control** (speech.js, every page; the owner asked for it in place of "Talking: on/off"):
-  fixed bottom-left on pickers and level lists, hidden in play (`body[data-screen=game|end]`, set by
-  each page's show()). Levels 0 (off) to 6, default 5: 1-4 set the frame's media volume to 1/4..full,
+  fixed top-right (level with the Back button, smaller) on pickers and level lists, hidden in play
+  (`body[data-screen=game|end]`, set by each page's show()). The first row (`.backroom`) gets
+  padding-right 40vmin there; web-test.js checks nothing overlaps it on all 12 screens. Levels 0 (off) to 6, default 5: 1-4 set the frame's media volume to 1/4..full,
   5-6 keep it full and add a LoudnessEnhancer boost of +6/+12 dB on each clip (GameActivity,
   `AndroidAudio.level()/setLevel()`, SharedPreferences "audio"). The frame's own volume is saved when
-  the game window opens and restored when it closes, so Skylight's volume doesn't change. Level pages keep room with
-  `.volroom`; hubs with body padding-bottom.
+  the game window opens and restored when it closes, so Skylight's volume doesn't change.
 - **Tap any word to hear it** (all games): `Speech.tapText(text)` wraps words in
   `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element
   with `data-say`. Words map to w_*, numbers to n_*, + - x / = to m_*. Every tappable word needs a

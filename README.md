@@ -26,7 +26,7 @@ A floating UFO button sits on top of the Skylight screen. Tap it to pick a missi
   (tap between the letters), build it, and big words like thunderstorm. Wrong choices are
   checked so they never make a real word too (sun + set would).
 
-The volume control sits in the bottom-left corner of the pickers and level lists. Tap -, +,
+The volume control sits in the top-right corner of the pickers and level lists. Tap -, +,
 or a bar. The bottom bar off is silent; the two orange bars are louder than the frame's own
 maximum. The frame's volume for Skylight is put back when you return to the photos.
 

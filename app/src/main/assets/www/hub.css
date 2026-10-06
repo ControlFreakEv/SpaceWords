@@ -55,7 +55,3 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
   .four .game img{width:13vmin;height:13vmin}
   .nums{font-size:11vmin}
 }
-
-/* room for the volume control at the bottom */
-body{padding-bottom:16vmin}
-.games,.four{margin-bottom:0}

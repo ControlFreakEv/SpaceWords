@@ -522,6 +522,32 @@ const server = http.createServer((req, res) => {
   sl === 1 ? ok("sound lab: turtle for the round's word") : fail("sound lab turtle: " + sl);
   await spd.close();
 
+  // Volume control: top right, never overlapping text, pictures, buttons or cards (screen by screen).
+  const volPages = ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html",
+    "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=count", "math-game.html?g=pattern"];
+  for (const pg of volPages) {
+    await page.goto(base + pg); await page.waitForTimeout(250);
+    const hits = await page.evaluate(() => {
+      const box = document.querySelector(".volbox"); if (!box || !box.offsetWidth) return ["no volume control"];
+      const v = box.getBoundingClientRect(), pad = 4, out = [];
+      const near = r => r.width > 0 && r.height > 0 && r.left < v.right + pad && r.right > v.left - pad && r.top < v.bottom + pad && r.bottom > v.top - pad;
+      const seen = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.display === "none" || cs.visibility === "hidden") return false; } return true; };
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n; (n = walker.nextNode());) {
+        if (!n.textContent.trim() || box.contains(n) || !seen(n.parentElement)) continue;
+        const range = document.createRange(); range.selectNodeContents(n);
+        for (const r of range.getClientRects()) if (near(r)) { out.push('text "' + n.textContent.trim().slice(0, 30) + '"'); break; }
+      }
+      document.querySelectorAll("img, button, .paper, .game, .stone, .act, .week").forEach(e => {
+        if (box.contains(e) || !seen(e)) return;
+        if (near(e.getBoundingClientRect())) out.push(e.tagName.toLowerCase() + "." + (e.className || "").toString().split(" ").join("."));
+      });
+      return out.slice(0, 6);
+    });
+    hits.length ? fail(pg + ": volume control overlaps " + hits.join(", ")) : ok(pg + ": volume control clear of everything");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "vol-" + pg.replace(/[^a-z]+/g, "-") + ".png") });
+  }
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();

@@ -208,22 +208,25 @@ function drawVolume(){
 (function(){
   var st = document.createElement("style");
   st.textContent =
-    ".volbox{position:fixed;left:3vmin;bottom:3vmin;z-index:30;height:11vmin;padding:0 1.2vmin;display:-webkit-flex;display:flex;" +
-    "-webkit-align-items:center;align-items:center;background:#F7F9FF;border:0.6vmin solid #1F2A44;border-radius:5.5vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A}" +
+    /* top-right corner, level with the Back button; hidden during play */
+    ".volbox{position:fixed;right:3vmin;top:4vmin;z-index:30;height:8vmin;padding:0 .8vmin;display:-webkit-flex;display:flex;" +
+    "-webkit-align-items:center;align-items:center;background:#F7F9FF;border:0.5vmin solid #1F2A44;border-radius:4vmin;box-shadow:0.6vmin 0.6vmin 0 #05081A}" +
     "body[data-screen]:not([data-screen=home]) .volbox{display:none}" +
-    ".volicon{width:6.4vmin;height:6.4vmin;margin:0 1vmin}" +
-    ".volb{width:8.4vmin;height:8.4vmin;border-radius:50%;border:0.5vmin solid #1F2A44;background:#FFD93D;color:#1F2A44;" +
-    "font-family:\"WHFun\",\"Trebuchet MS\",sans-serif;font-weight:600;font-size:6vmin;line-height:1;padding:0;cursor:pointer;outline:none;text-align:center;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}" +
+    ".volicon{width:4.8vmin;height:4.8vmin;margin:0 .8vmin 0 .6vmin}" +
+    ".volb{width:6vmin;height:6vmin;border-radius:50%;border:0.4vmin solid #1F2A44;background:#FFD93D;color:#1F2A44;" +
+    "font-family:\"WHFun\",\"Trebuchet MS\",sans-serif;font-weight:600;font-size:4.4vmin;line-height:1;padding:0;cursor:pointer;outline:none;text-align:center;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}" +
     ".volb:active{background:#FFC000}" +
-    ".volbars{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;height:8vmin;margin:0 1.4vmin}" +
-    ".volbar{width:3.6vmin;margin:0 .5vmin;border-radius:.8vmin;background:#D5DBEA;cursor:pointer}" +
+    ".volbars{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;height:5.6vmin;margin:0 1vmin}" +
+    ".volbar{width:2.6vmin;margin:0 .35vmin;border-radius:.6vmin;background:#D5DBEA;cursor:pointer}" +
     ".volbar.on{background:#3FB37F}.volbar.boost.on{background:#FF8A3D}" +
-    ".volroom{padding-left:65vmin}";
+    /* the top row of pickers and level lists leaves room for it on the right */
+    "body:not([data-screen]) .backroom,body[data-screen=home] .backroom{padding-right:40vmin}" +
+    ".backroom > div{min-width:0;-webkit-flex:1;flex:1}";
   (document.head || document.documentElement).appendChild(st);
   volBox = document.createElement("div");
   volBox.className = "volbox";
   var bars = "";
-  for (var i = 0; i < MAX_LEVEL; i++) bars += '<span class="volbar" data-level="' + (i + 1) + '" style="height:' + (2.4 + i*1.1) + 'vmin"></span>';
+  for (var i = 0; i < MAX_LEVEL; i++) bars += '<span class="volbar" data-level="' + (i + 1) + '" style="height:' + (1.6 + i*0.8) + 'vmin"></span>';
   volBox.innerHTML = '<img class="volicon" alt="">' +
     '<button class="volb" data-step="-1" aria-label="Quieter">&#8722;</button><span class="volbars">' + bars + '</span>' +
     '<button class="volb" data-step="1" aria-label="Louder">+</button>';
