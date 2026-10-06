@@ -163,7 +163,7 @@ function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ")
 function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
 function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
 function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); }
-function say(keys){ if (keys && keys.length) Speech.say(keys); }
+function say(keys, done){ Speech.say(keys, done); }
 function wk(w){ return "w_" + w; }
 function tapWord(w, cls){ return '<span class="' + (cls || "") + ' tw" data-say="' + wk(w) + '">' + w + '</span>'; }
 
@@ -392,8 +392,16 @@ function correct(target, sayKeys){
   addClass(target, "right");
   renderDots();
   confetti(target);
-  say(sayKeys.concat(["p_praise_" + Math.floor(Math.random()*6)]));
-  setTimeout(nextRound, 2400 + 500*sayKeys.length);
+  /* move on once everything has been said (syllables, word, praise), not on a fixed timer that
+     could cut the voice off; the long timer is only a safety net if the speech is interrupted */
+  var R = G.R, moved = false;
+  function moveOn(){
+    if (moved) return; moved = true;
+    if (G && G.R === R && hasClass($("game"), "on")) nextRound();
+  }
+  var keys = sayKeys.concat(["p_praise_" + Math.floor(Math.random()*6)]);
+  say(keys, function(){ setTimeout(moveOn, 700); });
+  setTimeout(moveOn, 4000 + 1800*keys.length);
 }
 function wrong(target){
   G.mistakes++;

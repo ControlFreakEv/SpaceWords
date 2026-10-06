@@ -22,6 +22,11 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   top), `<e>` silent, `(ai)` vowel team, `^ar^` bossy R, `-` syllable break; vowel colors a red,
   e orange, i green, o blue, u purple. Levels: short vowels (vowel swap), magic e, vowel teams,
   syllables (sy_* clips are respellings, e.g. "ell uh fent"), bossy R. Stars: localStorage sound:best.
+  Each syllable clip must say the syllable *as shown*, split the same way (ba-na-na = "bah nah nuh",
+  not the dictionary "buh NAN uh"); web-test.js checks every clip starts like its syllable.
+- `Speech.say(keys, done)`: done runs once after the last clip (not if interrupted). Rounds that
+  say several clips (Sound Lab, Compound Words) move on from done, with a long timer only as a
+  safety net; a fixed short timer cut the voice off mid-word.
 - **Compound Words** (compound.html): picture puzzles, match the halves, split it, build it, big
   words. PIC/MID/BIG lists of "first second"; KNOWN (all of them plus EXTRA real compounds) makes
   sure wrong choices never form a real word and match boards pair up one way only. Stars:

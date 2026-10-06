@@ -199,6 +199,26 @@ const server = http.createServer((req, res) => {
     const end = await page.evaluate(() => [document.getElementById("end").className.indexOf("on") >= 0, SoundLab.state().stars]);
     end[0] && end[1] === 10 ? ok("sound lab level " + (i + 1) + ": 10 rounds, 10 stars") : fail("sound lab level " + (i + 1) + " ended " + JSON.stringify(end));
   }
+  // Syllable clips must start like the syllable on screen (ba-na-na must not be "buh nan uh").
+  const sylBad = await page.evaluate(() => {
+    const bad = [], same = { c: "k", ph: "f" };
+    SoundLab.data.SYLL.forEach(e => {
+      const [spec, said] = e.split("|"), shown = SoundLab.plain(spec.replace(/-/g, "~")).split("~"), parts = said.split(" ");
+      if (shown.length !== parts.length) { bad.push(spec + ": " + shown.length + " syllables shown, " + parts.length + " clips"); return; }
+      shown.forEach((sh, i) => {
+        const onset = s => (s.match(/^(ph|[^aeiou]*)/) || [""])[0], a = onset(sh), b = onset(parts[i]);
+        const norm = x => x.replace(/^ph/, "f").replace(/^c/, "k");
+        if (norm(a).charAt(0) !== norm(b).charAt(0)) bad.push(sh + " is said as \"" + parts[i] + "\"");
+      });
+    });
+    return bad;
+  });
+  sylBad.length ? fail("syllable clips don't match the syllables shown: " + sylBad.join("; ")) : ok("every syllable clip starts like the syllable on screen");
+
+  // Speech waits: say(keys, done) calls done once, after the last clip.
+  const doneOk = await page.evaluate(() => new Promise(res => { let n = 0; Speech.say(["sy_bah", "sy_nah", "sy_nuh"], () => n++); setTimeout(() => res(n), 3000); }));
+  doneOk === 1 ? ok("Speech.say calls its done callback once") : fail("Speech.say done callback ran " + doneOk + " times");
+
   // Swap round: a wrong vowel says the word it made and costs the gold star.
   for (let t = 0; t < 30; t++) {
     await page.evaluate(() => SoundLab.start(0));

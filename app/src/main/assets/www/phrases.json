@@ -763,7 +763,6 @@
  "sy_mag": "mag",
  "sy_nit": "nit",
  "sy_kit": "kit",
- "sy_in": "in",
  "sy_nap": "nap",
  "sy_but": "but",
  "sy_ter": "ter",
@@ -774,8 +773,6 @@
  "sy_ock": "ock",
  "sy_tuh": "tuh",
  "sy_puss": "puss",
- "sy_buh": "buh",
- "sy_nan": "nan",
  "sy_um": "um",
  "sy_brell": "brell",
  "sy_tell": "tell",
@@ -787,7 +784,6 @@
  "sy_row": "row",
  "sy_nee": "nee",
  "sy_al": "al",
- "sy_ih": "ih",
  "sy_gay": "gay",
  "sy_er": "er",
  "sy_pill": "pill",
@@ -1021,5 +1017,12 @@
  "w_match": "match",
  "w_halves": "halves",
  "w_words": "words",
- "w_split": "split"
+ "w_split": "split",
+ "sy_tin": "tin",
+ "sy_bah": "bah",
+ "sy_nah": "nah",
+ "sy_nuh": "nuh",
+ "sy_luh": "luh",
+ "sy_lih": "lih",
+ "sy_ler": "ler"
 }

@@ -156,7 +156,7 @@ function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ")
 function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
 function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
 function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); }
-function say(keys){ if (keys && keys.length) Speech.say(keys); }
+function say(keys, done){ Speech.say(keys, done); }
 function wkey(w){ return "w_" + w; }
 
 /* ---------- word notation ----------
@@ -224,9 +224,9 @@ var BOSSY = ["c^ar^","st^ar^","f^ar^m","p^ar^k","j^ar^","sh^ar^k","f^or^k","h^or
 var SYLL = [
   "c[a]t|cat","d[o]g|dog","s[u]n|sun","f[i]sh|fish","fr[o]g|frog","sh[i]p|ship",
   "r[a]b-b[i]t|rab bit","p[u]mp-k[i]n|pump kin","r[o]ck-[e]t|rock it","c[u]p-c{a}k<e>|cup cake","s[u]n-s[e]t|sun set","p[i]c-n[i]c|pick nick",
-  "h[o]t-d[o]g|hot dog","m[a]g-n[e]t|mag nit","k[i]t-t[e]n|kit in","n[a]p-k[i]n|nap kin",
-  "b[u]t-t^er^-fly|but ter fly","[e]l-[e]-ph[a]nt|ell uh fent","[o]c-t[o]-p[u]s|ock tuh puss","b[a]-n[a]-n[a]|buh nan uh","[u]m-br[e]l-l[a]|um brell uh","t[e]l-[e]-sc{o}p<e>|tell uh scope",
-  "w[a]-t^er^-m[e]l-[o]n|wah ter mel un","m[a]c-[a]-r{o}-ni|mack uh row nee","[a]l-l[i]-g[a]-t^or^|al ih gay ter","c[a]t-^er^-p[i]l-l^ar^|cat er pill er"
+  "h[o]t-d[o]g|hot dog","m[a]g-n[e]t|mag nit","k[i]t-t[e]n|kit tin","n[a]p-k[i]n|nap kin",
+  "b[u]t-t^er^-fly|but ter fly","[e]l-[e]-ph[a]nt|ell uh fent","[o]c-t[o]-p[u]s|ock tuh puss","b[a]-n[a]-n[a]|bah nah nuh","[u]m-br[e]l-l[a]|um brell luh","t[e]l-[e]-sc{o}p<e>|tell uh scope",
+  "w[a]-t^er^-m[e]l-[o]n|wah ter mel un","m[a]c-[a]-r{o}-ni|mack uh row nee","[a]l-l[i]-g[a]-t^or^|al lih gay ter","c[a]t-^er^-p[i]l-l^ar^|cat er pill ler"
 ];
 
 /* ---------- round makers: each returns { hint, say, build(stage) } ---------- */
@@ -466,8 +466,16 @@ function correct(target, sayKeys){
   addClass(target, "right");
   renderDots();
   confetti(target);
-  say(sayKeys.concat(["p_praise_" + Math.floor(Math.random()*6)]));
-  setTimeout(nextRound, 2400 + 500*sayKeys.length);
+  /* move on once everything has been said (syllables, word, praise), not on a fixed timer that
+     could cut the voice off; the long timer is only a safety net if the speech is interrupted */
+  var R = G.R, moved = false;
+  function moveOn(){
+    if (moved) return; moved = true;
+    if (G && G.R === R && hasClass($("game"), "on")) nextRound();
+  }
+  var keys = sayKeys.concat(["p_praise_" + Math.floor(Math.random()*6)]);
+  say(keys, function(){ setTimeout(moveOn, 700); });
+  setTimeout(moveOn, 4000 + 1800*keys.length);
 }
 function wrong(target){
   G.mistakes++;
