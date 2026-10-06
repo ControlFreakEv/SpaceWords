@@ -677,15 +677,25 @@ ROUNDS.write = function(w){
       return pts;
     }
     function inkAt(x, y){
-      var r = lw * 0.9, c0 = Math.floor((x - r)/CELL), c1 = Math.floor((x + r)/CELL), r0 = Math.floor((y - r)/CELL), r1 = Math.floor((y + r)/CELL);
+      var r = lw * 0.6, c0 = Math.floor((x - r)/CELL), c1 = Math.floor((x + r)/CELL), r0 = Math.floor((y - r)/CELL), r1 = Math.floor((y + r)/CELL);
       for (var cx = c0; cx <= c1; cx++) for (var cy = r0; cy <= r1; cy++) grid[cx + "," + cy] = 1;
     }
-    function coverage(){
+    /* Done when the whole word is traced: at least 75% overall, and every part of every letter at
+       least half covered. (A total alone let an "I" pass with a bar left out, since the stem is most
+       of the letter.) The guide is split into small squares; each square with letter in it is a part. */
+    function traced(){
       if (!samples) samples = sampleGuide();
-      if (!samples.length) return 1;
-      var hit = 0;
-      samples.forEach(function(p){ if (grid[Math.floor(p[0]/CELL) + "," + Math.floor(p[1]/CELL)]) hit++; });
-      return hit / samples.length;
+      if (!samples.length) return true;
+      var R = Math.max(12, Math.round(H * 0.12)), parts = {}, hit = 0, k, p;
+      for (var i = 0; i < samples.length; i++){
+        p = samples[i]; k = Math.floor(p[0]/R) + "," + Math.floor(p[1]/R);
+        var on = !!grid[Math.floor(p[0]/CELL) + "," + Math.floor(p[1]/CELL)];
+        if (on) hit++;
+        parts[k] = parts[k] || [0, 0]; parts[k][0]++; if (on) parts[k][1]++;
+      }
+      if (hit / samples.length < 0.75) return false;
+      for (k in parts) if (parts.hasOwnProperty(k) && parts[k][0] >= 4 && parts[k][1] / parts[k][0] < 0.5) return false;
+      return true;
     }
     var last = null;
     function pos(e){ var r = cv.getBoundingClientRect(), t = e.touches ? e.touches[0] : e; return [t.clientX - r.left, t.clientY - r.top]; }
@@ -708,7 +718,7 @@ ROUNDS.write = function(w){
     function up(){
       if (!last) return;
       last = null;
-      if (!G.locked && coverage() >= 0.7) correct(box, [[["p_rainbow", wk(w)]]]);
+      if (!G.locked && traced()) correct(box, [[["p_rainbow", wk(w)]]]);
     }
     cv.addEventListener("touchstart", down, false); cv.addEventListener("touchmove", move, false); cv.addEventListener("touchend", up, false);
     cv.addEventListener("mousedown", down, false); cv.addEventListener("mousemove", move, false); window.addEventListener("mouseup", up, false);
@@ -716,6 +726,14 @@ ROUNDS.write = function(w){
     setTimeout(size, 0);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if (G && G.R === R){ samples = null; guide(); } });
     R.solve = function(){ if (!ctx) size(); samples = samples || sampleGuide(); samples.forEach(function(p){ inkAt(p[0], p[1]); }); last = [0, 0]; up(); };
+    /* for tests: trace only the guide points where keep(x, y, width, height) is true */
+    R.tracePart = function(keep){
+      if (!ctx) size(); samples = samples || sampleGuide();
+      var b = { top:1e9, bottom:-1e9, left:1e9, right:-1e9 };   // the letters' own ink box
+      samples.forEach(function(p){ b.top = Math.min(b.top, p[1]); b.bottom = Math.max(b.bottom, p[1]); b.left = Math.min(b.left, p[0]); b.right = Math.max(b.right, p[0]); });
+      samples.forEach(function(p){ if (keep(p[0], p[1], b)) inkAt(p[0], p[1]); });
+      last = [0, 0]; up(); return G.locked;
+    };
   };
   return R;
 };

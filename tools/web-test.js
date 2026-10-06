@@ -346,6 +346,29 @@ const server = http.createServer((req, res) => {
     const r = await play(a, 6);
     r.end[0] && r.end[1] === 6 ? ok("class words " + a + ": 6 rounds, 6 stars") : fail("class words " + a + " ended " + JSON.stringify(r));
   }
+  // Rainbow write: a word with a part left out isn't finished (an "I" without its top or bottom bar)
+  const traceCheck = await page.evaluate(() => {
+    const out = {}, C = ClassWords, plan = C.plan(), saved = JSON.stringify(plan);
+    const run = (word, keep) => {
+      plan.week = [word]; plan.done = [];
+      for (let t = 0; t < 50; t++) { C.start("write"); if (C.state().R.word === word) break; }   // review words can come first
+      return C.state().R.word === word ? C.state().R.tracePart(keep) : "no " + word + " round";
+    };
+    const frac = (y, b) => (y - b.top) / (b.bottom - b.top);   // 0 = top of the letters, 1 = bottom
+    out.stemOnly = run("I", (x, y, b) => frac(y, b) > 0.2 && frac(y, b) < 0.8);
+    out.noTop = run("I", (x, y, b) => frac(y, b) > 0.2);
+    out.noBottom = run("I", (x, y, b) => frac(y, b) < 0.8);
+    out.all = run("I", () => true);
+    out.halfWord = run("like", (x, y, b) => x < (b.left + b.right) / 2);
+    out.wholeWord = run("like", () => true);
+    const back = JSON.parse(saved); Object.keys(back).forEach(k => plan[k] = back[k]);
+    C.start("find");
+    return out;
+  });
+  traceCheck.stemOnly === false && traceCheck.noTop === false && traceCheck.noBottom === false && traceCheck.all === true && traceCheck.halfWord === false && traceCheck.wholeWord === true
+    ? ok("rainbow write: an I missing a bar or half a word isn't done; the whole word is")
+    : fail("rainbow write tracing check: " + JSON.stringify(traceCheck));
+
   // a wrong word in the hunt counts as a mistake
   await page.evaluate(() => ClassWords.start("hunt"));
   const huntWrong = await page.evaluate(() => { const o = document.querySelector(".hw:not([data-ok])"); if (!o) return "none"; o.click(); return ClassWords.state().mistakes; });
