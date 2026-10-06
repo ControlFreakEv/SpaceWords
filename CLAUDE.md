@@ -61,6 +61,9 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   5-6 keep it full and add a LoudnessEnhancer boost of +6/+12 dB on each clip (GameActivity,
   `AndroidAudio.level()/setLevel()`, SharedPreferences "audio"). The frame's own volume is saved when
   the game window opens and restored when it closes, so Skylight's volume doesn't change.
+- **Instructions button**: every round of every game shows its instruction with a yellow speaker
+  button (`.hintrow` + `.sayb`) that says it again; web-test.js checks every round has one. In
+  Picture Planet's "read the word, tap the picture" it says only the instruction (the word is the answer).
 - **Tap any word to hear it** (all games): `Speech.tapText(text)` wraps words in
   `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element
   with `data-say`. Words map to w_*, numbers to n_*, + - x / = to m_*. Every tappable word needs a

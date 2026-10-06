@@ -543,6 +543,38 @@ const server = http.createServer((req, res) => {
   await spd.goto(base + "sound-lab.html"); await spd.waitForTimeout(150);
   const sl = await spd.evaluate(() => { SoundLab.start(0); return document.querySelectorAll(".turtle").length; });
   sl === 1 ? ok("sound lab: turtle for the round's word") : fail("sound lab turtle: " + sl);
+  // Every round of every game has the speaker button to hear the instructions again.
+  const noSay = [];
+  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+    await spd.goto(base + w); await spd.waitForTimeout(150);
+    const n = await spd.locator("#path button").count();
+    for (let i = 0; i < n; i++) for (let t = 0; t < 3; t++) {
+      await spd.goto(base + w); await spd.waitForTimeout(60);
+      await spd.locator("#path button").nth(i).click(); await spd.waitForTimeout(60);
+      if (!(await spd.locator("#game.on .sayb").count())) noSay.push(w + " level " + (i + 1) + ": " + (await spd.locator("#game.on .hint").first().textContent()));
+    }
+  }
+  await spd.goto(base + "class-words.html"); await spd.waitForTimeout(150);
+  for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) {
+    await spd.evaluate(k => ClassWords.start(k), k);
+    if (!(await spd.locator("#game.on .sayb").count())) noSay.push("class words " + k);
+  }
+  noSay.length ? fail("rounds without the instructions button: " + [...new Set(noSay)].slice(0, 8).join("; ")) : ok("every round of every game has the instructions button");
+  // "read the word, tap the picture": the button repeats the instruction, never the word (that's the answer)
+  let picSaid = null;
+  for (let t = 0; t < 40 && !picSaid; t++) {
+    await spd.goto(base + "picture-planet.html"); await spd.waitForTimeout(80);
+    await spd.locator("#path button").first().click(); await spd.waitForTimeout(80);
+    if (await spd.locator(".bigword").count()) {
+      await spd.waitForTimeout(1200);
+      await spd.evaluate(() => { const real = Speech.say; window.__said = null; Speech.say = function(k, d, r){ window.__said = k.slice(); return real.apply(this, arguments); }; });
+      await spd.click("#game.on .sayb"); await spd.waitForTimeout(100);
+      picSaid = await spd.evaluate(() => window.__said || []);
+    }
+  }
+  picSaid && picSaid.join() === "i_pic" ? ok("picture round: the instructions button says only the instruction") : fail("picture round instructions said: " + JSON.stringify(picSaid));
+  if (SHOTS) await spd.screenshot({ path: path.join(SHOTS, "pp-pic-say.png") });
+
   await spd.close();
 
   // Volume control: top right, never overlapping text, pictures, buttons or cards (screen by screen).

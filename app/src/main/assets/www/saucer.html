@@ -126,6 +126,10 @@ img{display:block}
 .speakrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
 .speakrow .speak{margin-top:0}
 .btnrow .speakrow{margin-right:1.6vmin}
+.hintrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.sayb{width:8vmin;height:8vmin;border-radius:50%;background:#FFD93D;border:0.5vmin solid #1F2A44;margin-left:2vmin;-webkit-flex:none;flex:none;
+  display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.sayb img{width:5vmin;height:5vmin}
 </style>
 <link rel="stylesheet" href="back.css">
 </head>
@@ -293,7 +297,16 @@ function renderRound(){
   var stage = $("stage"); stage.innerHTML = "";
   var ufo = el("img", "ufo hover"); ufo.src = "emoji/1f6f8.svg"; ufo.alt = ""; ufo.id = "ufo";
   stage.appendChild(ufo);
-  stage.appendChild(el("p", "hint", Speech.tapText(HINTS[mode])));
+  /* the instruction, with a speaker button to hear it again */
+  var hr = el("div", "hintrow");
+  hr.appendChild(el("p", "hint", Speech.tapText(HINTS[mode])));
+  if (canTalk()){
+    var sb = el("button", "press sayb", '<img src="emoji/1f50a.svg" alt="">');
+    sb.setAttribute("aria-label", "Hear the instructions");
+    sb.onclick = function(){ say(mode === "sentence" ? ["i_sentence"] : [mode === "listen" ? "i_beam" : "i_look", word.k]); };
+    hr.appendChild(sb);
+  }
+  stage.appendChild(hr);
   if (mode === "listen") roundListen(stage, word);
   else if (mode === "sentence") roundSentence(stage, word);
   else roundSpell(stage, word);
