@@ -102,6 +102,9 @@ img{display:block}
 .colors{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-top:1.6vmin}
 .sw{width:7vmin;height:7vmin;border-radius:50%;margin:0 .8vmin;border:0.5vmin solid #F3F6FF}
 .sw.on{border:1vmin solid #FFD93D}
+.erase{padding:1.4vmin 2.6vmin;margin-left:2.4vmin}
+.erase.on{border-color:#FFD93D;box-shadow:0 0 0 0.6vmin #FFD93D}
+.rubber{display:inline-block;width:5.4vmin;height:3vmin;margin-right:1.6vmin;border-radius:0.8vmin;border:0.4vmin solid #1F2A44;background:#FF8FA3;background-image:-webkit-linear-gradient(left,#FF8FA3 62%,#5C8DFF 62%);background-image:linear-gradient(to right,#FF8FA3 62%,#5C8DFF 62%);-webkit-transform:rotate(-25deg);transform:rotate(-25deg)}
 .sw.rain{background:#FF5C7A;background-image:-webkit-linear-gradient(left,#FF5C7A,#FFD93D,#7CFFB2,#5CE1E6,#9B7CFF);background-image:linear-gradient(to right,#FF5C7A,#FFD93D,#7CFFB2,#5CE1E6,#9B7CFF)}
 
 /* roll & read */
@@ -647,28 +650,35 @@ var RAINBOW = ["#FF5C7A","#FF9E3D","#FFD93D","#7CFFB2","#5CE1E6","#9B7CFF"];
 ROUNDS.write = function(w){
   var R = { hint:"Trace the word with your finger. Use lots of colors!", say:["i_cw_write", wk(w)] };
   R.build = function(stage){
-    var box = el("div", "writebox"), cv = el("canvas");
-    box.appendChild(cv); stage.appendChild(box);
-    var colors = el("div", "colors"), auto = true, color = 0;
+    /* two layers: the faint guide word underneath, her ink on top (so the eraser only rubs out ink) */
+    var box = el("div", "writebox"), gcv = el("canvas"), cv = el("canvas");
+    box.appendChild(gcv); box.appendChild(cv); stage.appendChild(box);
+    var colors = el("div", "colors"), auto = true, color = 0, erasing = false;
     var rain = el("button", "sw rain on"); colors.appendChild(rain);
     var sws = RAINBOW.map(function(c, i){
       var b = el("button", "sw"); b.style.background = c;
-      b.onclick = function(){ auto = false; color = i; mark(b); };
+      b.onclick = function(){ auto = false; erasing = false; color = i; mark(b); };
       colors.appendChild(b); return b;
     });
-    function mark(on){ [rain].concat(sws).forEach(function(b){ removeClass(b, "on"); }); addClass(on, "on"); }
-    rain.onclick = function(){ auto = true; mark(rain); };
-    var clear = el("button", "paper press btn", "Clear"); clear.style.marginLeft = "3vmin";
+    var eraser = el("button", "paper press btn erase", '<span class="rubber"></span>Eraser');
+    colors.appendChild(eraser);
+    function mark(on){ [rain, eraser].concat(sws).forEach(function(b){ removeClass(b, "on"); }); addClass(on, "on"); }
+    rain.onclick = function(){ auto = true; erasing = false; mark(rain); };
+    eraser.onclick = function(){ erasing = true; mark(eraser); };
+    var clear = el("button", "paper press btn", "Clear"); clear.style.marginLeft = "1.6vmin";
     colors.appendChild(clear);
     stage.appendChild(colors);
 
-    var W, H, ctx, samples = null, grid = {}, CELL = 6, lw;
-    function size(){ W = cv.clientWidth; H = cv.clientHeight; cv.width = W; cv.height = H; ctx = cv.getContext("2d"); lw = Math.max(10, H * 0.085); guide(); }
+    var W, H, ctx, gctx, samples = null, grid = {}, CELL = 6, lw;
+    function size(){
+      W = cv.clientWidth; H = cv.clientHeight; cv.width = gcv.width = W; cv.height = gcv.height = H;
+      ctx = cv.getContext("2d"); gctx = gcv.getContext("2d"); lw = Math.max(10, H * 0.085); guide();
+    }
     function font(c){ c.font = "bold " + Math.round(H * (w.length > 4 ? 0.62 : 0.72)) + "px WHRead, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; }
     function guide(){
-      if (!ctx) return;
-      ctx.clearRect(0, 0, W, H);
-      font(ctx); ctx.fillStyle = "rgba(243,246,255,0.22)"; ctx.fillText(w, W/2, H/2 + H*0.04);
+      if (!gctx) return;
+      gctx.clearRect(0, 0, W, H);
+      font(gctx); gctx.fillStyle = "rgba(243,246,255,0.22)"; gctx.fillText(w, W/2, H/2 + H*0.04);
     }
     function sampleGuide(){
       var off = document.createElement("canvas"); off.width = W; off.height = H;
@@ -696,6 +706,15 @@ ROUNDS.write = function(w){
       var r = lw * 0.75, c0 = Math.floor((x - r)/CELL), c1 = Math.floor((x + r)/CELL), r0 = Math.floor((y - r)/CELL), r1 = Math.floor((y + r)/CELL);
       for (var cx = c0; cx <= c1; cx++) for (var cy = r0; cy <= r1; cy++) grid[cx + "," + cy] = 1;
     }
+    /* the eraser is twice as wide as the crayon; it takes back the tracing credit under it as well
+       (credit reaches a quarter line past the visible ink, so the reach does too) */
+    function eraseAt(x, y){
+      var r = lw + lw * 0.25, c0 = Math.floor((x - r)/CELL), c1 = Math.floor((x + r)/CELL), r0 = Math.floor((y - r)/CELL), r1 = Math.floor((y + r)/CELL);
+      for (var cx = c0; cx <= c1; cx++) for (var cy = r0; cy <= r1; cy++){
+        var ex = (cx + 0.5) * CELL - x, ey = (cy + 0.5) * CELL - y;
+        if (ex*ex + ey*ey <= r*r) delete grid[cx + "," + cy];
+      }
+    }
     /* Done when the whole word is traced: at least 75% overall, and every part of every letter at
        least half covered. (A total alone let an "I" pass with a bar left out, since the stem is most
        of the letter.) The guide is split into small squares; each square with letter in it is a part. */
@@ -719,26 +738,32 @@ ROUNDS.write = function(w){
       if (G.locked) return;
       if (!ctx) size();
       if (e.preventDefault) e.preventDefault();
-      if (auto) color = (color + 1) % RAINBOW.length;
-      last = pos(e); ctx.strokeStyle = RAINBOW[color]; ctx.fillStyle = RAINBOW[color]; ctx.lineWidth = lw; ctx.lineCap = ctx.lineJoin = "round";
-      ctx.beginPath(); ctx.arc(last[0], last[1], lw/2, 0, Math.PI*2); ctx.fill(); inkAt(last[0], last[1]);
+      last = pos(e); ctx.lineCap = ctx.lineJoin = "round";
+      if (erasing){
+        ctx.globalCompositeOperation = "destination-out"; ctx.strokeStyle = ctx.fillStyle = "#000"; ctx.lineWidth = lw * 2;
+      } else {
+        if (auto) color = (color + 1) % RAINBOW.length;
+        ctx.globalCompositeOperation = "source-over"; ctx.strokeStyle = ctx.fillStyle = RAINBOW[color]; ctx.lineWidth = lw;
+      }
+      ctx.beginPath(); ctx.arc(last[0], last[1], ctx.lineWidth/2, 0, Math.PI*2); ctx.fill(); dab(last[0], last[1]);
     }
+    function dab(x, y){ if (erasing) eraseAt(x, y); else inkAt(x, y); }
     function move(e){
       if (!last) return;
       if (e.preventDefault) e.preventDefault();
       var p = pos(e), dx = p[0] - last[0], dy = p[1] - last[1], n = Math.max(1, Math.ceil(Math.sqrt(dx*dx + dy*dy) / 3));
       ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
-      for (var i = 1; i <= n; i++) inkAt(last[0] + dx*i/n, last[1] + dy*i/n);
+      for (var i = 1; i <= n; i++) dab(last[0] + dx*i/n, last[1] + dy*i/n);
       last = p;
     }
     function up(){
       if (!last) return;
       last = null;
-      if (!G.locked && traced()) correct(box, [[["p_rainbow", wk(w)]]]);
+      if (!G.locked && !erasing && traced()) correct(box, [[["p_rainbow", wk(w)]]]);
     }
     cv.addEventListener("touchstart", down, false); cv.addEventListener("touchmove", move, false); cv.addEventListener("touchend", up, false);
     cv.addEventListener("mousedown", down, false); cv.addEventListener("mousemove", move, false); window.addEventListener("mouseup", up, false);
-    clear.onclick = function(){ grid = {}; guide(); };
+    clear.onclick = function(){ grid = {}; if (ctx) ctx.clearRect(0, 0, W, H); };
     setTimeout(size, 0);
     /* redraw the guide once the font has loaded. The frame's Chromium 39 has document.fonts.ready as a
        function returning a promise (newer browsers: a promise), so handle both, and redraw on a timer too. */
@@ -749,6 +774,9 @@ ROUNDS.write = function(w){
       if (fr && typeof fr.then === "function") fr.then(refont);
     } catch(e){}
     setTimeout(refont, 700);
+    /* for tests: how many credit squares are inked, and how solid the ink is at (x, y) */
+    R.inkCount = function(){ var n = 0; for (var k in grid) if (grid.hasOwnProperty(k)) n++; return n; };
+    R.inkAt = function(x, y){ return ctx ? ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data[3] : 0; };
     R.solve = function(){ if (!ctx) size(); samples = samples || sampleGuide(); samples.forEach(function(p){ inkAt(p[0], p[1]); }); last = [0, 0]; up(); };
     /* for tests: trace only the guide points where keep(x, y, width, height) is true */
     R.tracePart = function(keep){

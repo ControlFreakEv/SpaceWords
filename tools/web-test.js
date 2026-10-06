@@ -378,6 +378,35 @@ const server = http.createServer((req, res) => {
     ? ok("rainbow write: an I missing a bar or half a word isn't done; whole words are, even traced a little off-centre")
     : fail("rainbow write tracing check: " + JSON.stringify(traceCheck));
 
+  // Rainbow write eraser: rubs out ink and its tracing credit, never the guide word; then crayons draw again
+  await page.evaluate(() => {
+    const C = ClassWords, plan = C.plan();
+    window.__savedPlan = JSON.stringify(plan);
+    plan.week = ["like"]; plan.done = [];
+    for (let t = 0; t < 50; t++) { C.start("write"); if (C.state().R.word === "like") break; }
+  });
+  await page.waitForTimeout(100);
+  const wbox = await page.evaluate(() => { const r = document.querySelectorAll(".writebox canvas")[1].getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; });
+  const stroke = async () => {
+    const y = wbox[1] + wbox[3] * 0.5;
+    await page.mouse.move(wbox[0] + wbox[2] * 0.3, y); await page.mouse.down();
+    for (let i = 1; i <= 10; i++) await page.mouse.move(wbox[0] + wbox[2] * (0.3 + 0.04 * i), y);
+    await page.mouse.up();
+  };
+  const inkState = () => page.evaluate(b => {
+    const R = ClassWords.state().R, g = document.querySelectorAll(".writebox canvas")[0];
+    const gd = g.getContext("2d").getImageData(0, 0, g.width, g.height).data;
+    let guide = 0; for (let i = 3; i < gd.length; i += 4) if (gd[i]) guide++;
+    return { credit: R.inkCount(), ink: R.inkAt(b[2] * 0.5, b[3] * 0.5), guide, locked: ClassWords.state().locked };
+  }, wbox);
+  await stroke(); const drawn = await inkState();
+  await page.click(".erase"); await stroke(); const erased = await inkState();
+  await page.click(".sw.rain"); await stroke(); const redrawn = await inkState();
+  await page.evaluate(() => { const C = ClassWords, plan = C.plan(), back = JSON.parse(window.__savedPlan); Object.keys(back).forEach(k => plan[k] = back[k]); C.start("find"); });
+  drawn.credit > 0 && drawn.ink > 0 && erased.credit === 0 && erased.ink === 0 && erased.guide === drawn.guide && erased.guide > 0 && redrawn.credit > 0 && redrawn.ink > 0 && !erased.locked
+    ? ok("rainbow write eraser: rubs out ink and its credit, keeps the guide word, crayons work again after")
+    : fail("rainbow write eraser: " + JSON.stringify({ drawn, erased, redrawn }));
+
   // a wrong word in the hunt counts as a mistake
   await page.evaluate(() => ClassWords.start("hunt"));
   const huntWrong = await page.evaluate(() => { const o = document.querySelector(".hw:not([data-ok])"); if (!o) return "none"; o.click(); return ClassWords.state().mistakes; });

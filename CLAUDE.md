@@ -42,7 +42,8 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   (mail/sign/cereal box), Spell it, Rainbow write (finger tracing on canvas, scored on the middle band of each stroke,
   >=55% of max stroke depth, with a hit radius of 0.75x the drawn line width: 75% overall AND every
   ~12%-of-height square at least half traced. An I missing a bar fails; a whole word traced up to
-  about a line-width off-centre passes. web-test.js checks both), Roll &
+  about a line-width off-centre passes. web-test.js checks both. The guide word is its own canvas
+  under the ink, so the Eraser (2x line width, destination-out) rubs out ink and its credit only), Roll &
   read (die + silly voices), Car time (say a sentence). Mission = 8 mixed rounds ("short + fun").
   Plan per the handout: 2 new words a week + review of practiced ones; the game advances weekly
   unless a grown-up picks words (hold "Grown-ups" 1.5 s; tap words: this week -> practiced -> not
