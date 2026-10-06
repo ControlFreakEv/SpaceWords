@@ -43,7 +43,8 @@ var JS_RULES = [
   [/querySelectorAll\([^)]*\)\s*\.forEach/, "NodeList.forEach (Chrome 51)"],
   [/\.closest\s*\(/, "Element.closest (Chrome 41)"],
   [/\.classList\.toggle\([^,)]*,/, "classList.toggle with a second argument is unreliable on old WebViews"],
-  [/\bnew\s+(Map|Set|WeakMap|Symbol)\b/, "Map/Set/Symbol: avoid on Chromium 39"]
+  [/\bnew\s+(Map|Set|WeakMap|Symbol)\b/, "Map/Set/Symbol: avoid on Chromium 39"],
+  [/fonts\.ready\.then/, "document.fonts.ready is a function on Chromium 39 (a promise only in newer browsers)"]
 ];
 
 var CSS_RULES = [

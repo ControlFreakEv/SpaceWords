@@ -543,6 +543,26 @@ const server = http.createServer((req, res) => {
   await spd.goto(base + "sound-lab.html"); await spd.waitForTimeout(150);
   const sl = await spd.evaluate(() => { SoundLab.start(0); return document.querySelectorAll(".turtle").length; });
   sl === 1 ? ok("sound lab: turtle for the round's word") : fail("sound lab turtle: " + sl);
+  // Class Words on the frame's old browser: document.fonts.ready is a function there. Every activity
+  // must still read its instructions out loud on its own (Rainbow write didn't).
+  const old39 = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await old39.addInitScript(() => {
+    try { Object.defineProperty(document, "fonts", { configurable: true, value: { ready: function(){ return Promise.resolve(); } } }); } catch (e) {}
+  });
+  old39.on("pageerror", e => errors.push("old-browser page: " + e.message));
+  await old39.goto(base + "class-words.html"); await old39.waitForTimeout(200);
+  await old39.evaluate(() => { const real = Speech.say; window.__said = []; Speech.say = function(k){ window.__said.push(k.slice()); return real.apply(this, arguments); }; });
+  const silent = [];
+  for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) {
+    const err = await old39.evaluate(k => { window.__said = []; try { ClassWords.start(k); return null; } catch (e) { return e.message; } }, k);
+    if (err) { silent.push(k + " threw: " + err); continue; }
+    await old39.waitForTimeout(700);
+    const said = await old39.evaluate(() => [].concat.apply([], window.__said));
+    if (!said.some(x => /^(i_|z_)/.test(x))) silent.push(k + " " + JSON.stringify(said));
+  }
+  silent.length ? fail("activities that didn't read their instructions (old browser): " + silent.join("; ")) : ok("every Class Words activity reads its instructions by itself, on the frame's old browser too");
+  await old39.close();
+
   // Every round of every game has the speaker button to hear the instructions again.
   const noSay = [];
   for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {

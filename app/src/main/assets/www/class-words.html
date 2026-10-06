@@ -437,8 +437,9 @@ function renderRound(){
     if (wordKey) hr.appendChild(Speech.turtleButton(wordKey));
   }
   stage.appendChild(hr);
-  R.build(stage);
+  /* schedule the spoken instructions first, so a problem building the round can't silence them */
   setTimeout(function(){ if (G && G.R === R && !G.locked){ if (R.intro) R.intro(); else say(R.say); } }, 400);
+  try { R.build(stage); } catch(e){ if (window.console) console.error("round build failed", e); }
 }
 /* a right answer (or a finished practice round): praise, then move on once the voice is done */
 function correct(target, parts){
@@ -724,7 +725,15 @@ ROUNDS.write = function(w){
     cv.addEventListener("mousedown", down, false); cv.addEventListener("mousemove", move, false); window.addEventListener("mouseup", up, false);
     clear.onclick = function(){ grid = {}; guide(); };
     setTimeout(size, 0);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if (G && G.R === R){ samples = null; guide(); } });
+    /* redraw the guide once the font has loaded. The frame's Chromium 39 has document.fonts.ready as a
+       function returning a promise (newer browsers: a promise), so handle both, and redraw on a timer too. */
+    function refont(){ if (G && G.R === R && !G.locked){ samples = null; guide(); } }
+    try {
+      var fr = document.fonts && document.fonts.ready;
+      if (typeof fr === "function") fr = fr.call(document.fonts);
+      if (fr && typeof fr.then === "function") fr.then(refont);
+    } catch(e){}
+    setTimeout(refont, 700);
     R.solve = function(){ if (!ctx) size(); samples = samples || sampleGuide(); samples.forEach(function(p){ inkAt(p[0], p[1]); }); last = [0, 0]; up(); };
     /* for tests: trace only the guide points where keep(x, y, width, height) is true */
     R.tracePart = function(keep){
