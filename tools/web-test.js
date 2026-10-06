@@ -129,7 +129,7 @@ const server = http.createServer((req, res) => {
     await shot(w.replace(".html", "") + "-round");
   }
   const literalKeys = [];
-  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html", "compound.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html", "compound.html", "class-words.html"]) {
     const src = fs.readFileSync(path.join(WWW, w), "utf8"), re = /"((?:[pmi])_[a-z_]+)"/g; let m;
     while ((m = re.exec(src))) if (!/_$/.test(m[1])) literalKeys.push(m[1]);
   }
@@ -265,6 +265,81 @@ const server = http.createServer((req, res) => {
     end[0] && end[1] === 10 ? ok("compound level " + (i + 1) + ": 10 rounds, 10 stars") : fail("compound level " + (i + 1) + " ended " + JSON.stringify(end));
   }
 
+  // Class Words (her kindergarten list): data, every activity, the weekly plan, grown-ups screen.
+  await page.goto(base + "class-words.html"); await page.evaluate(() => localStorage.clear()); await page.reload(); await page.waitForTimeout(150);
+  await shot("class-home");
+  const cwData = await page.evaluate(() => {
+    const C = ClassWords, bad = [];
+    if (C.LIST.length !== 69) bad.push("list has " + C.LIST.length + " words");
+    C.LIST.forEach(w => {
+      const e = C.SENT[w]; if (!e) { bad.push(w + " has no sentence"); return; }
+      const [s, d] = e.split("|");
+      if (s.split("___").length !== 2) bad.push(w + ": sentence needs one blank");
+      d.split(" ").forEach(x => { if (C.LIST.indexOf(x) < 0 || x === w) bad.push(w + ": bad distractor " + x); });
+      if (!C.tokens(C.sentenceOf(w)).some(t => t.word === w.toLowerCase())) bad.push(w + ": sentence lacks the word");
+    });
+    return bad;
+  });
+  cwData.length ? fail("class words data: " + cwData.join("; ")) : ok("class words: 69 words, each with a sentence and two safe distractors");
+  const cwKeys = await page.evaluate(() => ClassWords.LIST.map(w => [Speech.key(w), "cs_" + w.toLowerCase()]).reduce((a, b) => a.concat(b), []));
+  const cwMissing = cwKeys.filter(k => !(k in phrases));
+  cwMissing.length ? fail("class words clips missing: " + cwMissing.join(", ")) : ok("class words: every word and sentence has a clip");
+  const plan0 = await page.evaluate(() => JSON.stringify(ClassWords.plan().week));
+  plan0 === '["I","a"]' ? ok("first week's words are I and a") : fail("first week: " + plan0);
+
+  async function solveRound() {
+    const t = await page.evaluate(() => ClassWords.state().R.type);
+    if (t === "write" || t === "spell") { await page.evaluate(() => ClassWords.state().R.solve()); return t; }
+    if (t === "roll") {
+      await page.click(".btn[data-ok]"); await page.waitForSelector(".voice", { timeout: 3000 });
+      const n = await page.locator(".voice").count();
+      for (let i = 0; i < n; i++) await page.locator(".voice").nth(i).click();
+      return t;
+    }
+    if (t === "hunt") { const n = await page.locator(".hw[data-ok]").count(); for (let i = 0; i < n; i++) await page.locator(".hw[data-ok]").nth(i).click(); return t; }
+    await page.locator("[data-ok]").first().click();
+    return t;
+  }
+  async function play(kind, n) {
+    await page.evaluate(k => ClassWords.start(k), kind);
+    const seen = [];
+    for (let r = 0; r < n; r++) {
+      if (r === 0) await shot("class-" + kind);
+      seen.push(await solveRound());
+      await page.waitForFunction(r => { const s = ClassWords.state(); return !s || s.round > r || document.getElementById("end").className.indexOf("on") >= 0; }, r, { timeout: 6000 });
+    }
+    const end = await page.evaluate(() => [document.getElementById("end").className.indexOf("on") >= 0, ClassWords.state().stars]);
+    return { end, seen };
+  }
+  const mission = await play("mission", 8);
+  mission.end[0] && mission.end[1] === 8 ? ok("class words mission: 8 rounds, 8 stars (" + mission.seen.join(", ") + ")") : fail("class words mission ended " + JSON.stringify(mission));
+  for (const a of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) {
+    const r = await play(a, 6);
+    r.end[0] && r.end[1] === 6 ? ok("class words " + a + ": 6 rounds, 6 stars") : fail("class words " + a + " ended " + JSON.stringify(r));
+  }
+  // a wrong word in the hunt counts as a mistake
+  await page.evaluate(() => ClassWords.start("hunt"));
+  const huntWrong = await page.evaluate(() => { const o = document.querySelector(".hw:not([data-ok])"); if (!o) return "none"; o.click(); return ClassWords.state().mistakes; });
+  huntWrong === 1 || huntWrong === "none" ? ok("word hunt: tapping a different word is a mistake") : fail("word hunt wrong tap: " + huntWrong);
+  const st = await page.evaluate(() => ClassWords.stats());
+  Object.keys(st).length ? ok("class words records first tries for " + Object.keys(st).join(", ")) : fail("class words recorded no first tries");
+  // the weekly plan: last week's words move to review, the next two in the handout's order come in
+  await page.evaluate(() => ClassWords.newWeek());
+  const p1 = await page.evaluate(() => ClassWords.plan());
+  JSON.stringify(p1.week) === '["the","to"]' && p1.done.indexOf("I") >= 0 ? ok("new week: the, to; I and a move to review") : fail("new week plan: " + JSON.stringify(p1));
+  // grown-ups screen: a press and hold opens it; tapping a word changes it
+  await page.evaluate(() => { document.getElementById("backBtn").click(); });
+  await page.dispatchEvent("#adultBtn", "mousedown"); await page.waitForTimeout(80);
+  const adultOpen = await page.evaluate(() => document.getElementById("adult").className.indexOf("on") >= 0);
+  adultOpen ? ok("grown-ups screen opens with a press and hold") : fail("grown-ups screen didn't open");
+  await shot("class-adult");
+  await page.locator("#adultList button", { hasText: /^like/ }).click();
+  const p2 = await page.evaluate(() => ClassWords.plan());
+  p2.manual && p2.week.indexOf("like") >= 0 ? ok("grown-ups: tapping 'like' makes it a this-week word") : fail("grown-ups tap: " + JSON.stringify(p2));
+  await page.click("#backBtn"); await page.click("#wallBtn"); await page.waitForTimeout(80); await shot("class-wall");
+  await page.click("#backBtn");
+  await shot("class-home-after");
+
   // Tap any word: every tappable piece on screen has a clip.
   const tapKeys = new Set();
   const collect = async () => (await page.evaluate(() => Array.prototype.map.call(document.querySelectorAll("[data-say]"), e => e.getAttribute("data-say")))).forEach(k => tapKeys.add(k));
@@ -272,6 +347,9 @@ const server = http.createServer((req, res) => {
     await page.goto(base + "math-game.html?g=" + g);
     for (let i = 0; i < 5; i++) for (let t = 0; t < 8; t++) { await page.evaluate(i => MathGame.start(i), i); await collect(); }
   }
+  await page.goto(base + "class-words.html");
+  for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) for (let t = 0; t < 6; t++) { await page.evaluate(k => ClassWords.start(k), k); await collect(); }
+  await page.evaluate(() => { document.getElementById("backBtn").click(); document.getElementById("wallBtn").click(); }); await collect();
   for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html"]) {
     await page.goto(base + w); await page.waitForTimeout(100); await collect();
     const n = await page.locator("#path button").count();
@@ -315,6 +393,13 @@ const server = http.createServer((req, res) => {
     await page.click("#backBtn"); await page.waitForURL(new RegExp(games[g] + "\\.html"));
     onLevels ? ok(g + ": Back goes game -> levels -> " + games[g] + ".html") : fail(g + ": Back from the game didn't show the levels");
   }
+  // Class Words: home, game, wall and grown-ups screens
+  await page.goto(base + "class-words.html"); await box("class-words home");
+  await page.evaluate(() => ClassWords.start("find")); await box("class-words game");
+  await page.click("#backBtn");
+  (await page.evaluate(() => document.getElementById("home").className.indexOf("on") >= 0)) ? ok("class-words: Back goes game -> home") : fail("class-words: Back from game failed");
+  await page.click("#wallBtn"); await box("class-words wall"); await page.click("#backBtn");
+  await page.click("#backBtn"); await page.waitForURL(/words\.html/); ok("class-words: Back goes home -> words.html");
   // end screen
   await page.goto(base + "math-game.html?g=count"); await page.evaluate(() => MathGame.start(0));
   for (let r = 0; r < 10; r++) {
@@ -330,7 +415,7 @@ const server = http.createServer((req, res) => {
     : fail("Back button moves around: " + JSON.stringify(boxes));
 
   // Volume control: on pickers and level lists, hidden while playing; -, +, bars; 0 means silent.
-  for (const pg of ["index.html", "words.html", "math.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=ops"]) {
+  for (const pg of ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=ops"]) {
     await page.goto(base + pg); await page.waitForTimeout(80);
     const v = await page.evaluate(() => { const b = document.querySelector(".volbox"); return !!b && b.offsetWidth > 0 && !document.getElementById("soundBtn"); });
     v ? ok(pg + ": volume control shown, no talking toggle") : fail(pg + ": volume control missing or talking toggle still there");

@@ -5,7 +5,9 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.AudioManager
+import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
+import android.media.SoundPool
 import android.media.audiofx.LoudnessEnhancer
 import android.os.Build
 import android.os.Handler
@@ -51,6 +53,10 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
     private var tts: TextToSpeech? = null
     private var player: MediaPlayer? = null
     private var enhancer: LoudnessEnhancer? = null
+    /** Silly voices (Roll & Read, Zib the alien): SoundPool can change speed and pitch on Android 5. */
+    private var pool: SoundPool? = null
+    private var poolStream = 0
+    private var sillyToken = -1
     /** The frame's own media volume, put back when the game closes so Skylight is unchanged. */
     private var frameVolume = -1
     @Volatile private var ttsReady = false
@@ -132,6 +138,7 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         root = null
         ui.removeCallbacks(idleCheck)
         stopClip()
+        pool?.release(); pool = null
         tts?.shutdown(); tts = null; ttsReady = false
         if (frameVolume >= 0) {
             try { am.setStreamVolume(AudioManager.STREAM_MUSIC, frameVolume, 0) } catch (e: Exception) {}
@@ -237,7 +244,42 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         clipDone(token)
     }
 
+    /** Plays audio/<key>.mp3 faster and higher (rate > 1) or slower and deeper (rate < 1). */
+    @Suppress("DEPRECATION")
+    private fun playSilly(key: String, token: Int, rate: Float) {
+        stopClip()
+        if (!isShowing) return
+        if (!CLIP_KEY.matches(key)) { clipDone(token); return }
+        try {
+            val sp = pool ?: SoundPool(1, AudioManager.STREAM_MUSIC, 0).also { pool = it }
+            val afd = ctx.assets.openFd("www/audio/$key.mp3")
+            val mmr = MediaMetadataRetriever()
+            val durMs = try {
+                mmr.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 1000L
+            } finally { mmr.release() }
+            val r = rate.coerceIn(0.5f, 2.0f)
+            sillyToken = token
+            sp.setOnLoadCompleteListener { p, sid, status ->
+                if (sillyToken != token) { p.unload(sid); return@setOnLoadCompleteListener }
+                if (status != 0) { sillyToken = -1; clipDone(token); return@setOnLoadCompleteListener }
+                poolStream = p.play(sid, 1f, 1f, 1, 0, r)
+                ui.postDelayed({
+                    p.unload(sid)
+                    if (sillyToken == token) { sillyToken = -1; clipDone(token) }
+                }, (durMs / r).toLong() + 150)
+            }
+            sp.load(afd, 1)
+            afd.close()
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't play $key in a silly voice", e)
+            sillyToken = -1
+            clipDone(token)
+        }
+    }
+
     private fun stopClip() {
+        if (sillyToken >= 0) { sillyToken = -1; pool?.stop(poolStream) }
         val p = player ?: return
         player = null
         try { p.stop() } catch (e: Exception) {}
@@ -253,6 +295,12 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         /** Plays audio/<key>.mp3; calls window.__clipDone(token) when it ends or fails. */
         @JavascriptInterface
         fun play(key: String, token: Int) { ui.post { playClip(key, token) } }
+
+        /** Like play(), in a silly voice: rate 0.5 (slow, deep) to 2.0 (fast, squeaky). */
+        @JavascriptInterface
+        fun playRate(key: String, token: Int, rate: Float) {
+            ui.post { if (rate in 0.97f..1.03f) playClip(key, token) else playSilly(key, token, rate) }
+        }
 
         @JavascriptInterface
         fun stop() { ui.post { stopClip() } }

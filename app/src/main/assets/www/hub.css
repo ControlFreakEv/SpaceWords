@@ -42,6 +42,11 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
 .five .game img{width:12vmin;height:12vmin;margin-right:2.2vmin}
 .five .t{font-size:4.6vmin}
 .five .d{font-size:2.6vmin}
+/* seven games: four per row, the second row centered */
+.seven .game{-webkit-flex:0 0 22%;flex:0 0 22%;margin:1.2vmin 1.2%;padding:2vmin 1.8vmin;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:flex-start;align-items:flex-start;-webkit-justify-content:flex-start;justify-content:flex-start}
+.seven .game img{width:11vmin;height:11vmin;margin:0 0 1.4vmin}
+.seven .t{font-size:4.4vmin}
+.seven .d{font-size:2.6vmin}
 @media (orientation: portrait){
   .games{-webkit-flex-direction:column;flex-direction:column;margin:0 0 6vmin}
   .game{margin:1.6vmin 0}

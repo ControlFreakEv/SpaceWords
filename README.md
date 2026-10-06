@@ -3,6 +3,12 @@
 A floating UFO button sits on top of the Skylight screen. Tap it to pick a mission:
 
 **Word games**
+- **Class Words** - her kindergarten class list (69 words to read and write), with the class
+  handout's practice ideas built in: word hunts on space mail, signs and cereal boxes; saying a
+  sentence ("car time"); teaching Zib the alien, who sometimes reads wrong; rainbow tracing; and
+  roll & read with silly voices. Two new words a week plus review, as the handout suggests. To
+  match the class newsletter, press and hold "Grown-ups" for a second and tap words to choose
+  this week's words. The Word wall shows how many she has learned.
 - **Picture Planet** - picture words: read it, hear it, spell it.
 - **Sight Word Saucer** - Dolch sight words across five planets (Pre-primer to Grade 3):
   hear a word and beam it up, pick the word that fits a sentence, or look-cover-spell.
@@ -49,7 +55,7 @@ Open Command Prompt in this SpaceWords folder (not platform-tools), then:
     pip install edge-tts
     python tools\make_audio.py
 
-That saves about 1,020 MP3 clips into app/src/main/assets/www/audio. It only records clips
+That saves about 1,130 MP3 clips into app/src/main/assets/www/audio. It only records clips
 that are missing, so after an update that adds new spoken text (like the math games),
 run it again and then rebuild.
 To hear other voices:  python tools\make_audio.py --list
