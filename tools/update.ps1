@@ -10,9 +10,11 @@
       -Open        open the games on the frame afterwards
       -SkipAudio   don't record voice clips (faster, when you know nothing new was added)
       -Frame 192.168.1.50:5555   a different frame address
+      -JavaHome "C:\path\to\jdk"  use this Java for the build (must be Java 17 to 21)
 #>
 param(
     [string]$Frame = "192.168.1.242:5555",
+    [string]$JavaHome = "",
     [switch]$Open,
     [switch]$SkipAudio
 )
@@ -52,12 +54,64 @@ if ($SkipAudio) {
 
 # 3. Build the APK (the same build as Android Studio's Generate APKs)
 Step 3 "Build the app"
-if ($isWin) {
-    # Gradle needs Java 21: use the one that comes with Android Studio.
-    foreach ($jbr in @("$env:ProgramFiles\Android\Android Studio\jbr", "$env:LOCALAPPDATA\Programs\Android Studio\jbr", "$env:ProgramFiles\Android\Android Studio1\jbr")) {
-        if (Test-Path (Join-Path $jbr "bin\java.exe")) { $env:JAVA_HOME = $jbr; break }
+
+# Gradle 8.7 runs on Java 17 to 21 only (on Java 25 it fails with just "25.0.3").
+# Find one: Android Studio's built-in Java first, then other installed JDKs.
+function Java-Major([string]$jdk) {
+    if (-not $jdk -or -not (Test-Path (Join-Path $jdk "bin\java.exe"))) { return 0 }
+    $rel = Join-Path $jdk "release"
+    $v = $null
+    if (Test-Path $rel) {
+        $m = Select-String -Path $rel -Pattern 'JAVA_VERSION="([0-9._]+)' | Select-Object -First 1
+        if ($m) { $v = $m.Matches[0].Groups[1].Value }
     }
-    if (-not $env:JAVA_HOME) { Stop-With "Couldn't find Java." "Install Android Studio (it includes Java), or set JAVA_HOME to a Java 21 folder." }
+    if (-not $v) {
+        $out = (& (Join-Path $jdk "bin\java.exe") -version 2>&1 | Out-String)
+        if ($out -match 'version "([0-9._]+)') { $v = $Matches[1] }
+    }
+    if (-not $v) { return 0 }
+    $parts = $v.Split(".")
+    if ($parts[0] -eq "1") { return [int]$parts[1] }   # 1.8 = Java 8
+    return [int]$parts[0]
+}
+function Find-Java {
+    $c = New-Object System.Collections.Generic.List[string]
+    if ($JavaHome) { $c.Add($JavaHome) }
+    foreach ($key in "HKLM:\SOFTWARE\Android Studio", "HKCU:\SOFTWARE\Android Studio", "HKLM:\SOFTWARE\WOW6432Node\Android Studio") {
+        $p = (Get-ItemProperty -Path $key -Name Path -ErrorAction SilentlyContinue).Path
+        if ($p) { $c.Add((Join-Path $p "jbr")); $c.Add((Join-Path $p "jre")) }
+    }
+    foreach ($base in "$env:ProgramFiles\Android", "${env:ProgramFiles(x86)}\Android", "$env:LOCALAPPDATA\Programs", "$env:LOCALAPPDATA\Google") {
+        if (Test-Path $base) {
+            Get-ChildItem $base -Directory -Filter "Android Studio*" -ErrorAction SilentlyContinue | ForEach-Object { $c.Add((Join-Path $_.FullName "jbr")); $c.Add((Join-Path $_.FullName "jre")) }
+        }
+    }
+    $tb = "$env:LOCALAPPDATA\JetBrains\Toolbox\apps"
+    if (Test-Path $tb) {
+        Get-ChildItem $tb -Recurse -Directory -Filter "jbr" -Depth 4 -ErrorAction SilentlyContinue | ForEach-Object { $c.Add($_.FullName) }
+    }
+    if ($env:JAVA_HOME) { $c.Add($env:JAVA_HOME) }
+    foreach ($base in "$env:ProgramFiles\Java", "$env:ProgramFiles\Eclipse Adoptium", "$env:ProgramFiles\Microsoft", "$env:ProgramFiles\Zulu", "$env:ProgramFiles\Amazon Corretto", "$env:USERPROFILE\.jdks") {
+        if (Test-Path $base) { Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | ForEach-Object { $c.Add($_.FullName) } }
+    }
+    foreach ($jdk in $c) {
+        $major = Java-Major $jdk
+        if ($major -ge 17 -and $major -le 21) { return @($jdk, $major) }
+    }
+    return $null
+}
+
+if ($isWin) {
+    $found = Find-Java
+    if (-not $found) {
+        Stop-With "Couldn't find Java 17 to 21 for the build (Java 25 is too new for this project's Gradle)." ("In Android Studio: File > Settings > Build, Execution, Deployment > Build Tools > Gradle shows the 'Gradle JDK' folder. " +
+            "Run this again with that folder:  powershell -ExecutionPolicy Bypass -File tools\update.ps1 -JavaHome ""C:\that\folder""")
+    }
+    $env:JAVA_HOME = $found[0]
+    $env:Path = (Join-Path $found[0] "bin") + ";" + $env:Path
+    Write-Host "Using Java $($found[1]): $($found[0])"
+    # a Gradle background process left over from another Java can get in the way; stop it quietly
+    & (Join-Path $root "gradlew.bat") --stop *> $null
     # Gradle needs to know where the Android SDK is.
     if (-not (Test-Path (Join-Path $root "local.properties"))) {
         $sdk = (Join-Path $env:LOCALAPPDATA "Android\Sdk") -replace '\\', '\\' -replace ':', '\:'

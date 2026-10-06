@@ -96,7 +96,8 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   ro.adb.secure=0, so Wi-Fi adb needs no approval). On the owner's Windows PC adb is not on PATH:
   `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`. Cloud sessions cannot reach the frame.
   The owner updates with **update.bat** (repo root) = `tools\update.ps1`: git pull, make_audio.py,
-  gradlew assembleDebug (JAVA_HOME = Android Studio's jbr), deploy.ps1. When telling the owner
+  gradlew assembleDebug (finds a Java 17-21: Android Studio's jbr first; the owner's JAVA_HOME is
+  Java 25, which Gradle 8.7 can't run on), deploy.ps1. When telling the owner
   how to get a change onto the frame, just say "double-click update.bat".
 - **The firmware kills the previous app whenever another app comes to the front** (low-RAM
   policy): when the games were an activity, Skylight died as they opened, so "Back to photos"

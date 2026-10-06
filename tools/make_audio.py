@@ -62,7 +62,7 @@ async def main():
     done = sorted(k for k, ok in results if ok)
     with open(os.path.join(OUT, "index.json"), "w", encoding="utf-8") as f:
         json.dump(done, f)
-    print(f"Done: {len(done)} of {len(phrases)} clips. Now rebuild the app in Android Studio.")
+    print(f"Done: {len(done)} of {len(phrases)} clips are ready.")
 
 
 asyncio.run(main())
