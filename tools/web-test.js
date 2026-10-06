@@ -361,12 +361,21 @@ const server = http.createServer((req, res) => {
     out.all = run("I", () => true);
     out.halfWord = run("like", (x, y, b) => x < (b.left + b.right) / 2);
     out.wholeWord = run("like", () => true);
+    // a real finger: the whole word a little off-centre, with small gaps
+    const shifted = (word, dx, dy, gap) => {
+      plan.week = [word]; plan.done = [];
+      for (let t = 0; t < 50; t++) { C.start("write"); if (C.state().R.word === word) break; }
+      return C.state().R.word === word ? C.state().R.traceShifted(dx, dy, gap) : "no " + word + " round";
+    };
+    // (the scored points are the middle of each stroke, so shifting them is a finger tracing a bit off-centre)
+    out.offCentre = ["for", "like", "the", "yellow", "I", "we"].map(w => [w, shifted(w, 12, -10, 7), shifted(w, -12, 10, 7)]).filter(r => r[1] !== true || r[2] !== true);
+    out.forNoO = run("for", (x, y, b) => !(x > b.left + (b.right - b.left) * 0.38 && x < b.left + (b.right - b.left) * 0.68));
     const back = JSON.parse(saved); Object.keys(back).forEach(k => plan[k] = back[k]);
     C.start("find");
     return out;
   });
-  traceCheck.stemOnly === false && traceCheck.noTop === false && traceCheck.noBottom === false && traceCheck.all === true && traceCheck.halfWord === false && traceCheck.wholeWord === true
-    ? ok("rainbow write: an I missing a bar or half a word isn't done; the whole word is")
+  traceCheck.stemOnly === false && traceCheck.noTop === false && traceCheck.noBottom === false && traceCheck.all === true && traceCheck.halfWord === false && traceCheck.wholeWord === true && traceCheck.offCentre.length === 0 && traceCheck.forNoO === false
+    ? ok("rainbow write: an I missing a bar or half a word isn't done; whole words are, even traced a little off-centre")
     : fail("rainbow write tracing check: " + JSON.stringify(traceCheck));
 
   // a wrong word in the hunt counts as a mistake

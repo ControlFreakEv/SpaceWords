@@ -39,8 +39,10 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   handout's order (the first two, "I" and "a", were under a crayon scribble in the photo; check with
   the owner if unsure). Activities map to the handout's ideas: Find it, Fill the blank (curated
   distractors that can't fit), Teach Zib (alien reads, sometimes wrong = "Teach a Toy"), Word hunt
-  (mail/sign/cereal box), Spell it, Rainbow write (finger tracing on canvas: 75% overall AND every
-  ~12%-of-height square of the letters at least half traced, so an I missing a bar fails), Roll &
+  (mail/sign/cereal box), Spell it, Rainbow write (finger tracing on canvas, scored on the middle band of each stroke,
+  >=55% of max stroke depth, with a hit radius of 0.75x the drawn line width: 75% overall AND every
+  ~12%-of-height square at least half traced. An I missing a bar fails; a whole word traced up to
+  about a line-width off-centre passes. web-test.js checks both), Roll &
   read (die + silly voices), Car time (say a sentence). Mission = 8 mixed rounds ("short + fun").
   Plan per the handout: 2 new words a week + review of practiced ones; the game advances weekly
   unless a grown-up picks words (hold "Grown-ups" 1.5 s; tap words: this week -> practiced -> not

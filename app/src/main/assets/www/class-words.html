@@ -673,12 +673,27 @@ ROUNDS.write = function(w){
     function sampleGuide(){
       var off = document.createElement("canvas"); off.width = W; off.height = H;
       var c = off.getContext("2d"); font(c); c.fillStyle = "#fff"; c.fillText(w, W/2, H/2 + H*0.04);
-      var data = c.getImageData(0, 0, W, H).data, pts = [];
-      for (var y = 0; y < H; y += 5) for (var x = 0; x < W; x += 5) if (data[(y*W + x)*4 + 3] > 100) pts.push([x, y]);
+      var data = c.getImageData(0, 0, W, H).data, S = 4, cols = Math.ceil(W / S), rows = Math.ceil(H / S), x, y, i;
+      /* Score the middle band of each stroke (what a finger aims for), not the whole thick letter:
+         d = how far each letter point is from the letter's edge; keep points at least 55% of the
+         thickest stroke's half-width in. A trace along the middle, a little off, covers them. */
+      var d = [], q = [], maxD = 0;
+      for (y = 0; y < rows; y++) for (x = 0; x < cols; x++){
+        var on = data[((y*S)*W + x*S)*4 + 3] > 100;
+        d.push(on ? -1 : 0);
+        if (!on) q.push(y*cols + x);
+      }
+      for (var h = 0; h < q.length; h++){
+        var k = q[h], cx = k % cols, cy = (k - cx) / cols;
+        var nb = [cx > 0 ? k - 1 : -1, cx < cols - 1 ? k + 1 : -1, cy > 0 ? k - cols : -1, cy < rows - 1 ? k + cols : -1];
+        for (i = 0; i < 4; i++) if (nb[i] >= 0 && d[nb[i]] < 0){ d[nb[i]] = d[k] + 1; if (d[nb[i]] > maxD) maxD = d[nb[i]]; q.push(nb[i]); }
+      }
+      var pts = [], keep = Math.max(1, Math.round(maxD * 0.55));
+      for (i = 0; i < d.length; i++) if (d[i] >= keep) pts.push([(i % cols) * S, Math.floor(i / cols) * S]);
       return pts;
     }
     function inkAt(x, y){
-      var r = lw * 0.6, c0 = Math.floor((x - r)/CELL), c1 = Math.floor((x + r)/CELL), r0 = Math.floor((y - r)/CELL), r1 = Math.floor((y + r)/CELL);
+      var r = lw * 0.75, c0 = Math.floor((x - r)/CELL), c1 = Math.floor((x + r)/CELL), r0 = Math.floor((y - r)/CELL), r1 = Math.floor((y + r)/CELL);
       for (var cx = c0; cx <= c1; cx++) for (var cy = r0; cy <= r1; cy++) grid[cx + "," + cy] = 1;
     }
     /* Done when the whole word is traced: at least 75% overall, and every part of every letter at
@@ -695,7 +710,7 @@ ROUNDS.write = function(w){
         parts[k] = parts[k] || [0, 0]; parts[k][0]++; if (on) parts[k][1]++;
       }
       if (hit / samples.length < 0.75) return false;
-      for (k in parts) if (parts.hasOwnProperty(k) && parts[k][0] >= 4 && parts[k][1] / parts[k][0] < 0.5) return false;
+      for (k in parts) if (parts.hasOwnProperty(k) && parts[k][0] >= 3 && parts[k][1] / parts[k][0] < 0.5) return false;
       return true;
     }
     var last = null;
@@ -741,6 +756,12 @@ ROUNDS.write = function(w){
       var b = { top:1e9, bottom:-1e9, left:1e9, right:-1e9 };   // the letters' own ink box
       samples.forEach(function(p){ b.top = Math.min(b.top, p[1]); b.bottom = Math.max(b.bottom, p[1]); b.left = Math.min(b.left, p[0]); b.right = Math.max(b.right, p[0]); });
       samples.forEach(function(p){ if (keep(p[0], p[1], b)) inkAt(p[0], p[1]); });
+      last = [0, 0]; up(); return G.locked;
+    };
+    /* for tests: trace the whole word off-centre by (dx, dy) pixels, skipping every gap-th point */
+    R.traceShifted = function(dx, dy, gap){
+      if (!ctx) size(); samples = samples || sampleGuide();
+      samples.forEach(function(p, i){ if (!gap || i % gap) inkAt(p[0] + dx, p[1] + dy); });
       last = [0, 0]; up(); return G.locked;
     };
   };
