@@ -30,7 +30,8 @@ The volume control sits in the bottom-left corner of the pickers and level lists
 or a bar. The bottom bar off is silent; the two orange bars are louder than the frame's own
 maximum. The frame's volume for Skylight is put back when you return to the photos.
 
-Next to "Hear it", a turtle says the word slowly and a rabbit says it fast.
+Next to "Hear it" there's a turtle switch. While it's on (green), every word is said slowly;
+instructions and praise stay normal. It stays on until she taps it off.
 
 In every game, tapping a word that isn't an answer choice reads it aloud (instructions,
 sentences, numbers in math questions). In Picture Planet's "read the word" rounds that counts

@@ -432,9 +432,9 @@ function renderRound(){
     var sb = el("button", "paper press sayb flex", img("1f50a"));
     sb.onclick = function(){ if (R.replay) R.replay(); else say(R.say); };
     hr.appendChild(sb);
-    /* turtle and rabbit: the round's word slow or fast (never the instructions) */
+    /* turtle: say words slowly (on/off; never the instructions) */
     var wordKey = (R.say || []).filter(function(k){ return /^w_/.test(k); }).pop();
-    if (wordKey) hr.appendChild(Speech.speedButtons(wordKey));
+    if (wordKey) hr.appendChild(Speech.turtleButton(wordKey));
   }
   stage.appendChild(hr);
   R.build(stage);

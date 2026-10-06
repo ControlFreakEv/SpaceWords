@@ -253,10 +253,10 @@ function distractors(word, n){
 function speakBtn(word, big){
   var b = el("button", "paper press speak" + (big ? " big" : ""), '<img src="emoji/1f50a.svg" alt="">Hear it');
   b.onclick = function(){ say([Speech.key(word.w)]); };
-  /* turtle and rabbit beside it: the word slow or fast */
+  /* the turtle beside it: say words slowly (on/off) */
   var row = el("div", "speakrow");
   row.appendChild(b);
-  if (Speech.canTalk()) row.appendChild(Speech.speedButtons(Speech.key(word.w)));
+  if (Speech.canTalk()) row.appendChild(Speech.turtleButton(Speech.key(word.w)));
   return row;
 }
 

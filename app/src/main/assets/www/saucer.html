@@ -302,10 +302,10 @@ function renderRound(){
 function speakBtn(word, big){
   var b = el("button", "press speak" + (big ? " big" : ""), '<img src="emoji/1f50a.svg" alt="">Hear it');
   b.onclick = function(){ say([word.k]); };
-  /* turtle and rabbit beside it: the word slow or fast */
+  /* the turtle beside it: say words slowly (on/off) */
   var row = el("div", "speakrow");
   row.appendChild(b);
-  if (Speech.canTalk()) row.appendChild(Speech.speedButtons(word.k));
+  if (Speech.canTalk()) row.appendChild(Speech.turtleButton(word.k));
   return row;
 }
 function choiceRow(stage, word, options){

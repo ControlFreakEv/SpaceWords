@@ -90,18 +90,18 @@ window.__clipDone = function(token){ if (token === clipToken) playNext(); };
 
 function playNext(){
   if (!queue.length){ playing = null; finished(); return; }
-  var key = queue.shift();
+  var item = queue.shift(), key = item.k, r = item.r;
   if (nativeAudio){
     clipToken++;
     try {
-      if (rate !== 1 && nativeAudio.playRate) nativeAudio.playRate(key, clipToken, rate);
+      if (r !== 1 && nativeAudio.playRate) nativeAudio.playRate(key, clipToken, r);
       else nativeAudio.play(key, clipToken);
     } catch(e){ playNext(); }
     return;
   }
   var a = new Audio("audio/" + key + ".mp3");
   playing = a;
-  try { a.volume = Math.min(1, level / 4); a.playbackRate = rate; } catch(e){}
+  try { a.volume = Math.min(1, level / 4); a.playbackRate = r; } catch(e){}
   a.onended = playNext;
   a.onerror = playNext;
   try { var p = a.play(); if (p && p["catch"]) p["catch"](function(){ playNext(); }); } catch(e){ playNext(); }
@@ -134,7 +134,8 @@ function say(keys, done, speed){
   if (m === "audio"){
     var allRecorded = keys.every(function(k){ return clips[k]; });
     if (allRecorded || !voices.length){
-      queue = keys.filter(function(k){ return clips[k]; });
+      queue = keys.filter(function(k){ return clips[k]; }).map(function(k){ return { k:k, r:rate }; });
+      if (slowOn && rate === 1) queue = queue.map(slowItem);
       playNext();
       return;
     }
@@ -235,41 +236,49 @@ function drawVolume(){
   drawVolume();
 })();
 
-/* ---- turtle and rabbit: hear a word slow or fast ----
-   Slow uses its own recording (ws_<word>, recorded slower so it stays clear), or until that exists
-   the normal clip slowed down. Fast speeds the normal clip up. Only the word, never instructions. */
-function sayAt(key, speed){
-  if (speed === "slow"){
-    var slow = key.replace(/^w_/, "ws_");
-    if (slow !== key && clips && clips[slow]) say([slow]); else say([key], null, 0.7);
-  } else if (speed === "fast") say([key], null, 1.45);
-  else say([key]);
+/* ---- turtle: an on/off toggle that says words slowly ----
+   While it's on, every single word (w_ keys) is said slowly: its own slow recording (ws_<word>,
+   recorded slower so it stays clear), or until that exists the normal clip at 0.7x. Instructions,
+   sentences, praise and silly voices are never slowed. Remembered between games. */
+var slowOn = load("slow", false);
+function slowItem(it){
+  if (!/^w_/.test(it.k)) return it;
+  var ws = it.k.replace(/^w_/, "ws_");
+  return clips && clips[ws] ? { k:ws, r:1 } : { k:it.k, r:0.7 };
 }
-function speedButtons(key){
-  var row = document.createElement("span");
-  row.className = "spdrow";
-  [["slow", "1f422", "Slow"], ["fast", "1f430", "Fast"]].forEach(function(o){
-    var b = document.createElement("button");
-    b.className = "spdbtn"; b.setAttribute("data-speed", o[0]); b.setAttribute("aria-label", o[2]);
-    b.innerHTML = '<img src="emoji/' + o[1] + '.svg" alt="">';
-    b.onclick = function(e){ if (e && e.stopPropagation) e.stopPropagation(); sayAt(key, o[0]); };
-    row.appendChild(b);
-  });
-  return row;
+var turtles = [];
+function drawTurtles(){
+  turtles = turtles.filter(function(b){ return document.body.contains(b); });
+  turtles.forEach(function(b){ b.className = "turtle" + (slowOn ? " on" : ""); b.setAttribute("aria-pressed", slowOn ? "true" : "false"); });
+}
+function setSlow(on){ slowOn = !!on; save("slow", slowOn); drawTurtles(); }
+function turtleButton(key){
+  var b = document.createElement("button");
+  b.setAttribute("aria-label", "Slow words");
+  b.innerHTML = '<img src="emoji/1f422.svg" alt=""><span>Slow</span>';
+  b.onclick = function(e){
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSlow(!slowOn);
+    if (key) say([key]);   // say the word at the new speed so she hears the difference
+  };
+  turtles.push(b);
+  b.className = "turtle" + (slowOn ? " on" : "");
+  return b;
 }
 (function(){
   var st = document.createElement("style");
-  st.textContent = ".spdrow{display:-webkit-inline-flex;display:inline-flex;-webkit-align-items:center;align-items:center;vertical-align:middle}" +
-    ".spdbtn{width:9vmin;height:9vmin;margin:0 0 0 1.4vmin;border-radius:50%;background:#F7F9FF;border:0.5vmin solid #1F2A44;" +
-    "box-shadow:0.6vmin 0.6vmin 0 #05081A;padding:0;cursor:pointer;outline:none;display:-webkit-flex;display:flex;" +
-    "-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}" +
-    ".spdbtn:active{background:#FFD93D}.spdbtn img{width:6vmin;height:6vmin;display:block}";
+  st.textContent = ".turtle{height:9vmin;margin:0 0 0 1.4vmin;padding:0 2.2vmin 0 1.4vmin;border-radius:4.5vmin;background:#F7F9FF;" +
+    "border:0.5vmin solid #1F2A44;box-shadow:0.6vmin 0.6vmin 0 #05081A;cursor:pointer;outline:none;display:-webkit-inline-flex;display:inline-flex;" +
+    "-webkit-align-items:center;align-items:center;font-family:\"WHFun\",\"Trebuchet MS\",sans-serif;font-weight:600;font-size:3.4vmin;color:#4F5F80;vertical-align:middle}" +
+    ".turtle img{width:6vmin;height:6vmin;margin-right:1vmin;display:block;opacity:.55}" +
+    ".turtle.on{background:#7CFFB2;color:#14193A;border-color:#14193A}.turtle.on img{opacity:1}";
   (document.head || document.documentElement).appendChild(st);
 })();
 
 window.Speech = {
-  sayAt: sayAt,
-  speedButtons: speedButtons,
+  turtleButton: turtleButton,
+  slowOn: function(){ return slowOn; },
+  setSlow: setSlow,
   tapText: tapText,
   tokenKey: tokenKey,
   say: say,

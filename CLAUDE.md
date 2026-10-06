@@ -47,11 +47,12 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Silly voices**: `Speech.say(keys, done, speed)`; on the frame `AndroidAudio.playRate()` plays
   through SoundPool (speed and pitch 0.5-2.0; MediaPlayer can't before Android 6). No volume
   boost on those. Zib speaks at 1.35.
-- **Turtle and rabbit** (owner's request): `Speech.speedButtons(wordKey)` next to "Hear it" in
-  Picture Planet / Saucer and next to the speaker in Sound Lab, Compound Words and Class Words,
-  for the round's word only (never instructions). Turtle plays ws_<word> (its own clip recorded at
-  -45% by make_audio.py so it stays clear; every w_ key has a ws_ twin) or, if missing, the word at
-  0.7x; rabbit plays the word at 1.45x.
+- **Turtle toggle** (owner's request; the rabbit was dropped): `Speech.turtleButton(wordKey)` next
+  to "Hear it" in Picture Planet / Saucer and next to the speaker in Sound Lab, Compound Words and
+  Class Words. On/off, remembered (localStorage speech:slow). While on, every w_ key said at normal
+  speed plays slowly: ws_<word> (its own clip recorded at -45% by make_audio.py; every w_ key has a
+  ws_ twin) or, if missing, the word at 0.7x. Instructions, sentences, praise and silly voices are
+  never slowed (the speech queue carries a rate per clip).
 - **Volume control** (speech.js, every page; the owner asked for it in place of "Talking: on/off"):
   fixed bottom-left on pickers and level lists, hidden in play (`body[data-screen=game|end]`, set by
   each page's show()). Levels 0 (off) to 6, default 5: 1-4 set the frame's media volume to 1/4..full,
