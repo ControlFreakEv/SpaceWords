@@ -1124,5 +1124,10 @@
  "w_die": "die",
  "w_times": "times",
  "w_silly": "silly",
- "w_voices": "voices"
+ "w_voices": "voices",
+ "m_rule": "The rule is",
+ "m_then": "then",
+ "m_rule_grow": "Each jump is one bigger!",
+ "m_rule_square": "These are square numbers. Each one is a number times itself!",
+ "m_rule_repeat": "The pattern repeats!"
 }

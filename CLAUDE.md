@@ -12,6 +12,9 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Math games** (math-game.html?g=count|ops|pattern): Star Count, Rocket Math, Alien Patterns.
   5 levels each, kindergarten starter to about 3rd grade; she's advanced, so keep the range wide.
   Choice rounds plus keypad rounds (3 misses reveal the answer). Stars: localStorage math:<g>:best.
+  Alien Patterns rounds carry `rule` {steps, html, say}: after a right (or revealed) answer the
+  step labels between the numbers appear (+3, x2...), a "Rule:" line shows, and it is said
+  ("The rule is plus three"). Math rounds move on after the voice finishes (Speech.say done).
 
 - **Match games** (match.html?g=connect|rhyme): Connect the Pairs (word to picture, Picture
   Planet's word levels) and Rhyming Pairs (pairs tagged by sound; a board never has two pairs with

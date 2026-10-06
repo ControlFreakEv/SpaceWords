@@ -92,6 +92,14 @@ img{display:block}
 .bub{min-width:13vmin;height:13vmin;margin:1vmin;padding:0 1.6vmin;font-size:7.5vmin;border-radius:6.5vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
 .bub img{width:9vmin;height:9vmin}
 .bub.q{background:#FFD93D;color:#1F2A44;min-width:13vmin}
+/* the pattern's rule, shown once she gets it right */
+.step{font-size:4.2vmin;color:#7CFFB2;visibility:hidden;margin:0 .2vmin;min-width:6vmin;text-align:center}
+.seq.solved .step{visibility:visible}
+.rule{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;
+  margin-top:1.4vmin;padding:1vmin 3vmin;border-radius:3vmin;background:#131A3D;border:0.5vmin solid #7CFFB2;font-size:4.8vmin;color:#F3F6FF}
+.rule b{color:#7CFFB2;margin-right:1.4vmin;font-weight:600}
+.rule img{width:6.4vmin;height:6.4vmin;margin:0 .5vmin}
+.rule .brk{color:#7CFFB2;font-size:6vmin;margin:0 .6vmin}
 
 /* answers */
 .choices{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap;width:100%}
@@ -258,9 +266,10 @@ function rCompareNums(lo, hi){
   return { hint:"Which number is " + (big ? "bigger" : "smaller") + "?", say:[big ? "m_bigger" : "m_smaller"], prompt:"",
     kind:"choice", options:[a, b].map(function(v){ return { html:String(v), val:v, cls:"n" }; }), answer:ans, answerSay:[n(ans)] };
 }
-function bubbles(values, hideIndex, asImages){
+function bubbles(values, hideIndex, asImages, steps){
   var out = '<div class="seq">';
   for (var i = 0; i < values.length; i++){
+    if (i > 0 && steps) out += '<span class="step">' + steps[i - 1] + '</span>';
     if (i === hideIndex) out += '<div class="paper bub q" id="entry">?</div>';
     else if (asImages) out += '<div class="paper bub">' + img(values[i]) + '</div>';
     else out += '<div class="paper bub tw" data-say="n_' + values[i] + '">' + values[i] + '</div>';
@@ -360,7 +369,14 @@ function rDivide(pad){
     options:pad ? null : numOpts(q, 0, 20, [q + 1, q - 1, b]), answer:q, answerSay:[n(q)] };
 }
 
-/* sequences */
+/* sequences. Each one carries its rule: steps between the numbers, a line of text, and what to say. */
+var MINUS_SIGN = "\u2212", TIMES_SIGN = "\u00d7", DIV_SIGN = "\u00f7";
+function signed(d){ return (d >= 0 ? "+" : MINUS_SIGN) + Math.abs(d); }
+function arithRule(vals){
+  var d = vals[1] - vals[0], steps = [];
+  for (var i = 1; i < vals.length; i++) steps.push(signed(d));
+  return { steps:steps, html:signed(d) + " each time", say:["m_rule", d >= 0 ? "m_plus" : "m_minus", n(Math.abs(d))] };
+}
 var UNITS = ["AB","AAB","ABB","ABC","AABB","ABAC"];
 function rPicturePattern(){
   var unit = pick(UNITS), letters = [], codes = {}, pool = shuffle(THINGS);
@@ -370,16 +386,19 @@ function rPicturePattern(){
   var ans = seq[shown];
   var opts = letters.map(function(L){ return codes[L]; });
   if (opts.length < 3) opts.push(pool[letters.length][0]);
+  var unitHtml = unit.split("").map(function(L){ return img(codes[L]); }).join("");
   return { hint:"What comes next?", say:["m_next"], prompt:bubbles(seq, shown, true), kind:"choice",
-    options:shuffle(opts).map(function(c){ return { html:img(c), val:c, cls:"e" }; }), answer:ans, answerHtml:img(ans), answerSay:[] };
+    options:shuffle(opts).map(function(c){ return { html:img(c), val:c, cls:"e" }; }), answer:ans, answerHtml:img(ans), answerSay:[],
+    rule:{ html:'<span class="brk">[</span>' + unitHtml + '<span class="brk">]</span> repeats', say:["m_rule_repeat"] } };
 }
-function seqRound(vals, missing, pad){
+function seqRound(vals, missing, pad, rule){
   var hide = missing ? ri(1, vals.length - 2) : vals.length - 1, ans = vals[hide], step = vals[1] - vals[0];
+  rule = rule || arithRule(vals);
   var say = [];
   if (!missing) for (var i = 0; i < hide; i++) say.push(n(vals[i]));
   say.push(missing ? "m_missing" : "m_next");
-  return { hint:missing ? "What number is missing?" : "What comes next?", say:say, prompt:bubbles(vals, hide), kind:pad ? "pad" : "choice",
-    options:pad ? null : numOpts(ans, 0, 100, [ans + step, ans - step, ans + 1, ans - 1]), answer:ans, answerSay:[n(ans)] };
+  return { hint:missing ? "What number is missing?" : "What comes next?", say:say, prompt:bubbles(vals, hide, false, rule.steps), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(ans, 0, 100, [ans + step, ans - step, ans + 1, ans - 1]), answer:ans, answerSay:[n(ans)], rule:rule };
 }
 function arith(start, step, len){ var v = []; for (var i = 0; i < len; i++) v.push(start + i*step); return v; }
 function rCountUpDown(missing){
@@ -406,11 +425,26 @@ function rBuster(pad){
   else if (type === "odd"){ v = arith(2*ri(0, 20) + 1, 2, 5); }
   else if (type === "alt"){ var a = ri(1, 20); v = [a]; for (i = 1; i < 6; i++) v.push(v[i - 1] + (i % 2 ? 2 : -1)); }
   else { var b = ri(1, 3); for (i = b; i < b + 5; i++) v.push(i*i); }
-  var ans = v[v.length - 1], say = [];
+  var ans = v[v.length - 1], say = [], rule, steps = [];
   for (i = 0; i < v.length - 1; i++) say.push(n(v[i]));
   say.push("m_next");
-  return { hint:"What comes next? Find the rule!", say:say, prompt:bubbles(v, v.length - 1), kind:pad ? "pad" : "choice",
-    options:pad ? null : numOpts(ans, 0, 100, [v[v.length - 2] + (v[v.length - 2] - v[v.length - 3]), ans + 1, ans - 1]), answer:ans, answerSay:[n(ans)] };
+  if (type === "double" || type === "halve"){
+    for (i = 1; i < v.length; i++) steps.push(type === "double" ? TIMES_SIGN + "2" : DIV_SIGN + "2");
+    rule = { steps:steps, html:steps[0] + " each time", say:["m_rule", type === "double" ? "m_times" : "m_div", n(2)] };
+  } else if (type === "grow"){
+    for (i = 1; i < v.length; i++) steps.push(signed(v[i] - v[i - 1]));
+    rule = { steps:steps, html:"+1, +2, +3... each jump is 1 bigger", say:["m_rule_grow"] };
+  } else if (type === "alt"){
+    for (i = 1; i < v.length; i++) steps.push(signed(v[i] - v[i - 1]));
+    rule = { steps:steps, html:"+2, then " + MINUS_SIGN + "1, again and again", say:["m_rule", "m_plus", n(2), "m_then", "m_minus", n(1)] };
+  } else if (type === "square"){
+    var sq = [];
+    for (i = 1; i < v.length; i++) steps.push(signed(v[i] - v[i - 1]));
+    for (i = 0; i < v.length; i++){ var r = Math.round(Math.sqrt(v[i])); sq.push(r + TIMES_SIGN + r); }
+    rule = { steps:steps, html:"Square numbers: " + sq.join(", "), say:["m_rule_square"] };
+  } else rule = arithRule(v);
+  return { hint:"What comes next? Find the rule!", say:say, prompt:bubbles(v, v.length - 1, false, rule.steps), kind:pad ? "pad" : "choice",
+    options:pad ? null : numOpts(ans, 0, 100, [v[v.length - 2] + (v[v.length - 2] - v[v.length - 3]), ans + 1, ans - 1]), answer:ans, answerSay:[n(ans)], rule:rule };
 }
 
 /* ---------- games and levels ----------
@@ -451,7 +485,7 @@ document.title = GAME.title;
 function load(k, d){ try { var v = localStorage.getItem("math:" + gameId + ":" + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } }
 function save(k, v){ try { localStorage.setItem("math:" + gameId + ":" + k, JSON.stringify(v)); } catch(e){} }
 var best = load("best", {});
-function say(keys){ if (keys && keys.length) Speech.say(keys); }
+function say(keys, done){ Speech.say(keys, done); }
 Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
 
 /* ---------- level list ---------- */
@@ -550,13 +584,29 @@ function padKey(k, btn){
   else if (G.typed.length < 3){ G.typed = (G.typed === "0" ? "" : G.typed) + k; }
   entry().textContent = G.typed || "?";
 }
+/* patterns: show the steps between the numbers and the rule line */
+function showRule(){
+  var R = G.R, seq = document.querySelector("#stage .seq");
+  if (!R.rule || !seq) return [];
+  addClass(seq, "solved");
+  var line = el("div", "rule", "<b>Rule:</b> " + R.rule.html);
+  seq.parentNode.insertBefore(line, seq.nextSibling);
+  return R.rule.say;
+}
+/* say it all, then move on once the voice is done (a long timer is only a safety net) */
+function sayThenNext(keys){
+  var R = G.R, moved = false;
+  function moveOn(){ if (moved) return; moved = true; if (G && G.R === R && hasClass($("game"), "on")) nextRound(); }
+  say(keys, function(){ setTimeout(moveOn, R.rule ? 1400 : 600); });
+  setTimeout(moveOn, 4000 + 1500*keys.length);
+}
 function revealAnswer(){
   G.locked = true;
   var e = entry(); e.textContent = String(G.R.answer); addClass(e, "reveal");
   G.results[G.round] = "ok";
   renderDots();
-  say(["m_answer_is"].concat(G.R.answerSay));
-  setTimeout(nextRound, 2600);
+  var rule = showRule();
+  sayThenNext(["m_answer_is"].concat(G.R.answerSay, rule));
 }
 
 function correct(target){
@@ -569,8 +619,8 @@ function correct(target){
   var e = entry(); if (e && G.R.kind === "choice") e.innerHTML = G.R.answerHtml || String(G.R.answer);
   renderDots();
   confetti(target);
-  say(G.R.answerSay.concat(["m_praise_" + Math.floor(Math.random()*6)]));
-  setTimeout(nextRound, 1800);
+  var rule = showRule();
+  sayThenNext(G.R.answerSay.concat(rule, ["m_praise_" + Math.floor(Math.random()*6)]));
 }
 function wrong(target){
   G.mistakes++;

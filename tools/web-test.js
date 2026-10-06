@@ -98,6 +98,35 @@ const server = http.createServer((req, res) => {
     saved && Object.keys(JSON.parse(saved)).length === levels ? ok(g + ": stars saved " + saved) : fail(g + " stars not saved: " + saved);
   }
 
+  // Alien Patterns: every round has a rule, and getting it right shows it.
+  await page.goto(base + "math-game.html?g=pattern");
+  const ruleCheck = await page.evaluate(() => {
+    const bad = [], keys = {};
+    MathGame.game().levels.forEach((lv, li) => lv.rounds.forEach(mk => { for (let t = 0; t < 60; t++) {
+      const R = mk();
+      if (!R.rule || !R.rule.html || !R.rule.say || !R.rule.say.length) bad.push("level " + (li + 1) + ": " + R.hint + " has no rule");
+      else R.rule.say.forEach(k => keys[k] = 1);
+      if (R.rule && R.rule.steps) { const d = document.createElement("div"); d.innerHTML = R.prompt; if (d.querySelectorAll(".step").length !== R.rule.steps.length) bad.push("step labels missing"); }
+    } }));
+    return { bad: bad.slice(0, 5), keys: Object.keys(keys) };
+  });
+  ruleCheck.bad.length ? fail("pattern rules: " + ruleCheck.bad.join("; ")) : ok("every Alien Patterns round has a rule");
+  const ruleMissing = ruleCheck.keys.filter(k => !(k in phrases));
+  ruleMissing.length ? fail("rule clips missing: " + ruleMissing.join(", ")) : ok("every rule can be said (" + ruleCheck.keys.length + " clips)");
+  for (const lv of [0, 3, 4]) {
+    await page.evaluate(i => MathGame.start(i), lv);
+    // the test speeds up long timers, so record the rule line the moment it appears
+    await page.evaluate(() => { window.__rule = null; new MutationObserver(() => { const r = document.querySelector(".rule"); if (r && !window.__rule) window.__rule = r.textContent; })
+      .observe(document.getElementById("stage"), { childList: true, subtree: true }); });
+    const R = await page.evaluate(() => { const R = MathGame.state().R; return { kind: R.kind, answer: R.answer, vals: R.options ? R.options.map(o => o.val) : null }; });
+    if (R.kind === "choice") await page.locator(".choice").nth(R.vals.indexOf(R.answer)).click();
+    else { for (const d of String(R.answer)) await page.locator(".key", { hasText: new RegExp("^" + d + "$") }).click(); await page.locator(".key.go").click(); }
+    await page.waitForTimeout(150);
+    const shown = await page.evaluate(() => window.__rule);
+    shown ? ok("pattern level " + (lv + 1) + " shows its rule: " + shown) : fail("pattern level " + (lv + 1) + ": no rule shown after a right answer");
+    await shot("pattern-rule-L" + (lv + 1));
+  }
+
   // Mistakes: a wrong choice dims, three wrong keypad answers reveal the answer.
   await page.goto(base + "math-game.html?g=count"); await page.evaluate(() => MathGame.start(0));
   const R0 = await page.evaluate(() => { const R = MathGame.state().R; return R.options.map(o => o.val).indexOf(R.answer); });
