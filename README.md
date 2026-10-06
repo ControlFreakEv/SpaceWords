@@ -30,6 +30,8 @@ The volume control sits in the bottom-left corner of the pickers and level lists
 or a bar. The bottom bar off is silent; the two orange bars are louder than the frame's own
 maximum. The frame's volume for Skylight is put back when you return to the photos.
 
+Next to "Hear it", a turtle says the word slowly and a rabbit says it fast.
+
 In every game, tapping a word that isn't an answer choice reads it aloud (instructions,
 sentences, numbers in math questions). In Picture Planet's "read the word" rounds that counts
 as a hint, like Peek, and costs the round's gold star.
@@ -55,7 +57,7 @@ Open Command Prompt in this SpaceWords folder (not platform-tools), then:
     pip install edge-tts
     python tools\make_audio.py
 
-That saves about 1,130 MP3 clips into app/src/main/assets/www/audio. It only records clips
+That saves about 1,850 MP3 clips into app/src/main/assets/www/audio. It only records clips
 that are missing, so after an update that adds new spoken text (like the math games),
 run it again and then rebuild.
 To hear other voices:  python tools\make_audio.py --list

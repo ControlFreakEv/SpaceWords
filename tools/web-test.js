@@ -466,6 +466,52 @@ const server = http.createServer((req, res) => {
   (await page.evaluate(() => document.querySelector(".volbox").offsetWidth === 0)) ? ok("volume control hidden while playing") : fail("volume control shows during play");
   await page.evaluate(() => Speech.setLevel(5));
 
+  // Turtle and rabbit: the word slow or fast, through the frame's audio bridge (a stand-in here).
+  const ws = Object.keys(phrases).filter(k => /^ws_/.test(k)), noTwin = ws.filter(k => !(("w_" + k.slice(3)) in phrases));
+  noTwin.length || !ws.length ? fail("slow clips without a word: " + noTwin.join(", ")) : ok(ws.length + " slow (turtle) word clips, one per word");
+  const spd = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await spd.addInitScript(() => {
+    window.__calls = [];
+    window.AndroidAudio = {
+      level: () => 5, setLevel: () => {}, stop: () => {},
+      play: (k, t) => { window.__calls.push([k, 1]); setTimeout(() => window.__clipDone(t), 5); },
+      playRate: (k, t, r) => { window.__calls.push([k, r]); setTimeout(() => window.__clipDone(t), 5); }
+    };
+  });
+  await spd.goto(base + "picture-planet.html"); await spd.waitForTimeout(300);
+  let found = false;
+  for (let t = 0; t < 30 && !found; t++) {
+    await spd.goto(base + "picture-planet.html"); await spd.waitForTimeout(150);
+    await spd.locator("#path button").first().click(); await spd.waitForTimeout(150);
+    found = (await spd.locator(".spdbtn").count()) === 2;
+  }
+  if (!found) fail("picture planet: no turtle and rabbit next to Hear it");
+  else {
+    await spd.waitForTimeout(1500);
+    await spd.evaluate(() => { window.__calls = []; });
+    await spd.click('.spdbtn[data-speed="slow"]'); await spd.waitForTimeout(100);
+    await spd.click('.spdbtn[data-speed="fast"]'); await spd.waitForTimeout(100);
+    const calls = await spd.evaluate(() => window.__calls);
+    const slowOk = calls[0] && /^ws?_/.test(calls[0][0]) && (calls[0][0].indexOf("ws_") === 0 ? calls[0][1] === 1 : calls[0][1] === 0.7);
+    const fastOk = calls[1] && /^w_/.test(calls[1][0]) && calls[1][1] === 1.45;
+    slowOk && fastOk ? ok("turtle says " + calls[0][0] + " slow, rabbit says " + calls[1][0] + " fast") : fail("turtle/rabbit calls: " + JSON.stringify(calls));
+    await spd.screenshot({ path: SHOTS ? path.join(SHOTS, "speed-pp.png") : "/dev/null" });
+  }
+  // they appear with the word rounds, not with instruction-only ones
+  await spd.goto(base + "class-words.html"); await spd.waitForTimeout(150);
+  const where = await spd.evaluate(() => {
+    const out = {};
+    ["spell", "find", "teach"].forEach(k => { ClassWords.start(k); out[k] = document.querySelectorAll(".spdbtn").length; });
+    return out;
+  });
+  where.spell === 2 && where.find === 2 && where.teach === 0 ? ok("class words: turtle and rabbit in spell and find, not in Teach Zib") : fail("class words speed buttons: " + JSON.stringify(where));
+  await spd.evaluate(() => ClassWords.start("spell")); await spd.waitForTimeout(200);
+  if (SHOTS) await spd.screenshot({ path: path.join(SHOTS, "speed-cw-spell.png") });
+  await spd.goto(base + "sound-lab.html"); await spd.waitForTimeout(150);
+  const sl = await spd.evaluate(() => { SoundLab.start(0); return document.querySelectorAll(".spdbtn").length; });
+  sl === 2 ? ok("sound lab: turtle and rabbit for the round's word") : fail("sound lab speed buttons: " + sl);
+  await spd.close();
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();

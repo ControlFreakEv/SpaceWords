@@ -42,6 +42,7 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--voice", default="en-US-AvaNeural")
     ap.add_argument("--rate", default="-10%", help="speed, e.g. -15%% is slower")
+    ap.add_argument("--slow-rate", default="-45%", help="speed of the turtle (slow) word clips, ws_*")
     ap.add_argument("--force", action="store_true", help="re-record clips that already exist")
     ap.add_argument("--list", action="store_true", help="list English voices and exit")
     a = ap.parse_args()
@@ -56,7 +57,8 @@ async def main():
     os.makedirs(OUT, exist_ok=True)
     print(f"Recording {len(phrases)} clips with {a.voice}...")
     sem = asyncio.Semaphore(4)
-    results = await asyncio.gather(*[record(k, t, a.voice, a.rate, a.force, sem) for k, t in phrases.items()])
+    results = await asyncio.gather(*[record(k, t, a.voice, a.slow_rate if k.startswith("ws_") else a.rate, a.force, sem)
+                                     for k, t in phrases.items()])
     done = sorted(k for k, ok in results if ok)
     with open(os.path.join(OUT, "index.json"), "w", encoding="utf-8") as f:
         json.dump(done, f)

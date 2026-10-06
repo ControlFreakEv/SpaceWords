@@ -123,6 +123,9 @@ img{display:block}
   .choice{margin:1.6vmin;width:30vmin}
   .hero h1{font-size:12vmin}
 }
+.speakrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.speakrow .speak{margin-top:0}
+.btnrow .speakrow{margin-right:1.6vmin}
 </style>
 <link rel="stylesheet" href="back.css">
 </head>
@@ -299,7 +302,11 @@ function renderRound(){
 function speakBtn(word, big){
   var b = el("button", "press speak" + (big ? " big" : ""), '<img src="emoji/1f50a.svg" alt="">Hear it');
   b.onclick = function(){ say([word.k]); };
-  return b;
+  /* turtle and rabbit beside it: the word slow or fast */
+  var row = el("div", "speakrow");
+  row.appendChild(b);
+  if (Speech.canTalk()) row.appendChild(Speech.speedButtons(word.k));
+  return row;
 }
 function choiceRow(stage, word, options){
   var row = el("div", "choices");

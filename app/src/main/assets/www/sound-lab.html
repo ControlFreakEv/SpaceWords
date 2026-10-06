@@ -452,6 +452,9 @@ function renderRound(){
     var sb = el("button", "paper press sayb flex", '<img src="emoji/1f50a.svg" alt="">');
     sb.onclick = function(){ say(R.say); };
     hr.appendChild(sb);
+    /* turtle and rabbit: the round's word slow or fast (never the instructions) */
+    var wordKey = (R.say || []).filter(function(k){ return /^w_/.test(k); }).pop();
+    if (wordKey) hr.appendChild(Speech.speedButtons(wordKey));
   }
   stage.appendChild(hr);
   R.build(stage);

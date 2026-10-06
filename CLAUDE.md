@@ -47,6 +47,11 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Silly voices**: `Speech.say(keys, done, speed)`; on the frame `AndroidAudio.playRate()` plays
   through SoundPool (speed and pitch 0.5-2.0; MediaPlayer can't before Android 6). No volume
   boost on those. Zib speaks at 1.35.
+- **Turtle and rabbit** (owner's request): `Speech.speedButtons(wordKey)` next to "Hear it" in
+  Picture Planet / Saucer and next to the speaker in Sound Lab, Compound Words and Class Words,
+  for the round's word only (never instructions). Turtle plays ws_<word> (its own clip recorded at
+  -45% by make_audio.py so it stays clear; every w_ key has a ws_ twin) or, if missing, the word at
+  0.7x; rabbit plays the word at 1.45x.
 - **Volume control** (speech.js, every page; the owner asked for it in place of "Talking: on/off"):
   fixed bottom-left on pickers and level lists, hidden in play (`body[data-screen=game|end]`, set by
   each page's show()). Levels 0 (off) to 6, default 5: 1-4 set the frame's media volume to 1/4..full,
@@ -131,7 +136,7 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
 On the frame, clips play natively through the `AndroidAudio` bridge (GameWindow, MediaPlayer):
 Chromium 39 hands `<audio>` to Android's MediaPlayer, which bypasses shouldInterceptRequest, so
 web audio from https://wordhop.local is silent there. mp3s are kept uncompressed in the APK.
-`phrases.json` maps every spoken key to its text (about 1,130; numbers are n_0..n_100, math prompts
+`phrases.json` maps every spoken key to its text (about 1,850, incl. ~720 ws_ slow words; numbers are n_0..n_100, math prompts
 m_*). To add spoken text:
 1. Add the key to `phrases.json`, then run `python3 tools/sync_phrases.py` to update speech.js.
    Every round reads its instructions aloud (i_* keys in the word games, R.say in math).
