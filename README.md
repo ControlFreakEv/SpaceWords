@@ -51,6 +51,18 @@ step at a time, and on "Pick a mission" it returns to the photos. The frame's Ba
 It comes back automatically after a restart. Works on Android 5.1 (Skylight frame) and newer.
 Everything is bundled in app/src/main/assets/www, so it runs offline.
 
+## Updating the frame (the usual routine)
+Double-click **update.bat** in this folder. It runs the four steps in order and stops with
+a plain message if one fails:
+
+1. git pull (latest code)
+2. python tools\make_audio.py (records only the clips that are new)
+3. build the APK (same as Android Studio's Generate APKs)
+4. tools\deploy.ps1 (install on the frame over Wi-Fi, or USB if Wi-Fi isn't answering)
+
+From a terminal instead: `powershell -ExecutionPolicy Bypass -File tools\update.ps1`
+Add `-Open` to open the games afterwards, or `-SkipAudio` to skip recording.
+
 ## 1. Record the voice (the frame has no text-to-speech engine)
 Needs Python 3 on your PC (python.org) and internet for a few minutes.
 Open Command Prompt in this SpaceWords folder (not platform-tools), then:

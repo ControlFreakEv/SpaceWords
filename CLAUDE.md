@@ -95,7 +95,9 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
 - ADB over USB (serial 0123456789ABCDEF) or Wi-Fi at 192.168.1.242:5555 (persist.adb.tcp.port set;
   ro.adb.secure=0, so Wi-Fi adb needs no approval). On the owner's Windows PC adb is not on PATH:
   `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`. Cloud sessions cannot reach the frame.
-  The owner deploys with `tools\deploy.ps1` (see README).
+  The owner updates with **update.bat** (repo root) = `tools\update.ps1`: git pull, make_audio.py,
+  gradlew assembleDebug (JAVA_HOME = Android Studio's jbr), deploy.ps1. When telling the owner
+  how to get a change onto the frame, just say "double-click update.bat".
 - **The firmware kills the previous app whenever another app comes to the front** (low-RAM
   policy): when the games were an activity, Skylight died as they opened, so "Back to photos"
   cold-started it (about 7 s), and the game's process died 2 ms after its onPause.
