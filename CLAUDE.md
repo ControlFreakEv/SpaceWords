@@ -43,7 +43,10 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   >=55% of max stroke depth, with a hit radius of 0.75x the drawn line width: 75% overall AND every
   ~12%-of-height square at least half traced. An I missing a bar fails; a whole word traced up to
   about a line-width off-centre passes. web-test.js checks both. The guide word is its own canvas
-  under the ink, so the Eraser (2x line width, destination-out) rubs out ink and its credit only), Roll &
+  under the ink, so the Eraser (2x line width, destination-out) rubs out ink and its credit only.
+  The rainbow swatch (default) draws shimmering ink: strokes go into an offscreen mask and a top
+  canvas paints a sliding rainbow + a sweep of light through it (~25 fps, only while rainbow ink is
+  on screen); solid colors stay on their own canvas until the word is done, then all of it shimmers), Roll &
   read (die + silly voices), Car time (say a sentence). Mission = 8 mixed rounds ("short + fun").
   Plan per the handout: 2 new words a week + review of practiced ones; the game advances weekly
   unless a grown-up picks words (hold "Grown-ups" 1.5 s; tap words: this week -> practiced -> not

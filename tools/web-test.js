@@ -387,8 +387,8 @@ const server = http.createServer((req, res) => {
   });
   await page.waitForTimeout(100);
   const wbox = await page.evaluate(() => { const r = document.querySelectorAll(".writebox canvas")[1].getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; });
-  const stroke = async () => {
-    const y = wbox[1] + wbox[3] * 0.5;
+  const stroke = async (fy = 0.5) => {
+    const y = wbox[1] + wbox[3] * fy;
     await page.mouse.move(wbox[0] + wbox[2] * 0.3, y); await page.mouse.down();
     for (let i = 1; i <= 10; i++) await page.mouse.move(wbox[0] + wbox[2] * (0.3 + 0.04 * i), y);
     await page.mouse.up();
@@ -402,10 +402,36 @@ const server = http.createServer((req, res) => {
   await stroke(); const drawn = await inkState();
   await page.click(".erase"); await stroke(); const erased = await inkState();
   await page.click(".sw.rain"); await stroke(); const redrawn = await inkState();
-  await page.evaluate(() => { const C = ClassWords, plan = C.plan(), back = JSON.parse(window.__savedPlan); Object.keys(back).forEach(k => plan[k] = back[k]); C.start("find"); });
   drawn.credit > 0 && drawn.ink > 0 && erased.credit === 0 && erased.ink === 0 && erased.guide === drawn.guide && erased.guide > 0 && redrawn.credit > 0 && redrawn.ink > 0 && !erased.locked
     ? ok("rainbow write eraser: rubs out ink and its credit, keeps the guide word, crayons work again after")
     : fail("rainbow write eraser: " + JSON.stringify({ drawn, erased, redrawn }));
+
+  // Rainbow ink shimmers (the top layer changes colour over time); a solid colour stays put on its own
+  // layer until the word is finished, then everything shimmers; Clear stops it.
+  const layers = () => page.evaluate(b => {
+    const cs = document.querySelectorAll(".writebox canvas"), y = Math.round(b[3] * 0.5), y2 = Math.round(b[3] * 0.3), x = Math.round(b[2] * 0.5);
+    const px = (c, yy) => Array.from(c.getContext("2d").getImageData(x, yy, 1, 1).data);
+    return { top: px(cs[2], y), solid2: px(cs[1], y2), top2: px(cs[2], y2), shimmering: ClassWords.state().R.shimmering(), locked: ClassWords.state().locked };
+  }, wbox);
+  const s1 = await layers(); await page.waitForTimeout(300); const s2 = await layers();
+  await page.click(".sw:nth-child(2)"); await stroke(0.3); const solid = await layers();
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "class-write-shimmer.png") });
+  // (read straight after finishing: the test's fast timers move on to the next round right away)
+  const done = await page.evaluate(b => {
+    const R = ClassWords.state().R, cs = document.querySelectorAll(".writebox canvas"), x = Math.round(b[2] * 0.5), y2 = Math.round(b[3] * 0.3);
+    R.solve();
+    return { locked: ClassWords.state().locked, shimmering: R.shimmering(), solid2: Array.from(cs[1].getContext("2d").getImageData(x, y2, 1, 1).data), top2: [0, 0, 0, R.inkAt(x, y2)] };
+  }, wbox);
+  await page.evaluate(() => { const C = ClassWords, plan = C.plan(); plan.week = ["like"]; plan.done = []; for (let t = 0; t < 50; t++) { C.start("write"); if (C.state().R.word === "like") break; } });
+  await page.waitForTimeout(100); await stroke(); const before = await layers();
+  await page.click(".colors .btn:not(.erase)"); await page.waitForTimeout(100); const cleared = await layers();
+  await page.evaluate(() => { const C = ClassWords, plan = C.plan(), back = JSON.parse(window.__savedPlan); Object.keys(back).forEach(k => plan[k] = back[k]); C.start("find"); });
+  s1.shimmering && s1.top[3] > 200 && s1.top.slice(0, 3).join() !== s2.top.slice(0, 3).join()
+    && solid.solid2[3] > 200 && solid.top2[3] === 0
+    && done.locked && done.shimmering && done.solid2[3] === 0 && done.top2[3] > 200
+    && before.shimmering && !cleared.shimmering && cleared.top[3] === 0
+    ? ok("rainbow write shimmer: rainbow ink shimmers, solid colours join it when the word is done, Clear stops it")
+    : fail("rainbow write shimmer: " + JSON.stringify({ s1, s2, solid, done, before, cleared }));
 
   // a wrong word in the hunt counts as a mistake
   await page.evaluate(() => ClassWords.start("hunt"));

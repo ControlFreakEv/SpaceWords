@@ -650,9 +650,11 @@ var RAINBOW = ["#FF5C7A","#FF9E3D","#FFD93D","#7CFFB2","#5CE1E6","#9B7CFF"];
 ROUNDS.write = function(w){
   var R = { hint:"Trace the word with your finger. Use lots of colors!", say:["i_cw_write", wk(w)] };
   R.build = function(stage){
-    /* two layers: the faint guide word underneath, her ink on top (so the eraser only rubs out ink) */
-    var box = el("div", "writebox"), gcv = el("canvas"), cv = el("canvas");
-    box.appendChild(gcv); box.appendChild(cv); stage.appendChild(box);
+    /* layers: the faint guide word underneath, then her solid-color ink, then the shimmering rainbow
+       ink on top (so the eraser only rubs out ink). Rainbow strokes are kept as a mask (offscreen);
+       each frame a sliding rainbow and a sweep of light are painted through it. */
+    var box = el("div", "writebox"), gcv = el("canvas"), cv = el("canvas"), rcv = el("canvas");
+    box.appendChild(gcv); box.appendChild(cv); box.appendChild(rcv); stage.appendChild(box);
     var colors = el("div", "colors"), auto = true, color = 0, erasing = false;
     var rain = el("button", "sw rain on"); colors.appendChild(rain);
     var sws = RAINBOW.map(function(c, i){
@@ -669,11 +671,43 @@ ROUNDS.write = function(w){
     colors.appendChild(clear);
     stage.appendChild(colors);
 
-    var W, H, ctx, gctx, samples = null, grid = {}, CELL = 6, lw;
+    var W, H, ctx, gctx, rctx, mask, mctx, stripe, shine, P, samples = null, grid = {}, CELL = 6, lw;
     function size(){
-      W = cv.clientWidth; H = cv.clientHeight; cv.width = gcv.width = W; cv.height = gcv.height = H;
-      ctx = cv.getContext("2d"); gctx = gcv.getContext("2d"); lw = Math.max(10, H * 0.085); guide();
+      W = cv.clientWidth; H = cv.clientHeight;
+      mask = document.createElement("canvas");
+      cv.width = gcv.width = rcv.width = mask.width = W; cv.height = gcv.height = rcv.height = mask.height = H;
+      ctx = cv.getContext("2d"); gctx = gcv.getContext("2d"); rctx = rcv.getContext("2d"); mctx = mask.getContext("2d");
+      lw = Math.max(10, H * 0.085); guide();
+      /* one rainbow every P pixels, drawn 1px tall and stretched; two periods past the edge so it can slide */
+      P = Math.round(W * 0.5); stripe = document.createElement("canvas"); stripe.width = W + P; stripe.height = 1;
+      var sc = stripe.getContext("2d"), g = sc.createLinearGradient(0, 0, P, 0);
+      RAINBOW.concat([RAINBOW[0]]).forEach(function(c, i){ g.addColorStop(i / RAINBOW.length, c); });
+      sc.fillStyle = g;
+      for (var x = 0; x < W + P; x += P){ sc.save(); sc.translate(x, 0); sc.fillRect(0, 0, P, 1); sc.restore(); }
+      shine = document.createElement("canvas"); shine.width = Math.round(W * 0.18); shine.height = 1;
+      var hc = shine.getContext("2d"), hg = hc.createLinearGradient(0, 0, shine.width, 0);
+      hg.addColorStop(0, "rgba(255,255,255,0)"); hg.addColorStop(0.5, "rgba(255,255,255,0.7)"); hg.addColorStop(1, "rgba(255,255,255,0)");
+      hc.fillStyle = hg; hc.fillRect(0, 0, shine.width, 1);
     }
+    /* the shimmer: runs only while there is rainbow ink and this round is on screen (about 25 frames a second) */
+    var hasRain = false, running = false, lastFrame = 0;
+    var frame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || function(f){ return setTimeout(f, 40); };
+    function shimmer(){
+      if (!hasRain || G.R !== R || !box.offsetWidth || !document.body.contains(box)){ running = false; return; }
+      frame(shimmer);
+      var now = Date.now();
+      if (now - lastFrame < 38) return;
+      lastFrame = now; paint(now);
+    }
+    function paint(now){
+      rctx.globalCompositeOperation = "source-over"; rctx.clearRect(0, 0, W, H); rctx.drawImage(mask, 0, 0);
+      rctx.globalCompositeOperation = "source-in"; rctx.drawImage(stripe, -((now / 1800 * P) % P), 0, W + P, H);
+      var sweep = W + shine.width + H * 0.4, sx = (now / 2600 * sweep) % (sweep * 1.6) - shine.width;
+      rctx.globalCompositeOperation = "source-atop"; rctx.save(); rctx.transform(1, 0, -0.4, 1, H * 0.4, 0);
+      rctx.drawImage(shine, sx, 0, shine.width, H); rctx.restore();
+      rctx.globalCompositeOperation = "source-over";
+    }
+    function startShimmer(){ hasRain = true; if (!running){ running = true; lastFrame = 0; frame(shimmer); } }
     function font(c){ c.font = "bold " + Math.round(H * (w.length > 4 ? 0.62 : 0.72)) + "px WHRead, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; }
     function guide(){
       if (!gctx) return;
@@ -738,32 +772,42 @@ ROUNDS.write = function(w){
       if (G.locked) return;
       if (!ctx) size();
       if (e.preventDefault) e.preventDefault();
-      last = pos(e); ctx.lineCap = ctx.lineJoin = "round";
-      if (erasing){
-        ctx.globalCompositeOperation = "destination-out"; ctx.strokeStyle = ctx.fillStyle = "#000"; ctx.lineWidth = lw * 2;
-      } else {
-        if (auto) color = (color + 1) % RAINBOW.length;
-        ctx.globalCompositeOperation = "source-over"; ctx.strokeStyle = ctx.fillStyle = RAINBOW[color]; ctx.lineWidth = lw;
-      }
-      ctx.beginPath(); ctx.arc(last[0], last[1], ctx.lineWidth/2, 0, Math.PI*2); ctx.fill(); dab(last[0], last[1]);
+      last = pos(e);
+      /* the rainbow swatch draws into the shimmer mask; a color draws solid; the eraser cuts both */
+      pens = erasing ? [ctx, mctx] : auto ? [mctx] : [ctx];
+      pens.forEach(function(c){
+        c.lineCap = c.lineJoin = "round";
+        c.globalCompositeOperation = erasing ? "destination-out" : "source-over";
+        c.strokeStyle = c.fillStyle = erasing || auto ? "#fff" : RAINBOW[color];
+        c.lineWidth = erasing ? lw * 2 : lw;
+        c.beginPath(); c.arc(last[0], last[1], c.lineWidth/2, 0, Math.PI*2); c.fill();
+      });
+      if (auto && !erasing) startShimmer();
+      dab(last[0], last[1]);
     }
+    var pens = [];
     function dab(x, y){ if (erasing) eraseAt(x, y); else inkAt(x, y); }
     function move(e){
       if (!last) return;
       if (e.preventDefault) e.preventDefault();
       var p = pos(e), dx = p[0] - last[0], dy = p[1] - last[1], n = Math.max(1, Math.ceil(Math.sqrt(dx*dx + dy*dy) / 3));
-      ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
+      pens.forEach(function(c){ c.beginPath(); c.moveTo(last[0], last[1]); c.lineTo(p[0], p[1]); c.stroke(); });
       for (var i = 1; i <= n; i++) dab(last[0] + dx*i/n, last[1] + dy*i/n);
       last = p;
     }
     function up(){
       if (!last) return;
       last = null;
-      if (!G.locked && !erasing && traced()) correct(box, [[["p_rainbow", wk(w)]]]);
+      if (!G.locked && !erasing && traced()){ allRainbow(); correct(box, [[["p_rainbow", wk(w)]]]); }
     }
-    cv.addEventListener("touchstart", down, false); cv.addEventListener("touchmove", move, false); cv.addEventListener("touchend", up, false);
-    cv.addEventListener("mousedown", down, false); cv.addEventListener("mousemove", move, false); window.addEventListener("mouseup", up, false);
-    clear.onclick = function(){ grid = {}; if (ctx) ctx.clearRect(0, 0, W, H); };
+    /* finished: every stroke, solid colors too, joins the shimmer */
+    function allRainbow(){ mctx.globalCompositeOperation = "source-over"; mctx.drawImage(cv, 0, 0); ctx.clearRect(0, 0, W, H); startShimmer(); }
+    rcv.addEventListener("touchstart", down, false); rcv.addEventListener("touchmove", move, false); rcv.addEventListener("touchend", up, false);
+    rcv.addEventListener("mousedown", down, false); rcv.addEventListener("mousemove", move, false); window.addEventListener("mouseup", up, false);
+    clear.onclick = function(){
+      grid = {}; hasRain = false;
+      if (ctx){ ctx.clearRect(0, 0, W, H); mctx.clearRect(0, 0, W, H); rctx.clearRect(0, 0, W, H); }
+    };
     setTimeout(size, 0);
     /* redraw the guide once the font has loaded. The frame's Chromium 39 has document.fonts.ready as a
        function returning a promise (newer browsers: a promise), so handle both, and redraw on a timer too. */
@@ -776,7 +820,12 @@ ROUNDS.write = function(w){
     setTimeout(refont, 700);
     /* for tests: how many credit squares are inked, and how solid the ink is at (x, y) */
     R.inkCount = function(){ var n = 0; for (var k in grid) if (grid.hasOwnProperty(k)) n++; return n; };
-    R.inkAt = function(x, y){ return ctx ? ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data[3] : 0; };
+    R.inkAt = function(x, y){
+      if (!ctx) return 0;
+      var a = function(c){ return c.getImageData(Math.round(x), Math.round(y), 1, 1).data[3]; };
+      return Math.max(a(ctx), a(mctx));
+    };
+    R.shimmering = function(){ return running; };
     R.solve = function(){ if (!ctx) size(); samples = samples || sampleGuide(); samples.forEach(function(p){ inkAt(p[0], p[1]); }); last = [0, 0]; up(); };
     /* for tests: trace only the guide points where keep(x, y, width, height) is true */
     R.tracePart = function(keep){
