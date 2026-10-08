@@ -373,7 +373,10 @@ function roundSpell(stage, word){
   btns.appendChild(peek);
   p.appendChild(btns);
   stage.appendChild(p);
-  say(["i_look", word.k]);
+  /* hide the word once the voice has finished saying it (a fixed timer cut the word off), after
+     at least 3 seconds of looking; the long timer is only a safety net */
+  var shownAt = Date.now(), covered = false;
+  Speech.say(["i_look", word.k], function(){ setTimeout(cover, Math.max(1200, 3400 - (Date.now() - shownAt))); });
 
   var letters = word.w.split("");
   var slots = el("div", "row");
@@ -406,13 +409,15 @@ function roundSpell(stage, word){
   stage.appendChild(tiles);
 
   /* look, then cover and spell */
-  setTimeout(function(){
-    if (G.locked || G.words[G.round] !== word) return;
+  function cover(){
+    if (covered || G.locked || G.words[G.round] !== word) return;
+    covered = true;
     flash.textContent = "?"; addClass(flash, "hidden");
     tiles.style.visibility = "";
     peek.style.display = "";
     say(["p_spell"]);
-  }, 3400);
+  }
+  setTimeout(cover, 12000);
 }
 
 function beamUp(target, done){

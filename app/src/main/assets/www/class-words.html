@@ -628,12 +628,18 @@ ROUNDS.spell = function(w){
       tiles.appendChild(t);
     });
     stage.appendChild(tiles);
-    setTimeout(function(){
-      if (G.locked || G.R !== R) return;
+    /* hide the word once the voice has finished saying it (a fixed timer cut the word off), after
+       at least 3 seconds of looking; the long timer is only a safety net */
+    var shownAt = Date.now(), covered = false;
+    function cover(){
+      if (covered || G.locked || G.R !== R) return;
+      covered = true;
       flash.textContent = "?"; addClass(flash, "hidden");
       tiles.style.visibility = ""; peek.style.visibility = "";
       say(["p_spell"]);
-    }, 3200);
+    }
+    R.intro = function(){ say(R.say, function(){ setTimeout(cover, Math.max(1200, 3200 - (Date.now() - shownAt))); }); };
+    setTimeout(cover, 12000);
     R.solve = function(){
       tiles.style.visibility = "";
       letters.forEach(function(ch, i){

@@ -27,7 +27,9 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   syllables (sy_* clips are respellings, e.g. "ell uh fent"), bossy R. Stars: localStorage sound:best.
   Each syllable clip must say the syllable *as shown*, split the same way (ba-na-na = "bah nah nuh",
   not the dictionary "buh NAN uh"); web-test.js checks every clip starts like its syllable.
-- `Speech.say(keys, done)`: done runs once after the last clip (not if interrupted). Rounds that
+- `Speech.say(keys, done)`: done runs once after the last clip (not if interrupted). Look-then-spell rounds
+  (Saucer, Class Words "Spell it") hide the word from done (at least ~3 s of looking), not a fixed
+  timer, which cut the word off. Rhyming Pairs says the tapped word and the praise in one say(). Rounds that
   say several clips (Sound Lab, Compound Words) move on from done, with a long timer only as a
   safety net; a fixed short timer cut the voice off mid-word.
 - **Compound Words** (compound.html): picture puzzles, match the halves, split it, build it, big
@@ -70,14 +72,15 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Instructions button**: every round of every game shows its instruction with a yellow speaker
   button (`.hintrow` + `.sayb`) that says it again; web-test.js checks every round has one. In
   Picture Planet's "read the word, tap the picture" it says only the instruction (the word is the answer).
-- **Turn timer** (the owner's son plays too): "Start a 5-minute turn" on Pick a mission (#turnbar).
+- **Turn timer** (the owner's son plays too): on Pick a mission (#turnbar), - / + pick 1-30 minutes
+  (TURN_CHOICES, remembered as speech:turnMin, default 5), then "Start a N-minute turn".
   The countdown lives natively in TurnTimer.kt (:ufo process; AndroidApp.turnStart/turnLeft/turnStop,
   left -1 = ran out, popup not dismissed), so it runs across pages and over the photos; when it runs
   out BubbleService opens the game window if it's closed. speech.js (every page) polls it each second:
   a countdown pill (in play under the stars, top right; on pickers/level lists just left of the volume
   control, the top row gets padding-right 67vmin while it runs) and the "Switch turns!" popup (Next
   turn / All done; the Back key closes it via Turns.back()). Browser fallback: localStorage
-  speech:turnEnd. Clips p_turn_go, p_switch_turns. web-test.js checks the popup flow and that the
+  speech:turnEnd. Said: p_your_turn, n_<min>, p_minutes|p_minute, p_have_fun; p_switch_turns. web-test.js checks the popup flow and that the
   countdown overlaps nothing on level lists and play screens.
 - **Tap any word to hear it** (all games): `Speech.tapText(text)` wraps words in
   `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element

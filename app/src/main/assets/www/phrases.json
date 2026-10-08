@@ -1846,6 +1846,9 @@
  "ws_times": "times",
  "ws_silly": "silly",
  "ws_voices": "voices",
- "p_turn_go": "Your turn! You have five minutes. Have fun!",
- "p_switch_turns": "Time's up! Switch turns!"
+ "p_switch_turns": "Time's up! Switch turns!",
+ "p_your_turn": "Your turn!",
+ "p_minutes": "minutes.",
+ "p_minute": "minute.",
+ "p_have_fun": "Have fun!"
 }

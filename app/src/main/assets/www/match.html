@@ -266,34 +266,36 @@ function item(p, side){
 
 function tap(b){
   if (G.locked || hasClass(b, "done")) return;
-  if (RHYME) say([key(b.side === "L" ? b.pair.a : b.pair.b)]);
+  /* Rhyming Pairs says the tapped word; when it completes a pair the praise follows it in the same
+     breath (a separate say for the pair cut the second word off and repeated the first one) */
+  var w = RHYME ? [key(b.side === "L" ? b.pair.a : b.pair.b)] : [];
   var s = G.sel;
   if (!s || s.side === b.side){
+    say(w);
     if (s) removeClass(s, "sel");
     if (s === b){ G.sel = null; return; }
     G.sel = b; addClass(b, "sel");
     return;
   }
   removeClass(s, "sel"); G.sel = null;
-  if (s.pair === b.pair) match(s, b);
-  else miss(s, b);
+  if (s.pair === b.pair) match(s, b, w);
+  else miss(s, b, w);
 }
 
-function match(x, y){
+function match(x, y, w){
   addClass(x, "done"); addClass(y, "done");
   var l = x.side === "L" ? x : y, r = x.side === "L" ? y : x;
   drawLine(l, r);
   G.matched++;
   var p = x.pair;
-  if (RHYME) say([key(p.a), key(p.b), "p_rhyme_" + Math.floor(Math.random()*3)]);
+  if (RHYME) say(w.concat(["p_rhyme_" + Math.floor(Math.random()*3)]));
   else say([key(p.a), "p_praise_" + Math.floor(Math.random()*6)]);
   if (G.matched === G.pairs.length) boardDone();
 }
-function miss(x, y){
+function miss(x, y, w){
   G.mistakes++;
   [x, y].forEach(function(t){ removeClass(t, "nope"); void t.offsetWidth; addClass(t, "nope"); });
-  if (!RHYME) say(["p_try"]);
-  else setTimeout(function(){ say(["p_try"]); }, 700);
+  say((w || []).concat(["p_try"]));
 }
 
 function drawLine(l, r){

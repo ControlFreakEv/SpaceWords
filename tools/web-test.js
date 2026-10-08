@@ -754,6 +754,62 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => localStorage.removeItem("speech:turnEnd"));
   pillBad.length ? fail("turn timer countdown overlaps: " + pillBad.slice(0, 8).join(" | ")) : ok("turn timer countdown clear of everything on level lists and in every game");
 
+  // Turn length: - and + pick the minutes (remembered); the turn starts with that many
+  await page.goto(base + "index.html"); await page.waitForTimeout(150);
+  await page.evaluate(() => { localStorage.removeItem("speech:turnEnd"); localStorage.removeItem("speech:turnMin"); }); await page.reload(); await page.waitForTimeout(200);
+  await page.click('#turnbar .turnstep[data-dir="1"]'); await page.click('#turnbar .turnstep[data-dir="1"]');
+  const picked = await page.evaluate(() => [document.querySelector("#turnbar .turnmin").textContent, document.querySelector("#turnbar .turngo").textContent]);
+  for (let i = 0; i < 20; i++) await page.click('#turnbar .turnstep[data-dir="-1"]');
+  const lowest = await page.evaluate(() => document.querySelector("#turnbar .turnmin").textContent);
+  await page.reload(); await page.waitForTimeout(200);
+  const keptMin = await page.evaluate(() => document.querySelector("#turnbar .turnmin").textContent);
+  await page.click("#turnbar .turngo"); await page.waitForTimeout(300);
+  const oneMin = await page.evaluate(() => Turns.left());
+  await page.evaluate(() => { Turns.stop(); localStorage.removeItem("speech:turnMin"); });
+  picked[0] === "7 min" && /7-minute/.test(picked[1]) && lowest === "1 min" && keptMin === "1 min" && oneMin > 50000 && oneMin <= 60000
+    ? ok("turn timer: - and + pick the minutes (5 -> 7, down to 1), remembered, and the turn uses them")
+    : fail("turn timer minutes: " + JSON.stringify({ picked, lowest, keptMin, oneMin }));
+
+  // Rhyming Pairs: tapping the partner says that word and then the praise (not the first word again)
+  await page.goto(base + "match.html?g=rhyme"); await page.evaluate(() => MatchGame.start(0)); await page.waitForTimeout(150);
+  const rhymeSaid = await page.evaluate(() => {
+    const calls = [], real = Speech.say; Speech.say = function(k, d, s){ calls.push(k.join(" ")); return real(k, d, s); };
+    const p = MatchGame.state().pairs[0], items = Array.from(document.querySelectorAll(".item"));
+    const L = items.filter(b => b.textContent === p.a)[0], R = items.filter(b => b.textContent === p.b)[0];
+    L.click(); R.click();
+    Speech.say = real;
+    return { a: Speech.key(p.a), b: Speech.key(p.b), calls };
+  });
+  const lastSaid = rhymeSaid.calls[rhymeSaid.calls.length - 1] || "";
+  rhymeSaid.calls.length === 2 && rhymeSaid.calls[0] === rhymeSaid.a && new RegExp("^" + rhymeSaid.b + " p_rhyme_\\d$").test(lastSaid)
+    ? ok("rhyming pairs: the second tap says its own word, then \"they rhyme\" (" + rhymeSaid.calls.join(" | ") + ")")
+    : fail("rhyming pairs speech: " + JSON.stringify(rhymeSaid));
+
+  // Spell it (Class Words): the word stays up until the voice has finished saying it (real timers here)
+  {
+    const sp = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await sp.goto(base + "class-words.html"); await sp.waitForTimeout(200);
+    await sp.evaluate(() => {
+      const real = Speech.say; window.__held = null;
+      Speech.say = function(k, d, s){ if (k[0] === "i_look"){ window.__held = d; return; } return real(k, d, s); };   // a long instruction that hasn't finished
+      const plan = ClassWords.plan(); window.__savedPlan2 = JSON.stringify(plan);
+      plan.week = ["like"]; plan.done = [];   // one-letter words are traced instead of spelled
+      for (let t = 0; t < 40; t++) { ClassWords.start("spell"); if (ClassWords.state().R.type === "spell") break; }
+    });
+    await sp.waitForTimeout(4500);   // longer than the old fixed 3.2 s
+    const hidden = () => sp.evaluate(() => document.querySelector("#stage .flash").className.indexOf("hidden") >= 0);
+    const whileTalking = await hidden();
+    await sp.evaluate(() => window.__held && window.__held()); await sp.waitForTimeout(400);
+    const justAfter = await hidden();
+    await sp.waitForTimeout(1300);
+    const later = await hidden();
+    await sp.evaluate(() => { const plan = ClassWords.plan(), back = JSON.parse(window.__savedPlan2); Object.keys(back).forEach(k => plan[k] = back[k]); ClassWords.start("find"); });
+    await sp.close();
+    !whileTalking && !justAfter && later
+      ? ok("spell it: the word stays up while it's being said and hides after the voice finishes")
+      : fail("spell it cover timing: " + JSON.stringify({ whileTalking, justAfter, later }));
+  }
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();
