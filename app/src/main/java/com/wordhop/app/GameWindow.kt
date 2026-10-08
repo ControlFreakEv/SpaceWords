@@ -64,11 +64,16 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
 
     val isShowing get() = root != null
 
-    /** Closes the game by itself after a while with nobody touching it, so the photos come back. */
+    /** Closes the game by itself after a while with nobody touching it, so the photos come back.
+     *  Nobody is playing, so the turn timer is cancelled too: otherwise it would reopen the game over
+     *  the photos later to say "Switch turns!" to an empty room (or leave that popup waiting). */
     private val idleCheck = object : Runnable {
         override fun run() {
             if (!isShowing) return
-            if (SystemClock.uptimeMillis() - lastTouch >= IDLE_MS) hide() else ui.postDelayed(this, 30_000)
+            if (SystemClock.uptimeMillis() - lastTouch >= IDLE_MS) {
+                TurnTimer.stop()
+                hide()
+            } else ui.postDelayed(this, 30_000)
         }
     }
 

@@ -130,7 +130,8 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   the window. Never open the games with an activity start; use `openGameWindow()` (Compat.kt) or
   `am startservice -n com.wordhop.app/.BubbleService -a com.wordhop.app.OPEN_GAME`. GameActivity is
   only a translucent launcher trampoline. The WebView is created on open and destroyed on close
-  (low RAM); the window closes itself after 10 minutes without a touch.
+  (low RAM); the window closes itself after 10 minutes without a touch (any touch resets it, so a
+  long turn isn't cut short), and that idle close also cancels the turn timer.
 - `ro.config.low_ram=true`. On 2026-10-05 the old build froze on "Back to photos" and Android
   silently killed it ("user request after error": the frame shows no ANR dialog), which explains
   both the long black screen and the vanished UFO. Prime suspect: WebView's media player stuck
