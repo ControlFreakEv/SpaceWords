@@ -687,6 +687,73 @@ const server = http.createServer((req, res) => {
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "vol-" + pg.replace(/[^a-z]+/g, "-") + ".png") });
   }
 
+  // Turn timer: start on "Pick a mission", counts down on every page, "Switch turns!" popup when it runs out.
+  await page.goto(base + "index.html"); await page.waitForTimeout(150);
+  await page.evaluate(() => localStorage.removeItem("speech:turnEnd")); await page.reload(); await page.waitForTimeout(200);
+  await page.click("#turnbar .turngo"); await page.waitForTimeout(1100);
+  const turnRun = await page.evaluate(() => [Turns.left(), (document.querySelector("#turnbar .turnleft") || {}).textContent, document.querySelector(".turnpill").style.display]);
+  turnRun[0] > 290000 && /^[45]:\d\d left$/.test(turnRun[1]) && turnRun[2] === "none"
+    ? ok("turn timer: starts at 5 minutes and counts down on Pick a mission (" + turnRun[1] + ")") : fail("turn timer start: " + JSON.stringify(turnRun));
+  await page.goto(base + "math-game.html?g=ops"); await page.evaluate(() => MathGame.start(0)); await page.waitForTimeout(1100);
+  const pillTxt = await page.evaluate(() => { const p = document.querySelector(".turnpill"); return p.offsetWidth ? p.textContent : "hidden"; });
+  /^[45]:\d\d$/.test(pillTxt) ? ok("turn timer: countdown shows in a game (" + pillTxt + ")") : fail("turn timer pill in a game: " + pillTxt);
+  // time runs out -> popup on the page that's open; Next turn starts 5 more minutes; All done and the Back key close it
+  const popShown = () => page.evaluate(() => document.querySelector(".turnpop").style.display !== "none");
+  await page.evaluate(() => localStorage.setItem("speech:turnEnd", JSON.stringify(Date.now() + 300))); await page.waitForTimeout(1500);
+  const over1 = [await popShown(), await page.evaluate(() => Turns.left())];
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "turn-over.png") });
+  await page.click(".turnpop .turnnext"); await page.waitForTimeout(150);
+  const next = [await popShown(), await page.evaluate(() => Turns.left())];
+  await page.evaluate(() => localStorage.setItem("speech:turnEnd", JSON.stringify(-1))); await page.waitForTimeout(1100);
+  await page.click(".turnpop .turndone"); await page.waitForTimeout(150);
+  const allDone = [await popShown(), await page.evaluate(() => Turns.left())];
+  await page.evaluate(() => localStorage.setItem("speech:turnEnd", JSON.stringify(-1))); await page.waitForTimeout(1100);
+  const backKey = await page.evaluate(() => Turns.back());
+  const afterBack = [await popShown(), await page.evaluate(() => Turns.left()), await page.evaluate(() => document.getElementById("game").className.indexOf("on") >= 0)];
+  over1[0] && over1[1] === -1 && !next[0] && next[1] > 290000 && !allDone[0] && allDone[1] === 0 && backKey && !afterBack[0] && afterBack[1] === 0 && afterBack[2]
+    ? ok("turn timer: Switch turns popup when time is up; Next turn, All done and the Back key work")
+    : fail("turn timer popup: " + JSON.stringify({ over1, next, allDone, backKey, afterBack }));
+  // the countdown pill (bottom left) stays clear of text, pictures and buttons on level lists and in play
+  await page.evaluate(() => localStorage.setItem("speech:turnEnd", JSON.stringify(Date.now() + 240000)));
+  const pillHits = () => page.evaluate(() => {
+    const pill = document.querySelector(".turnpill"); if (!pill || !pill.offsetWidth) return ["no countdown"];
+    const v = pill.getBoundingClientRect(), pad = 4, out = [];
+    const near = r => r.width > 0 && r.height > 0 && r.left < v.right + pad && r.right > v.left - pad && r.top < v.bottom + pad && r.bottom > v.top - pad;
+    const seen = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false; } return true; };
+    const skip = e => pill.contains(e) || e.closest(".turnpop");
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n; (n = walker.nextNode());) {
+      if (!n.textContent.trim() || skip(n.parentElement) || !seen(n.parentElement)) continue;
+      const range = document.createRange(); range.selectNodeContents(n);
+      for (const r of range.getClientRects()) if (near(r)) { out.push('text "' + n.textContent.trim().slice(0, 30) + '"'); break; }
+    }
+    document.querySelectorAll("img, button, canvas, .paper, .game, .stone, .act, .week, .choice, .tile").forEach(e => {
+      if (skip(e) || !seen(e)) return;
+      if (near(e.getBoundingClientRect())) out.push(e.tagName.toLowerCase() + "." + (e.className || "").toString().split(" ").join("."));
+    });
+    return out.slice(0, 6);
+  });
+  const pillBad = [];
+  const pillCheck = async label => { const h = await pillHits(); if (h.length) pillBad.push(label + ": " + h.join(", ")); };
+  for (const pg of ["words.html", "math.html"]) { await page.goto(base + pg); await page.waitForTimeout(150); await pillCheck(pg); }
+  for (const g of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html",
+                   "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+    await page.goto(base + g); await page.waitForTimeout(150); await pillCheck(g + " levels");
+    const n = await page.locator("#path button").count();
+    for (const i of [0, Math.floor(n / 2), n - 1]) {
+      await page.goto(base + g); await page.waitForTimeout(100);
+      await page.locator("#path button").nth(i).click(); await page.waitForTimeout(250);
+      await pillCheck(g + " level " + (i + 1));
+    }
+  }
+  await page.goto(base + "class-words.html"); await page.waitForTimeout(150); await pillCheck("class-words home");
+  for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) {
+    await page.evaluate(k => ClassWords.start(k), k); await page.waitForTimeout(200); await pillCheck("class-words " + k);
+  }
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "turn-pill.png") });
+  await page.evaluate(() => localStorage.removeItem("speech:turnEnd"));
+  pillBad.length ? fail("turn timer countdown overlaps: " + pillBad.slice(0, 8).join(" | ")) : ok("turn timer countdown clear of everything on level lists and in every game");
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();

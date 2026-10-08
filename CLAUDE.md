@@ -70,6 +70,15 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Instructions button**: every round of every game shows its instruction with a yellow speaker
   button (`.hintrow` + `.sayb`) that says it again; web-test.js checks every round has one. In
   Picture Planet's "read the word, tap the picture" it says only the instruction (the word is the answer).
+- **Turn timer** (the owner's son plays too): "Start a 5-minute turn" on Pick a mission (#turnbar).
+  The countdown lives natively in TurnTimer.kt (:ufo process; AndroidApp.turnStart/turnLeft/turnStop,
+  left -1 = ran out, popup not dismissed), so it runs across pages and over the photos; when it runs
+  out BubbleService opens the game window if it's closed. speech.js (every page) polls it each second:
+  a countdown pill (in play under the stars, top right; on pickers/level lists just left of the volume
+  control, the top row gets padding-right 67vmin while it runs) and the "Switch turns!" popup (Next
+  turn / All done; the Back key closes it via Turns.back()). Browser fallback: localStorage
+  speech:turnEnd. Clips p_turn_go, p_switch_turns. web-test.js checks the popup flow and that the
+  countdown overlaps nothing on level lists and play screens.
 - **Tap any word to hear it** (all games): `Speech.tapText(text)` wraps words in
   `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element
   with `data-say`. Words map to w_*, numbers to n_*, + - x / = to m_*. Every tappable word needs a

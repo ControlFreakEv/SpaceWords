@@ -149,10 +149,20 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         onClosed()
     }
 
-    /** "Back" on the "Pick a mission" page returns to the photos. */
+    /** "Back" on the "Pick a mission" page returns to the photos; the turn timer (TurnTimer). */
     inner class AppBridge {
         @JavascriptInterface
         fun backToPhotos() { ui.post { hide() } }
+
+        @JavascriptInterface
+        fun turnStart(ms: Long) = TurnTimer.start(ms.coerceIn(1_000L, 60 * 60_000L))
+
+        @JavascriptInterface
+        fun turnStop() = TurnTimer.stop()
+
+        /** Milliseconds left; 0 = off; -1 = time ran out ("Switch turns!" popup still up). */
+        @JavascriptInterface
+        fun turnLeft(): Long = TurnTimer.left()
     }
 
     /** Serves https://wordhop.local/<path> from assets/www/<path>. */
@@ -408,7 +418,8 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         /** Close the game after 10 minutes without a touch, so the frame goes back to the photos. */
         private const val IDLE_MS = 10 * 60_000L
         private val CLIP_KEY = Regex("[a-z0-9_]+")
-        private const val GO_BACK_JS = "(function(){if(window.goBack){goBack();return;}" +
+        private const val GO_BACK_JS = "(function(){if(window.Turns&&Turns.back())return;" +
+            "if(window.goBack){goBack();return;}" +
             "if(window.Speech)Speech.stop();" +
             "var m=document.querySelector('meta[name=parent]');" +
             "if(m)location.href=m.getAttribute('content');else if(window.AndroidApp)AndroidApp.backToPhotos();})()"

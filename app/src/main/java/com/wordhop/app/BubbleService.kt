@@ -57,6 +57,8 @@ class BubbleService : Service() {
     override fun onCreate() {
         super.onCreate()
         scheduleUfoJob(this)
+        // the turn timer ran out: show "Switch turns!", over the photos too (the page shows the popup)
+        TurnTimer.onOver = { if (game?.isShowing != true) openGame() }
         try {
             startForeground(1, notification())
         } catch (e: Exception) {
@@ -162,6 +164,7 @@ class BubbleService : Service() {
     }
 
     override fun onDestroy() {
+        TurnTimer.onOver = null
         game?.hide()
         game = null
         bubble?.let { try { wm?.removeView(it) } catch (e: Exception) { Log.w(TAG, "Couldn't remove the UFO window", e) } }
