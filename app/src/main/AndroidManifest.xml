@@ -46,6 +46,25 @@
             android:process=":ufo"
             android:exported="false" />
 
+        <!-- This frame won't start apps for broadcasts (so BootReceiver doesn't run at boot), but
+             it does for services the system binds by itself: these two bring the UFO back after
+             a restart (see UfoKeeper.kt). -->
+        <service
+            android:name=".UfoListener"
+            android:process=":ufo"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".UfoJob"
+            android:process=":ufo"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <receiver
             android:name=".BootReceiver"
             android:process=":ufo"

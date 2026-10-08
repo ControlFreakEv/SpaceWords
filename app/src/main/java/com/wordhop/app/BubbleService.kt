@@ -56,6 +56,7 @@ class BubbleService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        scheduleUfoJob(this)
         try {
             startForeground(1, notification())
         } catch (e: Exception) {

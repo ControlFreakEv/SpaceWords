@@ -78,6 +78,17 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# So the UFO comes back by itself after the frame restarts: turn on its notification listener.
+# Android binds every enabled listener at boot, and this frame allows that (it blocks the usual
+# boot broadcast). Added to any listeners already on, never replacing them.
+$listener = "com.wordhop.app/com.wordhop.app.UfoListener"
+$current = "$(& $adb -s $Frame shell settings get secure enabled_notification_listeners)".Trim()
+if ($current -notmatch [regex]::Escape($listener)) {
+    if ($current -and $current -ne "null") { $new = "${current}:$listener" } else { $new = $listener }
+    & $adb -s $Frame shell settings put secure enabled_notification_listeners "$new" | Out-Null
+    Write-Host "Turned on the UFO's restart helper."
+}
+
 # Installing closes the app, and this frame's software won't let it restart itself in the
 # background, so start the UFO service from here.
 & $adb -s $Frame shell am startservice -n com.wordhop.app/.BubbleService | Out-Null

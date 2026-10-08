@@ -127,7 +127,11 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
 - **The frame blocks background starts** of Space Words (and the Gallery app): BOOT_COMPLETED and
   MY_PACKAGE_REPLACED fail with "process is bad" although nothing crashed and Android's bad-process
   list is empty, so it looks like a vendor rule. Starting it from the foreground works (am start, or
-  `am startservice` from adb, which deploy.ps1 uses). `tools\inspect-autostart.ps1` gathers clues. `tools\diagnose-back.ps1` captures the
+  `am startservice` from adb, which deploy.ps1 uses). Even Gallery's broadcasts are refused; service
+  starts aren't. So the UFO comes back after a power cut through services the system binds itself
+  (UfoKeeper.kt): UfoListener, a notification listener Android binds at boot (deploy.ps1 adds it to
+  `settings secure enabled_notification_listeners`), and UfoJob, a persisted 15-minute periodic job
+  (fallback, no settings needed). Both just start BubbleService; logcat says "UFO woken by ...". `tools\inspect-autostart.ps1` gathers clues. `tools\diagnose-back.ps1` captures the
   frame's task stack, processes, UFO service/window state and kill/crash logs for debugging.
 
 ## Project
@@ -140,8 +144,8 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   The WebView's localStorage (her stars) lives in the app's data folder, shared by both processes;
   only ever run one WebView at a time.
 - `BubbleService.kt`: floating UFO overlay (TYPE_PHONE below API 26), draggable, position saved,
-  hidden while the game window is open. `BootReceiver.kt` restarts it on boot and after an app update
-  (MY_PACKAGE_REPLACED). `Compat.kt`: API helpers.
+  hidden while the game window is open. `BootReceiver.kt` would restart it on boot and after an app
+  update (MY_PACKAGE_REPLACED), but this frame blocks those broadcasts; `UfoKeeper.kt` does it instead. `Compat.kt`: API helpers.
 - `assets/www`: index.html (picker), picture-planet.html, saucer.html, speech.js, phrases.json,
   fonts/ (Andika subset, Fredoka SemiBold), emoji/, audio/.
 
@@ -174,6 +178,9 @@ The repo must stay **private**: the clips come from an unofficial Microsoft TTS 
   `dl.google.com` allowed in the cloud environment's network settings. Before building, read
   `~/.space-words-setup`: "running" means wait (re-check periodically); "done:" lines say whether
   the SDK is available. If it isn't, APK builds will fail; say so instead of claiming a build passed.
+- If Gradle gets "429 Too Many Requests" from repo.maven.apache.org in a cloud session, add a
+  ~/.gradle/init.d script that puts https://maven-central.storage-download.googleapis.com/maven2/
+  first in settings' pluginManagement and dependencyResolutionManagement repositories (not committed).
 - Install on the frame, from the owner's PC: `adb install -r app\build\outputs\apk\debug\app-debug.apk`
   (`-r` keeps her stars).
 
