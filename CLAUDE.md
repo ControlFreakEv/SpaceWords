@@ -61,6 +61,9 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   Plan per the handout: 2 new words a week + review of practiced ones; the game advances weekly
   unless a grown-up picks words (hold "Grown-ups" 1.5 s; tap words: this week -> practiced -> not
   yet). localStorage classwords:plan / stats (first tries) / best. Sentences: cs_<word> clips.
+  Home's "This week" box (#weekChips) has a fixed height: fitWeek() shrinks the chips (7 -> 3.6vmin)
+  and past that folds the last ones into "+N more" (opens the word wall); grown-ups can put dozens of
+  words in a week. Runs from show("home") too, since renderHome runs while home is hidden.
 - **Silly voices**: `Speech.say(keys, done, speed)`; on the frame `AndroidAudio.playRate()` plays
   through SoundPool (speed and pitch 0.5-2.0; MediaPlayer can't before Android 6). No volume
   boost on those. Zib speaks at 1.35.

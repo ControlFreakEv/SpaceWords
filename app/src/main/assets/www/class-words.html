@@ -30,8 +30,13 @@ img{display:block}
 .head p{margin:.6vmin 0 0;font-size:3vmin;color:#B9C3F2}
 .week{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:1.8vmin 2.4vmin;margin-bottom:2.4vmin}
 .week .lbl{font-size:3.2vmin;color:#4F5F80;margin-right:1.6vmin;line-height:1.15}
-.chip{display:inline-block;padding:.6vmin 2.4vmin 1vmin;margin:0 1vmin;border-radius:2vmin;background:#FFD93D;border:0.5vmin solid #1F2A44;font-size:7vmin;line-height:1}
-.week .rev{font-size:3vmin;color:#4F5F80;margin-left:1vmin;-webkit-flex:1;flex:1}
+.chip{display:inline-block;padding:.12em .34em .16em;margin:.5vmin .7vmin;border-radius:.28em;background:#FFD93D;border:0.5vmin solid #1F2A44;line-height:1}
+/* this week's words: a fixed-height box; fitWeek() shrinks the chips to fit, and if there are still
+   too many, the last ones become "+N more" (opens the word wall) so nothing spills over the cards */
+#weekChips{-webkit-flex:1;flex:1;min-width:0;height:27vmin;overflow:hidden;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;
+  -webkit-align-items:center;align-items:center;-webkit-align-content:center;align-content:center;font-size:7vmin}
+.chip.more{background:#F7F9FF;color:#4F5F80;font-family:"WHFun","Trebuchet MS",sans-serif}
+.week .rev{font-size:3vmin;color:#4F5F80;margin:0 1.4vmin;-webkit-flex:none;flex:none;max-width:16vmin;text-align:center}
 .go{background:#7CFFB2;color:#14193A;padding:2vmin 3.6vmin;font-size:4.6vmin;border-radius:2.6vmin;-webkit-flex:none;flex:none}
 .acts{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin:0 -1vmin}
 .act{width:23%;margin:1vmin 1%;padding:1.6vmin 2vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;text-align:left;min-height:13.6vmin}
@@ -218,7 +223,7 @@ function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ")
 function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
 function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
 var SCREENS = ["home","game","end","wall","adult"];
-function show(id){ SCREENS.forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); }
+function show(id){ SCREENS.forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); if (id === "home") fitWeek(); }
 function wk(w){ return Speech.key(w); }
 function sk(w){ return "cs_" + w.toLowerCase(); }
 function img(code){ return '<img src="emoji/' + code + '.svg" alt="">'; }
@@ -329,6 +334,7 @@ function renderHome(){
   var wc = $("weekChips");
   wc.innerHTML = plan.week.length ? plan.week.map(function(w){ return '<span class="chip rw tw" data-say="' + wk(w) + '">' + w + '</span>'; }).join("")
     : '<span class="lbl">all done!</span>';
+  fitWeek();
   var r = reviewPool().length;
   $("reviewInfo").textContent = r ? "+ review " + r + (r === 1 ? " word" : " words") : "";
   $("weekNote").textContent = plan.manual && Date.now() - plan.start >= WEEK ? "New week! Grown-ups: pick new words." : "";
@@ -340,6 +346,27 @@ function renderHome(){
     acts.appendChild(b);
   });
 }
+/* fit this week's chips in their box: big for the usual 2 words, smaller for more; past the smallest
+   size, the last chips fold into "+N more" (tap: the word wall, which shows every word) */
+function fitWeek(){
+  var wc = $("weekChips"), old = wc.querySelector(".more"), chips, size = 7;
+  if (old) wc.removeChild(old);
+  chips = wc.querySelectorAll(".chip");
+  for (var j = 0; j < chips.length; j++) chips[j].style.display = "";
+  if (!chips.length || !wc.clientHeight) return;
+  var over = function(){ return wc.scrollHeight > wc.clientHeight + 1; };
+  wc.style.fontSize = size + "vmin";
+  while (over() && size > 3.6){ size -= 0.4; wc.style.fontSize = size + "vmin"; }
+  if (!over()) return;
+  var more = el("span", "chip more", ""), hidden = 0;
+  more.onclick = function(){ renderWall(); show("wall"); };
+  wc.appendChild(more);
+  for (var i = chips.length - 1; i > 0 && over(); i--){
+    chips[i].style.display = "none"; hidden++;
+    more.textContent = "+" + hidden + " more";
+  }
+}
+window.addEventListener("resize", function(){ if (hasClass($("home"), "on")) renderHome(); }, false);
 $("missionBtn").onclick = function(){ start("mission"); };
 $("wallBtn").onclick = function(){ renderWall(); show("wall"); };
 

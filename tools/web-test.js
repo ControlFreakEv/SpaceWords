@@ -897,6 +897,32 @@ const server = http.createServer((req, res) => {
       : fail("carrying in 2 parts: " + JSON.stringify({ p1, dimmed, p2, p3 }));
   }
 
+  // Class Words home: however many words a grown-up puts in "this week", nothing spills over
+  {
+    await page.goto(base + "class-words.html"); await page.waitForTimeout(200);
+    const savedPlan = await page.evaluate(() => localStorage.getItem("classwords:plan"));
+    const crowd = [];
+    for (const n of [2, 12, 30, 69]) {
+      await page.evaluate(n => { const C = ClassWords, plan = C.plan(); plan.week = C.LIST.slice(0, n); plan.manual = true; localStorage.setItem("classwords:plan", JSON.stringify(plan)); }, n);
+      await page.reload(); await page.waitForTimeout(300);
+      const r = await page.evaluate(() => {
+        const wc = document.getElementById("weekChips"), rect = e => e.getBoundingClientRect();
+        const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+        const boxes = [document.querySelector("#home .head"), document.querySelector("#home .week"), document.getElementById("acts"), document.getElementById("wallBtn"), document.getElementById("adultBtn")].map(rect);
+        const clash = [];
+        for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (hit(boxes[i], boxes[j])) clash.push(i + "/" + j);
+        const shown = Array.from(wc.querySelectorAll(".chip:not(.more)")).filter(c => c.style.display !== "none").length;
+        const more = wc.querySelector(".more");
+        return { fits: wc.scrollHeight <= wc.clientHeight + 1, clash, shown, more: more ? more.textContent : "", font: parseFloat(getComputedStyle(wc).fontSize), bottom: boxes[4].bottom };
+      });
+      const hiddenCount = r.more ? parseInt(r.more.replace(/\D/g, ""), 10) : 0;
+      if (!r.fits || r.clash.length || r.shown + hiddenCount !== n || r.bottom > 800 || (n === 2 && r.font < 50)) crowd.push(n + " words: " + JSON.stringify(r));
+      if (SHOTS && n === 30) await page.screenshot({ path: path.join(SHOTS, "class-words-30-words.png") });
+    }
+    await page.evaluate(s => { if (s) localStorage.setItem("classwords:plan", s); else localStorage.removeItem("classwords:plan"); }, savedPlan);
+    crowd.length ? fail("class words home crowded: " + crowd.join(" | ")) : ok("class words home: 2, 12, 30 or 69 words this week fit their box (big chips for 2, \"+N more\" past that), nothing overlaps");
+  }
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();
