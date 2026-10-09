@@ -19,6 +19,10 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   digits in fixed-width cells, ones under ones, tens under tens (colored green / yellow / pink by
   place), the answer box under the line; setEntry() keeps typed and revealed answers in columns.
   Picture rounds and missing-number rounds stay in a line.
+  Adding with a carry (a 2-digit number and the ones make 10+; needsCarry) is a "steps" round in 2
+  parts (carryRound): "Add the ones" (choices; the ones digit is written and a pink carried 1 pops
+  up over the tens), then "Add the tens: 1 + ..." ; a dashed band marks the column being added.
+  R.step / R.busy; web-test.js plays steps rounds part by part. Subtraction borrowing isn't shown yet.
 
 - **Match games** (match.html?g=connect|rhyme): Connect the Pairs (word to picture, Picture
   Planet's word levels) and Rhyming Pairs (pairs tagged by sound; a board never has two pairs with

@@ -98,6 +98,15 @@ img{display:block}
 .cnum .p0{color:#7CFFB2}.cnum .p1{color:#FFD93D}.cnum .p2{color:#FF9ED8}
 .cbar{-webkit-align-self:stretch;align-self:stretch;height:0;border-top:0.8vmin solid #F3F6FF;border-radius:.4vmin;margin:.6vmin 0 1.2vmin}
 .q.colq{min-width:0;display:-webkit-flex;display:flex;-webkit-justify-content:flex-end;justify-content:flex-end}
+/* carrying: a small row above for the carried 1, and a glowing band over the column being added */
+.colsum{position:relative;z-index:0}
+.crow.ccarry{height:.62em}
+.ccarry .dg{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;-webkit-align-items:flex-end;align-items:flex-end}
+.cy{display:block;font-size:.5em;line-height:1.1;padding:0 .28em;border-radius:.35em;background:#FF9ED8;color:#1F2A44;font-weight:600;font-style:normal;
+  box-shadow:0.4vmin 0.4vmin 0 #05081A;-webkit-animation:cypop .5s ease-out;animation:cypop .5s ease-out}
+@-webkit-keyframes cypop{0%{-webkit-transform:translateY(1.4em) scale(.4);opacity:0}100%{-webkit-transform:none;opacity:1}}
+@keyframes cypop{0%{transform:translateY(1.4em) scale(.4);opacity:0}100%{transform:none;opacity:1}}
+.cband{position:absolute;z-index:-1;border-radius:1.6vmin;background:rgba(92,225,230,.16);border:0.4vmin dashed #5CE1E6;display:none}
 .bignum{font-size:20vmin;line-height:1;color:#FFD93D;text-shadow:0.8vmin 0.8vmin 0 #05081A}
 .seq{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap}
 .bub{min-width:13vmin;height:13vmin;margin:1vmin;padding:0 1.6vmin;font-size:7.5vmin;border-radius:6.5vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
@@ -330,13 +339,14 @@ function digitCells(v, cols){
   return out;
 }
 /* "34 + 25" stacked: ones under ones, tens under tens, answer box under the line */
-function colHtml(a, op, b, ans){
+function colHtml(a, op, b, ans, carry){
   var cols = Math.max(String(a).length, String(b).length, String(ans).length);
-  return '<div class="colsum" data-cols="' + cols + '">' +
+  return '<div class="colsum" data-cols="' + cols + '">' + (carry ? '<div class="cband"></div>' +
+    '<div class="crow ccarry"><span class="cop"></span><span class="cnum">' + digitCells("", cols) + '</span></div>' : '') +
     '<div class="crow"><span class="cop"></span><span class="cnum tw" data-say="n_' + a + '">' + digitCells(a, cols) + '</span></div>' +
     '<div class="crow">' + opSpan(op).replace('class="tw"', 'class="cop tw"') + '<span class="cnum tw" data-say="n_' + b + '">' + digitCells(b, cols) + '</span></div>' +
     '<div class="cbar"></div>' +
-    '<div class="crow"><span class="cop"></span><span class="q colq" id="entry" data-cols="' + cols + '">' + digitCells("", cols - 1) + '<i class="dg">?</i></span></div>' +
+    '<div class="crow"><span class="cop"></span><span class="q colq" id="entry" data-cols="' + cols + '">' + digitCells("", cols - 1) + '<i class="dg p0">?</i></span></div>' +
     '</div>';
 }
 /* adding and taking away: stacked once a number has 2 digits, in a line for small facts */
@@ -346,11 +356,31 @@ function setEntry(e, text){
   var cols = e && parseInt(e.getAttribute("data-cols"), 10);
   if (!e) return;
   if (!cols){ e.textContent = text; return; }
-  e.innerHTML = text === "?" ? digitCells("", cols - 1) + '<i class="dg">?</i>' : digitCells(text, Math.max(cols, text.length));
+  e.innerHTML = text === "?" ? digitCells("", cols - 1) + '<i class="dg p0">?</i>' : digitCells(text, Math.max(cols, text.length));
 }
+
+/* carrying, in 2 parts (24 + 67): add the ones (11: write 1, carry the 1 above the tens), then the
+   tens with the carried 1 (1 + 2 + 6 = 9). Each part has its own choices; the answer fills in. */
+function carryRound(a, b){
+  var s = a + b, oa = a % 10, ob = b % 10, ones = oa + ob, ta = Math.floor(a / 10), tb = Math.floor(b / 10), tens = 1 + ta + tb;
+  var parts = [1].concat(ta ? [ta] : [], tb ? [tb] : []), tensSay = ["m_add_tens"];
+  parts.forEach(function(v, i){ if (i) tensSay.push("m_plus"); tensSay.push(n(v)); });
+  return { kind:"steps", hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)],
+    prompt:colHtml(a, "+", b, s, true), answer:s, answerSay:[n(a), "m_plus", n(b), "m_equals", n(s)],
+    steps:[
+      { place:0, hint:"Add the ones: " + oa + " + " + ob, say:["m_add_ones", n(oa), "m_plus", n(ob)],
+        options:numOpts(ones, 0, 19, [ones % 10, ones + 1]), answer:ones,
+        doneSay:[n(oa), "m_plus", n(ob), "m_equals", n(ones), "m_write", n(ones % 10), "m_carry"] },
+      { place:1, hint:"Add the tens: " + parts.join(" + "), say:tensSay,
+        options:numOpts(tens, 0, 19, [tens - 1, tens + 1]), answer:tens }
+    ] };
+}
+/* adding with a carry (one number has tens, the ones make 10 or more) goes in 2 parts */
+function needsCarry(a, b){ return (a >= 10 || b >= 10) && a % 10 + b % 10 >= 10; }
 
 function rAdd(maxSum, pics, pad){
   var a = ri(1, maxSum - 1), b = ri(1, maxSum - a), s = a + b, t = pick(THINGS);
+  if (!pics && needsCarry(a, b)) return carryRound(a, b);
   var p = pics ? '<div class="prompt">' + frames(a, t[0]) + '<span class="op">+</span>' + frames(b, t[0]) + '</div>' + eqHtml(a, "+", b) : sumHtml(a, "+", b, s);
   return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:'<div class="prompt col">' + p + '</div>',
     kind:pad ? "pad" : "choice", options:pad ? null : numOpts(s, 0, maxSum + 3, [a, b]), answer:s, answerSay:[n(s)] };
@@ -375,6 +405,7 @@ function rAdd2(pad){
   else if (type === "easy"){ var ta = ri(1, 7), tb = ri(1, 8 - ta), oa = ri(0, 8), ob = ri(0, 9 - oa); a = ta*10 + oa; b = tb*10 + ob; if (b < 10) b += 10; }
   else { var oa2 = ri(2, 9), ob2 = ri(10 - oa2, 9), ta2 = ri(1, 6), tb2 = ri(0, 7 - ta2); a = ta2*10 + oa2; b = tb2*10 + ob2; }
   var s = a + b;
+  if (needsCarry(a, b)) return carryRound(a, b);
   return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:sumHtml(a, "+", b, s), kind:pad ? "pad" : "choice",
     options:pad ? null : numOpts(s, 0, 100, [s - 10, s + 10]), answer:s, answerSay:[n(s)] };
 }
@@ -571,15 +602,21 @@ function renderRound(){
   renderDots();
   var stage = $("stage"); stage.innerHTML = "";
   var hr = el("div", "hintrow");
-  hr.appendChild(el("p", "hint", Speech.tapText(R.hint)));
+  var hintEl = el("p", "hint", Speech.tapText(R.hint));
+  hr.appendChild(hintEl);
   if (Speech.canTalk()){
     var sb = el("button", "paper press sayb flex", img("1f50a"));
-    sb.onclick = function(){ say(R.say); };
+    sb.onclick = function(){ say(R.sayNow || R.say); };
     hr.appendChild(sb);
   }
   stage.appendChild(hr);
 
-  if (R.kind === "pad"){
+  if (R.kind === "steps"){
+    stage.appendChild(el("div", "prompt col", R.prompt));
+    var sc = el("div", "choices");
+    stage.appendChild(sc);
+    runStep(R, 0, hintEl, sc);
+  } else if (R.kind === "pad"){
     var row = el("div", "padrow"), left = el("div", "padleft", R.prompt);
     row.appendChild(left);
     row.appendChild(keypad());
@@ -594,7 +631,55 @@ function renderRound(){
     });
     stage.appendChild(ch);
   }
-  setTimeout(function(){ if (G && G.R === R) say(R.say); }, 400);
+  setTimeout(function(){ if (G && G.R === R) say(R.sayNow || R.say); }, 400);
+}
+
+/* ---------- carrying, one column at a time ---------- */
+function markColumn(place){
+  var box = document.querySelector("#stage .colsum"), band = box && box.querySelector(".cband");
+  if (!band) return;
+  var cells = box.querySelectorAll(".cnum .dg.p" + place + ", #entry .dg.p" + place);
+  if (place < 0 || !cells.length){ band.style.display = "none"; return; }
+  var b0 = box.getBoundingClientRect(), top = cells[0].getBoundingClientRect(), bot = cells[cells.length - 1].getBoundingClientRect(), pad = top.width * 0.12;
+  band.style.left = (top.left - b0.left - pad) + "px"; band.style.width = (top.width + 2*pad) + "px";
+  band.style.top = (top.top - b0.top - pad) + "px"; band.style.height = (bot.bottom - top.top + 2*pad) + "px";
+  band.style.display = "block";
+}
+/* the answer box while working: digits found so far, "?" in the column being added */
+function showWorking(R, place){
+  var e = entry(), cols = parseInt(e.getAttribute("data-cols"), 10), d = String(R.answer), html = "";
+  for (var p = cols - 1; p >= 0; p--){
+    var known = p < place ? d.charAt(d.length - 1 - p) : "";
+    html += '<i class="dg p' + p + '">' + (p === place ? "?" : known) + '</i>';
+  }
+  e.innerHTML = html;
+}
+function runStep(R, i, hintEl, ch){
+  var st = R.steps[i];
+  R.step = i;
+  hintEl.innerHTML = Speech.tapText(st.hint);
+  R.sayNow = i === 0 ? R.say.concat(st.say) : st.say;
+  showWorking(R, st.place);
+  setTimeout(function(){ if (G.R === R) markColumn(st.place); }, 0);
+  ch.innerHTML = "";
+  st.options.forEach(function(o){
+    var b = el("button", "paper press choice " + o.cls, o.html);
+    b.onclick = function(){
+      if (G.locked || R.busy || R.step !== i) return;
+      if (o.val !== st.answer){ wrong(b); return; }
+      if (i === R.steps.length - 1){ markColumn(-1); correct(b); return; }
+      /* ones done: write the ones digit, carry the 1 up above the tens, then on to the tens */
+      R.busy = true; addClass(b, "right");
+      showWorking(R, st.place + 1);
+      var cy = document.querySelector("#stage .ccarry .dg.p" + (st.place + 1));
+      if (cy) cy.innerHTML = '<b class="cy">1</b>';
+      var went = false;
+      function next(){ if (went || G.R !== R) return; went = true; R.busy = false; runStep(R, i + 1, hintEl, ch); say(R.sayNow); }
+      say(st.doneSay, function(){ setTimeout(next, 500); });
+      setTimeout(next, 12000);
+    };
+    ch.appendChild(b);
+  });
 }
 
 function keypad(){
@@ -655,7 +740,7 @@ function correct(target){
   if (clean) G.stars++;
   G.results[G.round] = clean ? "gold" : "ok";
   if (hasClass(target, "choice")) addClass(target, "right");
-  var e = entry(); if (e && G.R.kind === "choice"){ if (G.R.answerHtml) e.innerHTML = G.R.answerHtml; else setEntry(e, String(G.R.answer)); }
+  var e = entry(); if (e && (G.R.kind === "choice" || G.R.kind === "steps")){ if (G.R.answerHtml) e.innerHTML = G.R.answerHtml; else setEntry(e, String(G.R.answer)); }
   renderDots();
   confetti(target);
   var rule = showRule();

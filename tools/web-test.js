@@ -64,11 +64,17 @@ const server = http.createServer((req, res) => {
           (R.say || []).concat(R.answerSay || []).forEach(k => out.keys[k] = 1);
           if (typeof R.answer === "number" && !(Number.isInteger(R.answer) && R.answer >= 0 && R.answer <= 100)) out.bad.push(where + " answer " + R.answer);
           if (R.kind === "pad" && R.prompt.indexOf('id="entry"') < 0) out.bad.push(where + " keypad round without an answer box");
-          if (R.kind === "choice") {
-            const vals = R.options.map(o => o.val);
-            if (vals.indexOf(R.answer) < 0) out.bad.push(where + " answer missing from choices " + vals);
-            if (new Set(vals).size !== vals.length) out.bad.push(where + " repeated choices " + vals);
-            if (vals.some(v => typeof v === "number" && (v < 0 || v > 100))) out.bad.push(where + " choice out of range " + vals);
+          const checkOpts = (opts, ans, w) => {
+            const vals = opts.map(o => o.val);
+            if (vals.indexOf(ans) < 0) out.bad.push(w + " answer missing from choices " + vals);
+            if (new Set(vals).size !== vals.length) out.bad.push(w + " repeated choices " + vals);
+            if (vals.some(v => typeof v === "number" && (v < 0 || v > 100))) out.bad.push(w + " choice out of range " + vals);
+          };
+          if (R.kind === "choice") checkOpts(R.options, R.answer, where);
+          if (R.kind === "steps") {   // carrying in 2 parts: ones, then tens (with the carried 1)
+            R.steps.forEach((st, k) => { checkOpts(st.options, st.answer, where + " part " + (k + 1)); st.say.concat(st.doneSay || []).forEach(x => out.keys[x] = 1); });
+            const t = R.steps[0].answer, u = R.steps[1].answer;
+            if (t < 10 || u * 10 + t % 10 !== R.answer) out.bad.push(where + " carry parts " + t + ", " + u + " don't make " + R.answer);
           }
         }
       }));
@@ -84,9 +90,15 @@ const server = http.createServer((req, res) => {
     for (let i = 0; i < levels; i++) {
       await page.evaluate(i => MathGame.start(i), i);
       for (let r = 0; r < 10; r++) {
-        const R = await page.evaluate(() => { const R = MathGame.state().R; return { kind: R.kind, answer: R.answer, vals: R.options ? R.options.map(o => o.val) : null }; });
+        const R = await page.evaluate(() => { const R = MathGame.state().R; return { kind: R.kind, answer: R.answer, vals: R.options ? R.options.map(o => o.val) : null, steps: R.steps ? R.steps.map(st => [st.answer, st.options.map(o => o.val)]) : null }; });
         if (r === 0) await shot(g + "-L" + (i + 1));
         if (R.kind === "choice") await page.locator(".choice").nth(R.vals.indexOf(R.answer)).click();
+        else if (R.kind === "steps") {
+          for (let k = 0; k < R.steps.length; k++) {
+            await page.waitForFunction(k => MathGame.state().R.step === k && !MathGame.state().R.busy, k, { timeout: 3000 });
+            await page.locator(".choice").nth(R.steps[k][1].indexOf(R.steps[k][0])).click();
+          }
+        }
         else { for (const d of String(R.answer)) await page.locator(".key", { hasText: new RegExp("^" + d + "$") }).click(); await page.locator(".key.go").click(); }
         await page.waitForFunction(r => { const s = MathGame.state(); return s.round > r || document.getElementById("end").className.indexOf("on") >= 0; }, r, { timeout: 3000 });
       }
@@ -844,6 +856,45 @@ const server = http.createServer((req, res) => {
     if (SHOTS) { await page.screenshot({ path: path.join(SHOTS, "ops-stacked.png") }); }
     stacked > 20 && !colBad.length ? ok("rocket math: " + stacked + " two-digit sums stacked with ones under ones and tens under tens (typed answers too); " + inline + " small facts in a line")
       : fail("rocket math stacked sums: " + stacked + " stacked, problems: " + colBad.slice(0, 5).join(" | "));
+  }
+
+  // Carrying in 2 parts (24 + 67): add the ones, write the ones digit and carry the 1, then add the tens
+  {
+    await page.goto(base + "math-game.html?g=ops"); await page.waitForTimeout(60);
+    await page.evaluate(() => { const L = MathGame.game().levels[3], m = L.rounds[0]; L.rounds = L.rounds.map(() => m);
+      for (let t = 0; t < 200; t++) { MathGame.start(3); if (MathGame.state().R.kind === "steps") break; } });
+    await page.waitForTimeout(150);
+    const look = () => page.evaluate(() => {
+      const R = MathGame.state().R, band = document.querySelector(".cband"), e = document.getElementById("entry");
+      const cell = (sel, p) => { const c = document.querySelector(sel + " .dg.p" + p); return c ? c.textContent : null; };
+      const inBand = p => { const c = document.querySelector("#entry .dg.p" + p); if (!band || !c) return false; const b = band.getBoundingClientRect(), r = c.getBoundingClientRect(); return band.style.display === "block" && r.left >= b.left && r.right <= b.right; };
+      return { kind: R.kind, step: R.step, answer: R.answer, hint: document.querySelector(".hint").textContent, entry: e.textContent,
+        ones: cell("#entry", 0), tens: cell("#entry", 1), carry: cell(".ccarry", 1), bandOnes: inBand(0), bandTens: inBand(1), stars: MathGame.state().stars, locked: MathGame.state().locked };
+    });
+    const pick = val => page.evaluate(val => Array.from(document.querySelectorAll(".choice")).filter(b => b.textContent === String(val))[0].click(), val);
+    const part = k => page.evaluate(k => MathGame.state().R.steps[k].answer, k);
+    const p1 = await look();
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "carry-1-ones.png") });
+    const onesAns = await part(0), wrongVal = await page.evaluate(() => { const st = MathGame.state().R.steps[0]; return st.options.map(o => o.val).filter(v => v !== st.answer)[0]; });
+    await pick(wrongVal); await page.waitForTimeout(600);
+    const dimmed = await page.locator(".choice.dim").count();
+    await pick(onesAns);
+    await page.waitForFunction(() => MathGame.state().R.step === 1 && !MathGame.state().R.busy, null, { timeout: 4000 });
+    await page.waitForTimeout(100);
+    const p2 = await look();
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "carry-2-tens.png") });
+    // (read straight after the last pick: the test's fast timers move on to the next round right away)
+    const p3 = await page.evaluate(val => {
+      Array.from(document.querySelectorAll(".choice")).filter(b => b.textContent === String(val))[0].click();
+      return { locked: MathGame.state().locked, entry: document.getElementById("entry").textContent, stars: MathGame.state().stars };
+    }, await part(1));
+    const a = String(p1.answer);
+    p1.kind === "steps" && /^Add the ones/.test(p1.hint) && p1.ones === "?" && p1.bandOnes && !p1.carry
+      && dimmed === 1
+      && /^Add the tens: 1 \+/.test(p2.hint) && p2.carry === "1" && p2.ones === a.slice(-1) && p2.tens === "?" && p2.bandTens
+      && p3.locked && p3.entry === a
+      ? ok("carrying: ones first (" + p1.hint + "), then the carried 1 shows over the tens (" + p2.hint + "), answer " + a)
+      : fail("carrying in 2 parts: " + JSON.stringify({ p1, dimmed, p2, p3 }));
   }
 
   // Hubs show star totals after playing.

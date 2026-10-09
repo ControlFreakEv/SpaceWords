@@ -1850,5 +1850,15 @@
  "p_your_turn": "Your turn!",
  "p_minutes": "minutes.",
  "p_minute": "minute.",
- "p_have_fun": "Have fun!"
+ "p_have_fun": "Have fun!",
+ "m_add_ones": "Add the ones.",
+ "m_add_tens": "Now add the tens. Remember the one you carried!",
+ "m_write": "Write",
+ "m_carry": "and carry the one to the tens.",
+ "w_add": "add",
+ "ws_add": "add",
+ "w_ones": "ones",
+ "ws_ones": "ones",
+ "w_tens": "tens",
+ "ws_tens": "tens"
 }
