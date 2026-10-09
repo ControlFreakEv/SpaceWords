@@ -810,6 +810,42 @@ const server = http.createServer((req, res) => {
       : fail("spell it cover timing: " + JSON.stringify({ whileTalking, justAfter, later }));
   }
 
+  // Rocket Math: sums with 2-digit numbers are stacked so ones sit under ones and tens under tens
+  {
+    const colBad = [];
+    let stacked = 0, inline = 0;
+    for (const lv of [2, 3]) {
+      await page.goto(base + "math-game.html?g=ops"); await page.waitForTimeout(60);
+      const count = await page.evaluate(lv => MathGame.game().levels[lv].rounds.length, lv);
+      for (let idx = 0; idx < count; idx++) for (let rep = 0; rep < 3; rep++) {
+        await page.goto(base + "math-game.html?g=ops"); await page.waitForTimeout(60);
+        const r = await page.evaluate(([lv, idx]) => {
+          const L = MathGame.game().levels[lv], m = L.rounds[idx]; L.rounds = L.rounds.map(() => m); MathGame.start(lv);
+          const box = document.querySelector(".colsum"), R = MathGame.state().R;
+          const colsOf = () => {
+            const rows = Array.from(box.querySelectorAll(".cnum, #entry")).map(e => Array.from(e.querySelectorAll(".dg")).map(d => { const b = d.getBoundingClientRect(); return Math.round(b.left + b.width / 2); }));
+            const w = Math.max.apply(null, rows.map(x => x.length));
+            return rows.every(x => x.length === w) && rows.every(x => x.every((c, i) => Math.abs(c - rows[0][i]) <= 1));
+          };
+          if (!box) return { stacked: false, hint: R.hint };
+          const before = colsOf();
+          if (R.kind === "pad") {   // type the answer on the keypad: still lined up
+            const keys = Array.from(document.querySelectorAll(".pad .key"));
+            String(R.answer).split("").forEach(ch => keys.filter(b => b.textContent === ch)[0].click());
+          }
+          const typed = R.kind === "pad" ? document.getElementById("entry").textContent : "";
+          return { stacked: true, hint: R.hint, before, after: colsOf(), typedOk: R.kind !== "pad" || typed === String(R.answer) };
+        }, [lv, idx]);
+        if (!r.stacked) { inline++; if (/\d\d/.test(r.hint) && !/missing/i.test(r.hint)) colBad.push(r.hint + " not stacked"); continue; }
+        stacked++;
+        if (!r.before || !r.after || !r.typedOk) colBad.push(r.hint + " " + JSON.stringify(r));
+      }
+    }
+    if (SHOTS) { await page.screenshot({ path: path.join(SHOTS, "ops-stacked.png") }); }
+    stacked > 20 && !colBad.length ? ok("rocket math: " + stacked + " two-digit sums stacked with ones under ones and tens under tens (typed answers too); " + inline + " small facts in a line")
+      : fail("rocket math stacked sums: " + stacked + " stacked, problems: " + colBad.slice(0, 5).join(" | "));
+  }
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();

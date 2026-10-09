@@ -87,6 +87,17 @@ img{display:block}
 .eq span{margin:0 1.4vmin}
 .q{display:inline-block;min-width:13vmin;padding:0 1.6vmin;text-align:center;border-radius:2vmin;background:#FFD93D;color:#1F2A44;border:0.5vmin solid #1F2A44}
 .q.reveal{background:#FF9E5C}
+/* adding and taking away with 2-digit numbers: stacked, so ones sit under ones and tens under tens.
+   Every row has the answer box's padding and border, so the digit columns line up exactly. */
+.colsum{display:-webkit-inline-flex;display:inline-flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:flex-end;align-items:flex-end;
+  font-size:10vmin;line-height:1.08;margin:1vmin 0}
+.crow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+.cop{width:9vmin;text-align:center;margin-right:1.4vmin}
+.cnum{display:-webkit-flex;display:flex;padding:0 1.6vmin;border:0.5vmin solid transparent}
+.dg{display:block;width:.66em;text-align:center;font-style:normal}
+.cnum .p0{color:#7CFFB2}.cnum .p1{color:#FFD93D}.cnum .p2{color:#FF9ED8}
+.cbar{-webkit-align-self:stretch;align-self:stretch;height:0;border-top:0.8vmin solid #F3F6FF;border-radius:.4vmin;margin:.6vmin 0 1.2vmin}
+.q.colq{min-width:0;display:-webkit-flex;display:flex;-webkit-justify-content:flex-end;justify-content:flex-end}
 .bignum{font-size:20vmin;line-height:1;color:#FFD93D;text-shadow:0.8vmin 0.8vmin 0 #05081A}
 .seq{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap}
 .bub{min-width:13vmin;height:13vmin;margin:1vmin;padding:0 1.6vmin;font-size:7.5vmin;border-radius:6.5vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
@@ -309,16 +320,44 @@ var OP_KEY = { "+":"m_plus" }; OP_KEY[MINUS] = "m_minus"; OP_KEY[TIMES] = "m_tim
 function opSpan(op){ return '<span class="tw" data-say="' + OP_KEY[op] + '">' + op + '</span>'; }
 var EQUALS = '<span class="tw" data-say="m_equals">=</span>';
 function eqHtml(a, op, b){ return '<div class="eq">' + num(a) + opSpan(op) + num(b) + EQUALS + Q + '</div>'; }
+/* digits of v in `cols` cells, right-aligned; each cell colored by its place (ones, tens, hundreds) */
+function digitCells(v, cols){
+  var d = String(v), out = "";
+  for (var i = 0; i < cols; i++){
+    var k = i - (cols - d.length), place = cols - 1 - i;
+    out += '<i class="dg p' + place + '">' + (k >= 0 ? d.charAt(k) : "") + '</i>';
+  }
+  return out;
+}
+/* "34 + 25" stacked: ones under ones, tens under tens, answer box under the line */
+function colHtml(a, op, b, ans){
+  var cols = Math.max(String(a).length, String(b).length, String(ans).length);
+  return '<div class="colsum" data-cols="' + cols + '">' +
+    '<div class="crow"><span class="cop"></span><span class="cnum tw" data-say="n_' + a + '">' + digitCells(a, cols) + '</span></div>' +
+    '<div class="crow">' + opSpan(op).replace('class="tw"', 'class="cop tw"') + '<span class="cnum tw" data-say="n_' + b + '">' + digitCells(b, cols) + '</span></div>' +
+    '<div class="cbar"></div>' +
+    '<div class="crow"><span class="cop"></span><span class="q colq" id="entry" data-cols="' + cols + '">' + digitCells("", cols - 1) + '<i class="dg">?</i></span></div>' +
+    '</div>';
+}
+/* adding and taking away: stacked once a number has 2 digits, in a line for small facts */
+function sumHtml(a, op, b, ans){ return a >= 10 || b >= 10 || ans >= 10 ? colHtml(a, op, b, ans) : eqHtml(a, op, b); }
+/* what goes in the answer box: typed digits, the revealed answer, or "?" (stacked sums keep their columns) */
+function setEntry(e, text){
+  var cols = e && parseInt(e.getAttribute("data-cols"), 10);
+  if (!e) return;
+  if (!cols){ e.textContent = text; return; }
+  e.innerHTML = text === "?" ? digitCells("", cols - 1) + '<i class="dg">?</i>' : digitCells(text, Math.max(cols, text.length));
+}
 
 function rAdd(maxSum, pics, pad){
   var a = ri(1, maxSum - 1), b = ri(1, maxSum - a), s = a + b, t = pick(THINGS);
-  var p = (pics ? '<div class="prompt">' + frames(a, t[0]) + '<span class="op">+</span>' + frames(b, t[0]) + '</div>' : '') + eqHtml(a, "+", b);
+  var p = pics ? '<div class="prompt">' + frames(a, t[0]) + '<span class="op">+</span>' + frames(b, t[0]) + '</div>' + eqHtml(a, "+", b) : sumHtml(a, "+", b, s);
   return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:'<div class="prompt col">' + p + '</div>',
     kind:pad ? "pad" : "choice", options:pad ? null : numOpts(s, 0, maxSum + 3, [a, b]), answer:s, answerSay:[n(s)] };
 }
 function rSub(max, pics, pad){
   var a = ri(2, max), b = ri(1, a), d = a - b, t = pick(THINGS);
-  var p = (pics ? '<div class="prompt">' + frames(a, t[0], b) + '</div>' : '') + eqHtml(a, MINUS, b);
+  var p = pics ? '<div class="prompt">' + frames(a, t[0], b) + '</div>' + eqHtml(a, MINUS, b) : sumHtml(a, MINUS, b, d);
   return { hint:"What is " + a + " " + "−" + " " + b + "?", say:["m_what_is", n(a), "m_minus", n(b)], prompt:'<div class="prompt col">' + p + '</div>',
     kind:pad ? "pad" : "choice", options:pad ? null : numOpts(d, 0, max, [a + b <= max + 5 ? a + b : a]), answer:d, answerSay:[n(d)] };
 }
@@ -336,7 +375,7 @@ function rAdd2(pad){
   else if (type === "easy"){ var ta = ri(1, 7), tb = ri(1, 8 - ta), oa = ri(0, 8), ob = ri(0, 9 - oa); a = ta*10 + oa; b = tb*10 + ob; if (b < 10) b += 10; }
   else { var oa2 = ri(2, 9), ob2 = ri(10 - oa2, 9), ta2 = ri(1, 6), tb2 = ri(0, 7 - ta2); a = ta2*10 + oa2; b = tb2*10 + ob2; }
   var s = a + b;
-  return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:eqHtml(a, "+", b), kind:pad ? "pad" : "choice",
+  return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:sumHtml(a, "+", b, s), kind:pad ? "pad" : "choice",
     options:pad ? null : numOpts(s, 0, 100, [s - 10, s + 10]), answer:s, answerSay:[n(s)] };
 }
 function rSub2(pad){
@@ -345,7 +384,7 @@ function rSub2(pad){
   else if (type === "easy"){ var ta = ri(3, 9), oa = ri(2, 9); a = ta*10 + oa; b = ri(1, ta - 1)*10 + ri(0, oa); }
   else { var ta2 = ri(3, 9), oa2 = ri(0, 7); a = ta2*10 + oa2; b = ri(1, ta2 - 2)*10 + ri(oa2 + 1, 9); }
   var d = a - b;
-  return { hint:"What is " + a + " − " + b + "?", say:["m_what_is", n(a), "m_minus", n(b)], prompt:eqHtml(a, MINUS, b), kind:pad ? "pad" : "choice",
+  return { hint:"What is " + a + " − " + b + "?", say:["m_what_is", n(a), "m_minus", n(b)], prompt:sumHtml(a, MINUS, b, d), kind:pad ? "pad" : "choice",
     options:pad ? null : numOpts(d, 0, 100, [d + 10, d - 10]), answer:d, answerSay:[n(d)] };
 }
 function rGroups(pad){
@@ -582,7 +621,7 @@ function padKey(k, btn){
     say(["p_try"]);
   }
   else if (G.typed.length < 3){ G.typed = (G.typed === "0" ? "" : G.typed) + k; }
-  entry().textContent = G.typed || "?";
+  setEntry(entry(), G.typed || "?");
 }
 /* patterns: show the steps between the numbers and the rule line */
 function showRule(){
@@ -602,7 +641,7 @@ function sayThenNext(keys){
 }
 function revealAnswer(){
   G.locked = true;
-  var e = entry(); e.textContent = String(G.R.answer); addClass(e, "reveal");
+  var e = entry(); setEntry(e, String(G.R.answer)); addClass(e, "reveal");
   G.results[G.round] = "ok";
   renderDots();
   var rule = showRule();
@@ -616,7 +655,7 @@ function correct(target){
   if (clean) G.stars++;
   G.results[G.round] = clean ? "gold" : "ok";
   if (hasClass(target, "choice")) addClass(target, "right");
-  var e = entry(); if (e && G.R.kind === "choice") e.innerHTML = G.R.answerHtml || String(G.R.answer);
+  var e = entry(); if (e && G.R.kind === "choice"){ if (G.R.answerHtml) e.innerHTML = G.R.answerHtml; else setEntry(e, String(G.R.answer)); }
   renderDots();
   confetti(target);
   var rule = showRule();

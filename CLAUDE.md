@@ -15,6 +15,10 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   Alien Patterns rounds carry `rule` {steps, html, say}: after a right (or revealed) answer the
   step labels between the numbers appear (+3, x2...), a "Rule:" line shows, and it is said
   ("The rule is plus three"). Math rounds move on after the voice finishes (Speech.say done).
+  Rocket Math + and - with any 2-digit number (Facts to 20, Big numbers) are stacked (colHtml):
+  digits in fixed-width cells, ones under ones, tens under tens (colored green / yellow / pink by
+  place), the answer box under the line; setEntry() keeps typed and revealed answers in columns.
+  Picture rounds and missing-number rounds stay in a line.
 
 - **Match games** (match.html?g=connect|rhyme): Connect the Pairs (word to picture, Picture
   Planet's word levels) and Rhyming Pairs (pairs tagged by sound; a board never has two pairs with
