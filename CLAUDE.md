@@ -4,7 +4,7 @@ Space/UFO reading games for a 5-year-old who reads above grade level. Runs on a 
 digital photo frame: a draggable floating UFO button over the Skylight slideshow opens a
 "Pick a mission" picker. Stars per level live in localStorage.
 
-- **Picture Planet** (picture-planet.html): picture words in 5 levels. Rounds: read the word and
+- **Picture Planet** (picture-planet.html): picture words in 5 levels (36/45/56/102/53 words). Rounds: read the word and
   tap the picture, hear it and tap the word, spell it from letter tiles.
 - **Sight Word Saucer** (saucer.html): all 220 Dolch words over 5 planets (Pre-primer to Grade 3).
   Rounds: hear a word and beam it up from look-alikes, fill-in-the-blank sentences (67 curated,

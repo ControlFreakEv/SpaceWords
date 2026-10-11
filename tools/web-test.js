@@ -177,6 +177,24 @@ const server = http.createServer((req, res) => {
   const missingLit = literalKeys.filter(k => !(k in phrases));
   missingLit.length ? fail("spoken keys in the pages missing from phrases.json: " + missingLit.join(", ")) : ok("all " + literalKeys.length + " spoken keys written in the pages exist");
 
+  // Picture Planet's words = Connect the Pairs' words: same levels, pictures exist, nothing repeats, every word can be said.
+  {
+    const ppSrc = fs.readFileSync(path.join(WWW, "picture-planet.html"), "utf8"), mSrc = fs.readFileSync(path.join(WWW, "match.html"), "utf8");
+    const raw = JSON.parse(ppSrc.match(/^var RAW = (\[.*\]);$/m)[1]);
+    const conn = JSON.parse(mSrc.match(/var PICTURES = (\[[\s\S]*?\]);/)[1]).map(l => l.split("|").map(p => p.split(" ")));
+    JSON.stringify(raw) === JSON.stringify(conn) ? ok("Picture Planet and Connect the Pairs use the same " + raw.map(l => l.length).join("/") + " words")
+      : fail("Picture Planet's RAW and Connect the Pairs' PICTURES differ");
+    const all = [].concat.apply([], raw), bad = [], seenW = {}, seenP = {};
+    all.forEach(([w, c]) => {
+      if (seenW[w]) bad.push("word " + w + " twice"); if (seenP[c]) bad.push("picture " + c + " twice (" + seenP[c] + ", " + w + ")");
+      seenW[w] = 1; seenP[c] = w;
+      if (!fs.existsSync(path.join(WWW, "emoji", c + ".svg"))) bad.push("no emoji/" + c + ".svg for " + w);
+      const k = w.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!(("w_" + k) in phrases) || !(("ws_" + k) in phrases)) bad.push(w + " lacks w_/ws_ phrases");
+    });
+    bad.length ? fail("picture words: " + bad.join("; ")) : ok("all " + all.length + " picture words have a picture and clips, none repeats");
+  }
+
   // Match games: board rules, then play every level.
   for (const g of ["connect", "rhyme"]) {
     await page.goto(base + "match.html?g=" + g); await page.waitForTimeout(150);
