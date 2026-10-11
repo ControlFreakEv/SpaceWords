@@ -12,7 +12,8 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Math games** (math-game.html?g=count|ops|pattern): Star Count, Rocket Math, Alien Patterns.
   5 levels each, kindergarten starter to about 3rd grade; she's advanced, so keep the range wide.
   Choice rounds plus keypad rounds (3 misses reveal the answer). Stars: localStorage math:<g>:best.
-  Alien Patterns rounds carry `rule` {steps, html, say}: after a right (or revealed) answer the
+  Alien Patterns rounds carry `rule` {kind, steps, html, say} (Brain busters: 12 rule kinds, numbers
+  to 999 said via numSay, web-test.js rebuilds each sequence from its kind): after a right (or revealed) answer the
   step labels between the numbers appear (+3, x2...), a "Rule:" line shows, and it is said
   ("The rule is plus three"). Math rounds move on after the voice finishes (Speech.say done).
   Rocket Math + and - with any 2-digit number (Facts to 20, Big numbers) are stacked (colHtml):
