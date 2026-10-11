@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -37,6 +38,7 @@ class BubbleService : Service() {
     private var wm: WindowManager? = null
     private var bubble: View? = null
     private var game: GameWindow? = null
+    private var bubbleLp: WindowManager.LayoutParams? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -122,8 +124,9 @@ class BubbleService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = prefs.getInt("x", dm.widthPixels - size - (24 * d).toInt())
-            y = prefs.getInt("y", dm.heightPixels - size - (24 * d).toInt())
+            // the saved spot may be from the other orientation: keep it on the screen
+            x = prefs.getInt("x", dm.widthPixels - size - (24 * d).toInt()).coerceIn(0, maxOf(0, dm.widthPixels - size))
+            y = prefs.getInt("y", dm.heightPixels - size - (24 * d).toInt()).coerceIn(0, maxOf(0, dm.heightPixels - size))
         }
 
         val slop = ViewConfiguration.get(this).scaledTouchSlop
@@ -161,6 +164,21 @@ class BubbleService : Service() {
 
         manager.addView(view, lp)
         bubble = view
+        bubbleLp = lp
+    }
+
+    /** The frame can be turned to portrait: keep the UFO on the screen (its saved spot may be off it). */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val v = bubble ?: return
+        val lp = bubbleLp ?: return
+        val dm = resources.displayMetrics
+        val x = lp.x.coerceIn(0, maxOf(0, dm.widthPixels - lp.width))
+        val y = lp.y.coerceIn(0, maxOf(0, dm.heightPixels - lp.height))
+        if (x != lp.x || y != lp.y) {
+            lp.x = x; lp.y = y
+            try { wm?.updateViewLayout(v, lp) } catch (e: Exception) { Log.w(TAG, "Couldn't move the UFO on screen", e) }
+        }
     }
 
     override fun onDestroy() {

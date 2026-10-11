@@ -246,7 +246,7 @@ function renderBoard(){
   var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "lines");
   board.appendChild(svg);
-  G.boardEl = board; G.svg = svg;
+  G.boardEl = board; G.svg = svg; G.links = [];
   var left = el("div", "col"), right = el("div", "col");
   shuffle(pairs).forEach(function(p){ left.appendChild(item(p, "L")); });
   shuffle(pairs).forEach(function(p){ right.appendChild(item(p, "R")); });
@@ -298,14 +298,23 @@ function miss(x, y, w){
   say((w || []).concat(["p_try"]));
 }
 
-function drawLine(l, r){
-  var br = G.boardEl.getBoundingClientRect(), a = l.getBoundingClientRect(), b = r.getBoundingClientRect();
-  var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  line.setAttribute("x1", a.right - br.left); line.setAttribute("y1", a.top + a.height/2 - br.top);
-  line.setAttribute("x2", b.left - br.left);  line.setAttribute("y2", b.top + b.height/2 - br.top);
-  line.setAttribute("stroke", "#7CFFB2"); line.setAttribute("stroke-width", "7"); line.setAttribute("stroke-linecap", "round");
-  G.svg.appendChild(line);
+function drawLine(l, r){ G.links.push([l, r]); paintLines(); }
+/* lines are measured from where the cards are now, so they're redrawn when the frame turns
+   (portrait <-> landscape moves every card) */
+function paintLines(){
+  if (!G || !G.svg) return;
+  while (G.svg.firstChild) G.svg.removeChild(G.svg.firstChild);
+  var br = G.boardEl.getBoundingClientRect();
+  G.links.forEach(function(lr){
+    var a = lr[0].getBoundingClientRect(), b = lr[1].getBoundingClientRect();
+    var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", a.right - br.left); line.setAttribute("y1", a.top + a.height/2 - br.top);
+    line.setAttribute("x2", b.left - br.left);  line.setAttribute("y2", b.top + b.height/2 - br.top);
+    line.setAttribute("stroke", "#7CFFB2"); line.setAttribute("stroke-width", "7"); line.setAttribute("stroke-linecap", "round");
+    G.svg.appendChild(line);
+  });
 }
+window.addEventListener("resize", function(){ setTimeout(paintLines, 50); }, false);
 
 function boardDone(){
   G.locked = true;

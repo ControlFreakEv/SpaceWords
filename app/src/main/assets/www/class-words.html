@@ -105,6 +105,11 @@ img{display:block}
 .writebox{position:relative;width:88vmin;height:40vmin;background:#131A3D;border:0.6vmin solid #5CE1E6;border-radius:3vmin}
 .writebox canvas{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:2.4vmin}
 .colors{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-top:1.6vmin}
+@media (orientation: portrait){
+  .colors{-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center;max-width:94vw}
+  .colors .btn{margin-top:2vmin}
+  .scene{width:92vw}
+}
 .sw{width:7vmin;height:7vmin;border-radius:50%;margin:0 .8vmin;border:0.5vmin solid #F3F6FF}
 .sw.on{border:1vmin solid #FFD93D}
 .erase{padding:1.4vmin 2.6vmin;margin-left:2.4vmin}
@@ -842,6 +847,14 @@ ROUNDS.write = function(w){
       if (ctx){ ctx.clearRect(0, 0, W, H); mctx.clearRect(0, 0, W, H); rctx.clearRect(0, 0, W, H); }
     };
     setTimeout(size, 0);
+    /* the frame turned (portrait <-> landscape): the box changed shape, so start the tracing over at
+       the new size (the old strokes would no longer sit on the letters) */
+    function resized(){
+      if (G.R !== R || G.locked || !ctx){ window.removeEventListener("resize", resized, false); return; }
+      if (cv.clientWidth === W && cv.clientHeight === H) return;
+      samples = null; grid = {}; hasRain = false; size();
+    }
+    window.addEventListener("resize", resized, false);
     /* redraw the guide once the font has loaded. The frame's Chromium 39 has document.fonts.ready as a
        function returning a promise (newer browsers: a promise), so handle both, and redraw on a timer too. */
     function refont(){ if (G && G.R === R && !G.locked){ samples = null; guide(); } }

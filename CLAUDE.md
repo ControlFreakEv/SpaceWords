@@ -111,6 +111,12 @@ Android Back key calls the same goBack(). New pages must include back.css, the b
 goBack(); the first row of each screen leaves room with `.backroom` / `.barspace`. web-test.js
 checks the button is in the identical spot on every screen.
 
+**The frame can be turned to portrait (800 x 1280).** Pages have portrait rules; on pickers and level lists
+the title moves under the Back/volume row (speech.js). Anything measured in px must be redone on
+resize: Connect the Pairs lines (paintLines), Rainbow write's canvas (restarts the trace), the UFO's
+position (BubbleService.onConfigurationChanged clamps it on screen). web-test.js checks every screen
+in portrait for overflow and the Back button.
+
 The owner is a controls engineer who is new to Android. Explain Android Studio and adb steps plainly.
 
 ## Target device: drives every technical decision

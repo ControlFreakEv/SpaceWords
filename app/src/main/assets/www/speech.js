@@ -221,7 +221,10 @@ function drawVolume(){
     ".volbar.on{background:#3FB37F}.volbar.boost.on{background:#FF8A3D}" +
     /* the top row of pickers and level lists leaves room for it on the right */
     "body:not([data-screen]) .backroom,body[data-screen=home] .backroom{padding-right:40vmin}" +
-    ".backroom > div{min-width:0;-webkit-flex:1;flex:1}";
+    ".backroom > div{min-width:0;-webkit-flex:1;flex:1}" +
+    /* portrait (the frame can be turned): the title goes on its own line under the Back button and
+       the volume control, instead of being squeezed between them */
+    "@media (orientation: portrait){body:not([data-screen]) .backroom,body[data-screen=home] .backroom{margin-left:0 !important;padding-right:0 !important;padding-top:13vmin}}";
   (document.head || document.documentElement).appendChild(st);
   volBox = document.createElement("div");
   volBox.className = "volbox";

@@ -923,6 +923,51 @@ const server = http.createServer((req, res) => {
     crowd.length ? fail("class words home crowded: " + crowd.join(" | ")) : ok("class words home: 2, 12, 30 or 69 words this week fit their box (big chips for 2, \"+N more\" past that), nothing overlaps");
   }
 
+  // The frame can be turned to portrait (800 x 1280): nothing off the screen or under the Back button,
+  // and Connect the Pairs lines follow the cards when it turns
+  {
+    const pp = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await pp.addInitScript(() => { const st = window.setTimeout; window.setTimeout = (f, d, ...a) => st(f, d >= 1500 ? 5 : d, ...a); });
+    // a matched pair, then turn the frame
+    await pp.goto(base + "match.html?g=connect"); await pp.evaluate(() => MatchGame.start(0)); await pp.waitForTimeout(200);
+    await pp.evaluate(() => { const p = MatchGame.state().pairs[0], items = Array.from(document.querySelectorAll(".item"));
+      items.filter(b => b.pair === p && b.side === "L")[0].click(); items.filter(b => b.pair === p && b.side === "R")[0].click(); });
+    await pp.setViewportSize({ width: 800, height: 1280 }); await pp.waitForTimeout(300);
+    const lineOk = await pp.evaluate(() => {
+      const G = MatchGame.state(), ln = G.svg.querySelector("line"), br = G.boardEl.getBoundingClientRect(), p = G.pairs[0];
+      const items = Array.from(document.querySelectorAll(".item")), L = items.filter(b => b.pair === p && b.side === "L")[0].getBoundingClientRect(), R = items.filter(b => b.pair === p && b.side === "R")[0].getBoundingClientRect();
+      const near = (a, b) => Math.abs(a - b) < 3;
+      return !!ln && near(+ln.getAttribute("x1") + br.left, L.right) && near(+ln.getAttribute("y1") + br.top, L.top + L.height / 2) && near(+ln.getAttribute("x2") + br.left, R.left) && near(+ln.getAttribute("y2") + br.top, R.top + R.height / 2);
+    });
+    lineOk ? ok("connect the pairs: the line follows the cards when the frame turns to portrait") : fail("connect the pairs line is in the wrong place after turning the frame");
+    const portraitBad = [];
+    const check = async name => {
+      await pp.waitForTimeout(250);
+      const r = await pp.evaluate(() => {
+        const W = innerWidth, H = innerHeight, out = [];
+        const seen = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.display === "none" || cs.visibility === "hidden") return false; } return true; };
+        const els = Array.from(document.querySelectorAll("button, img, .paper, .chip, .choice, .tile, .item, .card, h1, .hint, .eq, .colsum, .prompt, canvas")).filter(e => seen(e) && e.offsetWidth && !e.closest(".turnpop"));
+        els.forEach(e => { const r = e.getBoundingClientRect(); if (r.right > W + 2 || r.left < -2 || r.bottom > H + 2) out.push("off screen: " + e.tagName.toLowerCase() + "." + String(e.className).split(" ").join(".")); });
+        const back = document.getElementById("backBtn").getBoundingClientRect();
+        els.forEach(e => { if (e.closest("#backBtn")) return; const r = e.getBoundingClientRect(); if (r.left < back.right && r.right > back.left && r.top < back.bottom && r.bottom > back.top) out.push("under Back: " + e.tagName.toLowerCase() + "." + String(e.className).split(" ").join(".")); });
+        if (document.documentElement.scrollWidth > W) out.push("scrolls sideways");
+        return out.slice(0, 3);
+      });
+      if (r.length) portraitBad.push(name + ": " + r.join(", "));
+    };
+    for (const p of ["index", "words", "math"]) { await pp.goto(base + p + ".html"); await check(p); }
+    for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+      await pp.goto(base + u); await check(u + " levels");
+      const cnt = await pp.locator("#path button").count();
+      for (const i of [0, cnt - 1]) { await pp.goto(base + u); await pp.waitForTimeout(100); await pp.locator("#path button").nth(i).click(); await check(u + " level " + (i + 1)); }
+    }
+    await pp.goto(base + "class-words.html"); await check("class-words home");
+    for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) { await pp.evaluate(k => ClassWords.start(k), k); await check("class-words " + k); }
+    if (SHOTS) await pp.screenshot({ path: path.join(SHOTS, "portrait-class-write.png") });
+    await pp.close();
+    portraitBad.length ? fail("portrait: " + portraitBad.slice(0, 6).join(" | ")) : ok("portrait (800 x 1280): every picker, level list and game screen fits, nothing under the Back button");
+  }
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();

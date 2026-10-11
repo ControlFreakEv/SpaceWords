@@ -54,4 +54,9 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
   .four .game,.five .game{-webkit-flex:0 0 96%;flex:0 0 96%}
   .four .game img{width:13vmin;height:13vmin}
   .nums{font-size:11vmin}
+  /* seven games: two per row, picture beside the words */
+  .seven{-webkit-flex-direction:row;flex-direction:row;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-align-content:stretch;align-content:stretch;margin:0 0 4vmin}
+  .seven .game{-webkit-flex:0 0 47%;flex:0 0 47%;margin:1.2vmin 1.5%;-webkit-flex-direction:row;flex-direction:row;-webkit-align-items:center;align-items:center;padding:2vmin 2.4vmin}
+  .seven .game img{width:13vmin;height:13vmin;margin:0 2.4vmin 0 0}
+  .seven .txt{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;min-width:0}
 }
