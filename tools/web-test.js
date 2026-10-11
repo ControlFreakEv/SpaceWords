@@ -283,7 +283,7 @@ const server = http.createServer((req, res) => {
     await shot(w.replace(".html", "") + "-round");
   }
   const literalKeys = [];
-  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html", "compound.html", "class-words.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html", "compound.html", "class-words.html", "wordsearch.html"]) {
     const src = fs.readFileSync(path.join(WWW, w), "utf8"), re = /"((?:[pmi])_[a-z_]+)"/g; let m;
     while ((m = re.exec(src))) if (!/_$/.test(m[1])) literalKeys.push(m[1]);
   }
@@ -592,6 +592,82 @@ const server = http.createServer((req, res) => {
     end[0] && end[1] === 10 ? ok("compound level " + (i + 1) + ": 10 rounds, 10 stars") : fail("compound level " + (i + 1) + " ended " + JSON.stringify(end));
   }
 
+  // Word Search: every puzzle hides each word exactly once (in the level's directions), nothing rude, words match Picture Planet.
+  await page.goto(base + "wordsearch.html"); await page.evaluate(() => localStorage.removeItem("search:best")); await page.reload(); await page.waitForTimeout(150);
+  await shot("search-levels");
+  {
+    const ppSrc = fs.readFileSync(path.join(WWW, "picture-planet.html"), "utf8");
+    const pp = {}; JSON.parse(ppSrc.match(/^var RAW = (\[.*\]);$/m)[1]).forEach(l => l.forEach(([w, c]) => pp[w] = c));
+    const ws = await page.evaluate(() => {
+      const W = WordSearch, bad = [], words = {}, sizes = [];
+      W.levels.forEach((L, li) => {
+        const dirs = L.dirs.map(d => d.join(","));
+        L.words.forEach(x => words[x.w] = x.img);
+        if (L.words.length < L.count * 3) bad.push("L" + (li + 1) + " has only " + L.words.length + " words");
+        L.words.forEach(x => { if (x.w.length > L.n) bad.push(x.w + " is too long for L" + (li + 1));
+          if (x.w === x.w.split("").reverse().join("")) bad.push(x.w + " reads the same backwards"); });
+        sizes.push(L.words.length);
+        for (let t = 0; t < 120; t++) {
+          const P = W.make(li); if (!P) { bad.push("L" + (li + 1) + " couldn't make a puzzle"); break; }
+          const ls = W.lines(P.grid);
+          if (P.grid.length !== L.n || P.grid.some(r => r.length !== L.n || r.some(ch => !/^[a-z]$/.test(ch)))) bad.push("L" + (li + 1) + " grid isn't " + L.n + " x " + L.n + " letters");
+          if (P.words.length !== L.count) bad.push("L" + (li + 1) + " has " + P.words.length + " words");
+          P.words.forEach(p => {
+            if (W.count(ls, p.w) !== 1) bad.push(p.w + " found " + W.count(ls, p.w) + " times in L" + (li + 1));
+            if (P.words.some(q => q !== p && q.w === p.w)) bad.push(p.w + " twice in one puzzle");
+            const c = p.cells, d = [c[1][0] - c[0][0], c[1][1] - c[0][1]].join(",");
+            if (dirs.indexOf(d) < 0) bad.push(p.w + " goes " + d + " in L" + (li + 1));
+            if (c.map(x => P.grid[x[0]][x[1]]).join("") !== p.w) bad.push(p.w + " cells don't spell it");
+          });
+          W.rude.forEach(x => { if (W.count(ls, x)) bad.push("L" + (li + 1) + " grid has " + x); });
+        }
+      });
+      return { bad: bad.slice(0, 10), words, sizes };
+    });
+    Object.keys(ws.words).forEach(w => {
+      if (pp[w] !== ws.words[w]) ws.bad.push(w + " isn't in Picture Planet with the same picture");
+      if (!fs.existsSync(path.join(WWW, "emoji", ws.words[w] + ".svg"))) ws.bad.push(w + " picture missing");
+      ["w_", "ws_"].forEach(k => { if (!((k + w.replace(/ /g, "_")) in phrases)) ws.bad.push(k + w + " has no clip"); });
+    });
+    ws.bad.length ? fail("word search: " + ws.bad.join("; ")) : ok("word search: 600 puzzles, every word hidden exactly once in its level's directions, nothing rude; " + ws.sizes.join("/") + " words, all from Picture Planet with clips");
+  }
+  // Play: a real finger drag, a tap on the first letter then the last, a wrong line, a hint; then every level to the end.
+  {
+    await page.evaluate(() => WordSearch.start(4)); await page.waitForTimeout(100);
+    const centers = await page.evaluate(() => { const G = WordSearch.state(); return G.P.words.map(w => [w.cells[0], w.cells[w.cells.length - 1]].map(c => { const r = G.cells[c[0]][c[1]].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })); });
+    let [a, z] = centers[0];
+    await page.mouse.move(a[0], a[1]); await page.mouse.down(); await page.mouse.move((a[0] + z[0]) / 2, (a[1] + z[1]) / 2, { steps: 5 }); await page.mouse.move(z[0], z[1], { steps: 5 }); await page.mouse.up();
+    [a, z] = centers[1];
+    await page.mouse.click(a[0], a[1]);
+    const anchored = await page.evaluate(() => document.querySelectorAll(".cell.anchor").length);
+    await page.mouse.click(z[0], z[1]);
+    const after = await page.evaluate(() => { const G = WordSearch.state(); return [G.found, G.misses, document.querySelectorAll(".wi.done").length, G.P.words[0].found, G.P.words[1].found]; });
+    after[0] === 2 && after[1] === 0 && after[2] === 2 && after[3] && after[4] && anchored === 1
+      ? ok("word search: dragging along a word and tapping its first then last letter both find it") : fail("word search input: " + JSON.stringify([anchored, after]));
+    await shot("search-L5");
+    // a line that isn't a word counts a miss; the hint flashes a hidden word's first letter
+    const miss = await page.evaluate(() => { const G = WordSearch.state(), n = G.P.n, cells = [];
+      for (let r = 0; r < n; r++) { const row = []; for (let c = 0; c < 3; c++) row.push([r, c]); if (!G.P.words.some(p => JSON.stringify(p.cells) === JSON.stringify(row) || JSON.stringify(p.cells.slice().reverse()) === JSON.stringify(row))) { cells.push(row); break; } }
+      return cells[0].map(c => { const e = G.cells[c[0]][c[1]].getBoundingClientRect(); return [e.x + e.width / 2, e.y + e.height / 2]; }); });
+    await page.mouse.move(miss[0][0], miss[0][1]); await page.mouse.down(); await page.mouse.move(miss[2][0], miss[2][1], { steps: 4 }); await page.mouse.up();
+    await page.click(".helpb");
+    const mh = await page.evaluate(() => { const G = WordSearch.state(); return [G.misses, G.helps, document.querySelectorAll(".cell.flash").length]; });
+    mh[0] === 1 && mh[1] === 1 && mh[2] === 1 ? ok("word search: a wrong line is a miss, Hint flashes one first letter") : fail("word search miss/hint: " + JSON.stringify(mh));
+  }
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate(i => WordSearch.start(i), i);
+    for (let pz = 0; pz < 3; pz++) {
+      const n = await page.evaluate(() => WordSearch.state().P.words.length);
+      for (let k = 0; k < n; k++) await page.evaluate(k => WordSearch.find(k), k);
+      await page.waitForFunction(pz => { const G = WordSearch.state(); return (G && G.puzzle > pz) || document.getElementById("end").className.indexOf("on") >= 0; }, pz, { timeout: 12000 });
+    }
+    const end = await page.evaluate(i => [document.getElementById("end").className.indexOf("on") >= 0, JSON.parse(localStorage.getItem("search:best") || "{}")[i]], i);
+    end[0] && end[1] === 3 ? ok("word search level " + (i + 1) + ": 3 puzzles, 3 stars saved") : fail("word search level " + (i + 1) + " ended " + JSON.stringify(end));
+  }
+  await page.goto(base + "words.html"); await page.waitForTimeout(150);
+  const wsGot = await page.evaluate(() => document.querySelector('[data-go="wordsearch.html"] .got').textContent);
+  /15/.test(wsGot) ? ok("words.html: Word Search card shows its 15 stars") : fail("Word Search card shows " + JSON.stringify(wsGot));
+
   // Class Words (her kindergarten list): data, every activity, words taking turns, grown-ups screen.
   await page.goto(base + "class-words.html"); await page.evaluate(() => localStorage.clear()); await page.reload(); await page.waitForTimeout(150);
   await shot("class-home");
@@ -773,7 +849,7 @@ const server = http.createServer((req, res) => {
   await page.goto(base + "class-words.html");
   for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) for (let t = 0; t < 6; t++) { await page.evaluate(k => ClassWords.start(k), k); await collect(); }
   await page.evaluate(() => { document.getElementById("backBtn").click(); document.getElementById("wallBtn").click(); }); await collect();
-  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html"]) {
     await page.goto(base + w); await page.waitForTimeout(100); await collect();
     const n = await page.locator("#path button").count();
     for (let i = 0; i < n; i++) for (let t = 0; t < 6; t++) {
@@ -833,7 +909,7 @@ const server = http.createServer((req, res) => {
     ok("Back on " + hub + " goes to Pick a mission");
   }
   const games = { "picture-planet.html": "words", "saucer.html": "words", "match.html?g=connect": "words", "match.html?g=rhyme": "words",
-    "sound-lab.html": "words", "compound.html": "words", "math-game.html?g=count": "math", "math-game.html?g=ops": "math", "math-game.html?g=pattern": "math" };
+    "sound-lab.html": "words", "compound.html": "words", "wordsearch.html": "words", "math-game.html?g=count": "math", "math-game.html?g=ops": "math", "math-game.html?g=pattern": "math" };
   for (const g of Object.keys(games)) {
     await page.goto(base + g); await page.waitForTimeout(80); await box(g + " levels");
     await page.locator("#path button").first().click(); await page.waitForTimeout(80); await box(g + " game");
@@ -864,7 +940,7 @@ const server = http.createServer((req, res) => {
     : fail("Back button moves around: " + JSON.stringify(boxes));
 
   // Volume control: on pickers and level lists, hidden while playing; -, +, bars; 0 means silent.
-  for (const pg of ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=ops"]) {
+  for (const pg of ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "math-game.html?g=ops"]) {
     await page.goto(base + pg); await page.waitForTimeout(80);
     const v = await page.evaluate(() => { const b = document.querySelector(".volbox"); return !!b && b.offsetWidth > 0 && !document.getElementById("soundBtn"); });
     v ? ok(pg + ": volume control shown, no talking toggle") : fail(pg + ": volume control missing or talking toggle still there");
@@ -965,7 +1041,7 @@ const server = http.createServer((req, res) => {
 
   // Every round of every game has the speaker button to hear the instructions again.
   const noSay = [];
-  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
     await spd.goto(base + w); await spd.waitForTimeout(150);
     const n = await spd.locator("#path button").count();
     for (let i = 0; i < n; i++) for (let t = 0; t < 3; t++) {
@@ -1000,7 +1076,7 @@ const server = http.createServer((req, res) => {
 
   // Volume control: top right, never overlapping text, pictures, buttons or cards (screen by screen).
   const volPages = ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html",
-    "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=count", "math-game.html?g=pattern"];
+    "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "math-game.html?g=count", "math-game.html?g=pattern"];
   for (const pg of volPages) {
     await page.goto(base + pg); await page.waitForTimeout(250);
     const hits = await page.evaluate(() => {
@@ -1073,7 +1149,7 @@ const server = http.createServer((req, res) => {
   const pillBad = [];
   const pillCheck = async label => { const h = await pillHits(); if (h.length) pillBad.push(label + ": " + h.join(", ")); };
   for (const pg of ["words.html", "math.html"]) { await page.goto(base + pg); await page.waitForTimeout(150); await pillCheck(pg); }
-  for (const g of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html",
+  for (const g of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html",
                    "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
     await page.goto(base + g); await page.waitForTimeout(150); await pillCheck(g + " levels");
     const n = await page.locator("#path button").count();
@@ -1281,7 +1357,7 @@ const server = http.createServer((req, res) => {
       if (r.length) portraitBad.push(name + ": " + r.join(", "));
     };
     for (const p of ["index", "words", "math"]) { await pp.goto(base + p + ".html"); await check(p); }
-    for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+    for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
       await pp.goto(base + u); await check(u + " levels");
       const cnt = await pp.locator("#path button").count();
       for (const i of [0, cnt - 1]) { await pp.goto(base + u); await pp.waitForTimeout(100); await pp.locator("#path button").nth(i).click(); await check(u + " level " + (i + 1)); }

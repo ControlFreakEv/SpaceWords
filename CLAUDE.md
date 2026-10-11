@@ -43,6 +43,13 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   timer, which cut the word off. Rhyming Pairs says the tapped word and the praise in one say(). Rounds that
   say several clips (Sound Lab, Compound Words) move on from done, with a long timer only as a
   safety net; a fixed short timer cut the voice off mid-word.
+- **Word Search** (wordsearch.html; last card in Word games): letter grids hiding Picture Planet's
+  words (same pictures; too-long words and palindromes left out). 5 levels: 5x5 across, 6x6 + down,
+  7x7 + slants, 8x8 + backwards, 10x10 every way (3-7 words); 3 puzzles a level, a star each if at
+  most 1 miss and no Hint. Find a word by dragging along it or tapping its first then last letter
+  (lines snap to 45 degrees). makePuzzle re-rolls until every word appears exactly once in all 8
+  directions and no RUDE word shows up by chance (no q/x/z filler). Hint flashes a first letter and
+  says "Look for <word>". Stars: localStorage search:best.
 - **Compound Words** (compound.html): picture puzzles, match the halves, split it, build it, big
   words. PIC/MID/BIG lists of "first second" (84/112/88, NOT 80 distractors); KNOWN (all of them
   plus EXTRA real compounds) makes sure wrong choices never form a real word and match boards pair
@@ -210,7 +217,7 @@ The repo must stay **private**: the clips come from an unofficial Microsoft TTS 
 
 ## Build and check
 - `node tools/check-es5.js`: ES5 and Chromium 39 checks for all web code.
-- `node tools/web-test.js [shot-dir]`: plays every math, match, Sound Lab, Compound Words and Class Words level in headless Chromium at 1280x800,
+- `node tools/web-test.js [shot-dir]`: plays every math, match, Sound Lab, Compound Words, Word Search and Class Words level in headless Chromium at 1280x800,
   checks generated questions and speech keys, optional screenshots. Modern Chromium, so run
   check-es5 too. `python3 tools/sync_phrases.py --check`: speech.js matches phrases.json.
 - PowerShell scripts can be syntax-checked with a portable pwsh (GitHub release tarball).

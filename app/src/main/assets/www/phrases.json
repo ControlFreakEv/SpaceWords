@@ -4031,5 +4031,9 @@
  "w_parent": "parent",
  "ws_parent": "parent",
  "w_grandparent": "grandparent",
- "ws_grandparent": "grandparent"
+ "ws_grandparent": "grandparent",
+ "i_search": "Find the words. Slide your finger along the letters.",
+ "p_look_for": "Look for",
+ "w_along": "along",
+ "ws_along": "along"
 }
