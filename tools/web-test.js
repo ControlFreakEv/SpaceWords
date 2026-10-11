@@ -249,6 +249,40 @@ const server = http.createServer((req, res) => {
     });
     wrongOk ? ok(g + ": wrong pair shakes and counts a mistake") : fail(g + ": wrong pair not handled");
   }
+  // Rhyming Pairs pool: per level each word once, enough sounds for varied boards, clips for every
+  // word, and words that end in the same rime spelling (-at, -ight, -unny) share a sound tag, so a
+  // board can't hold two pairs that rhyme with each other. The rime runs from the last vowel group
+  // (y counts after the first letter; a final silent e reaches back one group); two-syllable words
+  // reach back one more group (bunny: unny). Same spelling, different sound, checked by ear:
+  const RIME_OK = ["key they", "go two"], wkey = w => "w_" + w.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const rime = w => {
+    const g = [], v = j => /[aeiou]/.test(w[j]) || (w[j] === "y" && j > 0);
+    for (let i = 0; i < w.length; ) { if (v(i)) { g.push(i); while (i < w.length && v(i)) i++; } else i++; }
+    if (g.length > 1 && /e$/.test(w) && g[g.length - 1] === w.length - 1) g.pop();
+    return w.slice(g.length > 1 ? g[g.length - 2] : g[0]);
+  };
+  const rhymePool = await page.evaluate(() => { const G = MatchGame.game(); return { pool: G.pool, sizes: G.sizes }; });
+  const rhymeBad = [];
+  rhymePool.pool.forEach((pairs, li) => {
+    const L = "L" + (li + 1) + " ", tagOf = {}, byRime = {}, tags = {};
+    pairs.forEach(p => {
+      tags[p.tag] = 1;
+      [p.a, p.b].forEach(w => {
+        if (tagOf[w]) rhymeBad.push(L + "repeats " + w);
+        tagOf[w] = p.tag;
+        if (!(wkey(w) in phrases) || !(("ws_" + wkey(w).slice(2)) in phrases)) rhymeBad.push(L + w + " has no w_/ws_ phrase");
+        (byRime[rime(w)] = byRime[rime(w)] || []).push(w);
+      });
+    });
+    const nTags = Object.keys(tags).length;
+    if (nTags < 3 * rhymePool.sizes[li]) rhymeBad.push(L + "has " + nTags + " sounds, needs " + 3 * rhymePool.sizes[li]);
+    Object.keys(byRime).forEach(r => byRime[r].forEach(a => byRime[r].forEach(b => {
+      if (a < b && tagOf[a] !== tagOf[b] && RIME_OK.indexOf(a + " " + b) < 0)
+        rhymeBad.push(L + a + " (" + tagOf[a] + ") and " + b + " (" + tagOf[b] + ") both end in -" + r + " but have different sounds");
+    })));
+  });
+  rhymeBad.length ? rhymeBad.slice(0, 20).forEach(b => fail("rhyme pool: " + b))
+    : ok("rhyme pool: " + rhymePool.pool.map(p => p.length).join("/") + " pairs; no repeats, enough sounds, phrases, same rime = same sound");
   // Sound Lab: play every level by tapping the marked answer.
   await page.goto(base + "sound-lab.html"); await page.waitForTimeout(150); await shot("sound-levels");
   for (let i = 0; i < 5; i++) {
@@ -698,6 +732,7 @@ const server = http.createServer((req, res) => {
     for (let i = 0; i < n; i++) for (let t = 0; t < 3; t++) {
       await spd.goto(base + w); await spd.waitForTimeout(60);
       await spd.locator("#path button").nth(i).click(); await spd.waitForTimeout(60);
+      await spd.locator("#game.on .sayb").first().waitFor({ timeout: 3000 }).catch(() => {});
       if (!(await spd.locator("#game.on .sayb").count())) noSay.push(w + " level " + (i + 1) + ": " + (await spd.locator("#game.on .hint").first().textContent()));
     }
   }

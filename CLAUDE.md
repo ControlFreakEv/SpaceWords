@@ -25,8 +25,8 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   R.step / R.busy; web-test.js plays steps rounds part by part. Subtraction borrowing isn't shown yet.
 
 - **Match games** (match.html?g=connect|rhyme): Connect the Pairs (word to picture, Picture
-  Planet's word levels) and Rhyming Pairs (pairs tagged by sound; a board never has two pairs with
-  the same sound). 5 levels x 5 boards of 3-5 pairs; lines drawn with inline SVG. Stars:
+  Planet's word levels) and Rhyming Pairs (42/80/84/85/81 pairs per level, tagged by sound; a
+  board never has two pairs with the same sound). 5 levels x 5 boards of 3-5 pairs; lines drawn with inline SVG. Stars:
   localStorage match:<g>:best.
 
 - **Sound Lab** (sound-lab.html): pronunciation. Word notation `[a]` short, `{a}` long (bar on

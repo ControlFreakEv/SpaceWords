@@ -147,13 +147,42 @@ var PICTURES = [
   "rabbit 1f430|rocket 1f680|pumpkin 1f383|apple 1f34e|tiger 1f42f|zebra 1f993|pencil 270f|carrot 1f955|robot 1f916|lemon 1f34b|monkey 1f412|turtle 1f422|candle 1f56f|guitar 1f3b8|balloon 1f388|penguin 1f427|dragon 1f409|spider 1f577|cookie 1f36a|pizza 1f355|peanut 1f95c|donkey 1facf|panda 1f43c|lion 1f981|camel 1f42b|hippo 1f99b|beaver 1f9ab|parrot 1f99c|peacock 1f99a|turkey 1f983|beetle 1fab2|dolphin 1f42c|lobster 1f99e|hedgehog 1f994|giraffe 1f992|raccoon 1f99d|hamster 1f439|eagle 1f985|rooster 1f413|pretzel 1f968|waffle 1f9c7|pancakes 1f95e|donut 1f369|candy 1f36c|honey 1f36f|butter 1f9c8|salad 1f957|taco 1f32e|bacon 1f953|pepper 1fad1|mushroom 1f344|cherry 1f352|orange 1f34a|kiwi 1f95d|toothbrush 1faa5|snowflake 2744|comet 2604|planet 1fa90|scooter 1f6f4|skateboard 1f6f9|tractor 1f69c|taxi 1f695|castle 1f3f0|circus 1f3aa|headphones 1f3a7|trumpet 1f3ba|tulip 1f337|cactus 1f335|bubbles 1fae7|magnet 1f9f2|ladder 1fa9c|hammer 1f528|bucket 1faa3|basket 1f9fa|puzzle 1f9e9|baseball 26be|football 1f3c8|trophy 1f3c6|medal 1f3c5|laptop 1f4bb|ruler 1f4cf|backpack 1f392|glasses 1f453|mailbox 1f4eb|window 1fa9f|mirror 1fa9e|shower 1f6bf|teapot 1fad6|sneaker 1f45f|baby 1f476|princess 1f478|fairy 1f9da|mermaid 1f9dc-200d-2640-fe0f|flashlight 1f526|lightning 26a1|bottle 1f37c|feather 1fab6|chopsticks 1f962|mountain 26f0|toolbox 1f9f0|suitcase 1f9f3|fireworks 1f386",
   "butterfly 1f98b|rainbow 1f308|snowman 26c4|octopus 1f419|elephant 1f418|dinosaur 1f995|umbrella 2602|strawberry 1f353|pineapple 1f34d|helicopter 1f681|telescope 1f52d|kangaroo 1f998|crocodile 1f40a|watermelon 1f349|sandwich 1f96a|popcorn 1f37f|sunflower 1f33b|ladybug 1f41e|cupcake 1f9c1|jellyfish 1fabc|flamingo 1f9a9|koala 1f428|gorilla 1f98d|unicorn 1f984|alien 1f47d|volcano 1f30b|ambulance 1f691|microphone 1f3a4|camera 1f4f7|television 1f4fa|radio 1f4fb|battery 1f50b|envelope 2709|telephone 260e|violin 1f3bb|piano 1f3b9|banana 1f34c|avocado 1f951|coconut 1f965|potato 1f954|tomato 1f345|broccoli 1f966|cucumber 1f952|blueberry 1fad0|hamburger 1f354|lollipop 1f36d|spaghetti 1f35d|basketball 1f3c0|motorcycle 1f3cd|computer 1f5a5|sunglasses 1f576|superhero 1f9b8|saxophone 1f3b7"
 ];
-/* Rhyming pairs: "word partner sound"; one pair per sound on a board so only one match fits */
+/* Rhyming pairs: "word partner sound"; one pair per sound on a board so only one match fits.
+   Every pair that rhymes with another shares its sound tag, whatever the spelling (kite, night: ite);
+   a word is used once per level. web-test.js checks the pool. */
 var RHYMES = [
-  "cat hat at|dog log og|pig wig ig|sun run un|top hop op|bed red ed|bug rug ug|fan van an|hen ten en|map cap ap|box fox ox|jet net et",
-  "bat mat at|frog jog og|big dig ig|fun bun un|mop pop op|sled fed ed|hug mug ug|can man an|pen men en|clap nap ap|hot pot ot|ship lip ip|cup pup up|sit hit it|drum plum um",
-  "cake lake ake|kite bite ite|rose nose ose|cube tube ube|bee tree ee|boat coat oat|rain train ain|ride hide ide|bone cone one|game name ame|seat meat eat|day play ay",
-  "blue shoe oo|two zoo oo|bear chair air|pear hair air|eight plate ate|night kite ite|light white ite|rain plane ain|boat note oat|tree key ee|snow go ow|they play ay|fly pie eye|head bed ed|said red ed|four door or",
-  "bunny funny unny|honey money unny|kitten mitten itten|rocket pocket ocket|jelly belly elly|flower tower ower|giggle wiggle iggle|carrot parrot arrot|candle handle andle|letter sweater etter|puddle cuddle uddle|table cable able"
+  "cat hat at|dog log og|pig wig ig|sun run un|top hop op|bed red ed|bug rug ug|fan van an|hen ten en|map cap ap|box fox ox|jet net et|" +
+  "rat sat at|pan ran an|lap tap ap|gap nap ap|dad sad ad|bad mad ad|bag tag ag|rag wag ag|jam ham am|yam ram am|hog fog og|dot not ot|got lot ot|rod nod od|fig jig ig|zip tip ip|dip hip ip|sip lip ip|kit bit it|lid kid id|hid did id|six mix ix|bib rib ib|jug tug ug|hut nut ut|cut but ut|tub cub ub|rub sub ub|gum hum um|mud bud ud",
+  "bat mat at|frog jog og|big dig ig|fun bun un|mop pop op|sled fed ed|hug mug ug|can man an|pen men en|clap nap ap|hot pot ot|ship lip ip|cup pup up|sit hit it|drum plum um|" +
+  "shed red ed|wet pet et|then when en|tent went ent|nest best est|vest chest est|bell shell ell|well smell ell|neck deck eck|send lend end|belt melt elt|" +
+  "back sack ack|black snack ack|track stack ack|bank tank ank|drank thank ank|hand sand and|band land and|bang hang ang|cash dash ash|flash splash ash|lamp camp amp|fast last ast|crab grab ab|flag bag ag|clam jam am|snap trap ap|flat chat at|plan fan an|" +
+  "drip trip ip|flip chip ip|fit lit it|kick pick ick|brick stick ick|chick quick ick|hill fill ill|spill still ill|fish dish ish|gift lift ift|list twist ist|king ring ing|sing swing ing|thing wing ing|pink sink ink|drink think ink|twig pig ig|" +
+  "shop stop op|drop chop op|spot trot ot|sock rock ock|clock block ock|song long ong|" +
+  "snug plug ug|spun run un|duck truck uck|luck stuck uck|jump bump ump|pump stump ump|trunk skunk unk|brush rush ush|lunch bunch unch|crunch munch unch|dust must ust|puff fluff uff|shut cut ut",
+  "cake lake ake|kite bite ite|rose nose ose|cube tube ube|bee tree ee|boat coat oat|rain train ain|ride hide ide|bone cone one|game name ame|seat meat eat|day play ay|" +
+  "snake rake ake|bake make ake|gate skate ate|late date ate|same flame ame|cave wave ave|gave save ave|cape tape ape|grape shape ape|face race ace|space place ace|shade made ade|snail mail ail|tail sail ail|whale scale ail|chain brain ain|plane cane ain|tray gray ay|hay say ay|" +
+  "sea tea ee|she we ee|feet sweet eat|heat wheat eat|sheep sleep eep|deep keep eep|feed need eed|beak speak eak|cheek week eak|beach peach each|teach reach each|green queen een|bean clean een|dream cream eam|wheel peel eel|meal seal eel|" +
+  "night light ite|slide wide ide|bike like ike|time lime ime|nine line ine|pine shine ine|mice rice ice|nice dice ice|five hive ive|dive drive ive|fly cry eye|pie tie eye|smile pile ile|pipe ripe ipe|kind find ind|" +
+  "gold cold old|hold fold old|goat float oat|note vote oat|stone phone one|toes goes ose|joke poke oke|mole hole ole|goal coal ole|rope hope ope|go no o|slow grow o|road toad oad|" +
+  "flute cute oot|noon soon oon|moon spoon oon|pool cool ool|rule mule ool|blue glue oo|new chew oo|zoom broom oom|hoop loop oop",
+  "blue shoe oo|two zoo oo|bear chair air|pear hair air|eight plate ate|night kite ite|light white ite|rain plane ain|boat note oat|tree key ee|snow go ow|they play ay|fly pie eye|head bed ed|said red ed|four door or|" +
+  "new glue oo|chew true oo|tune spoon oon|school rule ool|fruit boot oot|suit flute oot|goose juice oos|" +
+  "gate wait ate|chain cane ain|neigh hay ay|whale nail ail|tail scale ail|break cake ake|aim game ame|base face ace|care stair air|scare fair air|" +
+  "knee sea ee|me tea ee|eat feet eat|sweet treat eat|bean green een|clean queen een|wheel meal eel|seal feel eel|sheep leap eep|deer here eer|" +
+  "heart start art|more floor or|roar store or|bird word urd|learn turn urn|girl curl url|her fur ur|stir purr ur|" +
+  "bright bite ite|cried ride ide|sign line ine|fries size ize|high sky eye|eye why eye|rhyme time ime|climb lime ime|" +
+  "coat wrote oat|bowl hole ole|roll goal ole|nose toes ose|rose goes ose|oak joke oke|soap rope ope|post toast ost|comb home ome|" +
+  "loud crowd oud|noise toys oiz|caught bought ought|crawl ball all|hawk walk awk|laugh half af|one sun un|done run un|thumb gum um|" +
+  "could wood ood|should good ood|bread sled ed|friend send end|wrap map ap|quack back ack|socks fox ox|please cheese eez",
+  "bunny funny unny|honey money unny|kitten mitten itten|rocket pocket ocket|jelly belly elly|flower tower ower|giggle wiggle iggle|carrot parrot arrot|candle handle andle|letter sweater etter|puddle cuddle uddle|table cable able|" +
+  "kitty city itty|happy snappy appy|tummy yummy ummy|doggy froggy oggy|foggy soggy oggy|holly jolly olly|lucky ducky ucky|sticky tricky icky|noodle poodle oodle|pickle tickle ickle|" +
+  "buckle chuckle uckle|tumble rumble umble|bumpy jumpy umpy|lumpy grumpy umpy|summer drummer ummer|dinner winner inner|jingle tingle ingle|baker maker aker|skater later ater|" +
+  "easy breezy eezy|sneezy cheesy eezy|ready teddy eddy|feather weather eather|mother brother other|sister mister ister|zipper slipper ipper|butter flutter utter|" +
+  "puzzle nuzzle uzzle|drizzle sizzle izzle|wobble gobble obble|bubble trouble ubble|snuggle juggle uggle|silly chilly illy|spider rider ider|tiny shiny iny|frozen chosen ozen|" +
+  "toaster coaster oaster|floppy sloppy oppy|muddy buddy uddy|crunchy munchy unchy|dusty rusty usty|party smarty arty|otter hotter otter|roller stroller oller|furry blurry urry|" +
+  "dirty thirty irty|cherry berry erry|fishy squishy ishy|candy sandy andy|paddle saddle addle|kettle petal ettle|yellow fellow ellow|pillow willow illow|" +
+  "scooter computer ooter|super duper uper|llama pajama ama|fiddle middle iddle|cozy rosy ozy|puppy guppy uppy|muffin puffin uffin|tunnel funnel unnel|" +
+  "sneaker speaker eaker|teacher creature eacher|river shiver iver|daisy lazy aisy|lizard wizard izard|twinkle sprinkle inkle|dizzy busy izzy|shower power ower"
 ];
 function parse(lines, fn){ return lines.map(function(line){ return line.split("|").map(function(p){ return fn(p.split(" ")); }); }); }
 
