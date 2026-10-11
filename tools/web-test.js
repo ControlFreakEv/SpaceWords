@@ -592,7 +592,7 @@ const server = http.createServer((req, res) => {
     end[0] && end[1] === 10 ? ok("compound level " + (i + 1) + ": 10 rounds, 10 stars") : fail("compound level " + (i + 1) + " ended " + JSON.stringify(end));
   }
 
-  // Class Words (her kindergarten list): data, every activity, the weekly plan, grown-ups screen.
+  // Class Words (her kindergarten list): data, every activity, words taking turns, grown-ups screen.
   await page.goto(base + "class-words.html"); await page.evaluate(() => localStorage.clear()); await page.reload(); await page.waitForTimeout(150);
   await shot("class-home");
   const cwData = await page.evaluate(() => {
@@ -611,8 +611,20 @@ const server = http.createServer((req, res) => {
   const cwKeys = await page.evaluate(() => ClassWords.LIST.map(w => [Speech.key(w), "cs_" + w.toLowerCase()]).reduce((a, b) => a.concat(b), []));
   const cwMissing = cwKeys.filter(k => !(k in phrases));
   cwMissing.length ? fail("class words clips missing: " + cwMissing.join(", ")) : ok("class words: every word and sentence has a clip");
-  const plan0 = await page.evaluate(() => JSON.stringify(ClassWords.plan().week));
-  plan0 === '["I","a"]' ? ok("first week's words are I and a") : fail("first week: " + plan0);
+  // words take turns by themselves; missed words come back more often, known ones less, all keep coming round
+  const cycle = await page.evaluate(() => {
+    const C = ClassWords, st = C.stats(), saved = JSON.stringify(st);
+    const draws = n => { const c = {}; for (let t = 0; t < n; t++) C.wordsFor(8).forEach(w => c[w] = (c[w] || 0) + 1); return c; };
+    const one = C.wordsFor(8), distinct = new Set(one).size === 8 && one.every(w => C.LIST.indexOf(w) >= 0);
+    const fresh = draws(300), everyWord = C.LIST.every(w => fresh[w] > 0);
+    st.like = { ok:0, miss:6, last:-20 }; st.the = { ok:8, miss:0, last:-20 };   // both last had a while ago
+    const c = draws(600);
+    Object.keys(st).forEach(k => delete st[k]); Object.assign(st, JSON.parse(saved));
+    return { distinct, everyWord, like: c.like || 0, the: c.the || 0 };
+  });
+  cycle.distinct && cycle.everyWord && cycle.like > 2 * cycle.the
+    ? ok("class words: 8 different words a mission from all " + 69 + "; a missed word comes up far more than a known one (" + cycle.like + " vs " + cycle.the + ")")
+    : fail("class words word cycling: " + JSON.stringify(cycle));
 
   async function solveRound() {
     const t = await page.evaluate(() => ClassWords.state().R.type);
@@ -737,19 +749,16 @@ const server = http.createServer((req, res) => {
   huntWrong === 1 || huntWrong === "none" ? ok("word hunt: tapping a different word is a mistake") : fail("word hunt wrong tap: " + huntWrong);
   const st = await page.evaluate(() => ClassWords.stats());
   Object.keys(st).length ? ok("class words records first tries for " + Object.keys(st).join(", ")) : fail("class words recorded no first tries");
-  // the weekly plan: last week's words move to review, the next two in the handout's order come in
-  await page.evaluate(() => ClassWords.newWeek());
-  const p1 = await page.evaluate(() => ClassWords.plan());
-  JSON.stringify(p1.week) === '["the","to"]' && p1.done.indexOf("I") >= 0 ? ok("new week: the, to; I and a move to review") : fail("new week plan: " + JSON.stringify(p1));
+  const lastSet = await page.evaluate(() => { const st = ClassWords.stats(); return Object.keys(st).filter(w => typeof st[w].last === "number").length; });
+  lastSet > 0 ? ok("class words remembers when each word was last played (" + lastSet + " words)") : fail("class words: no last-played marks");
   // grown-ups screen: a press and hold opens it; tapping a word changes it
   await page.evaluate(() => { document.getElementById("backBtn").click(); });
   await page.dispatchEvent("#adultBtn", "mousedown"); await page.waitForTimeout(80);
   const adultOpen = await page.evaluate(() => document.getElementById("adult").className.indexOf("on") >= 0);
   adultOpen ? ok("grown-ups screen opens with a press and hold") : fail("grown-ups screen didn't open");
   await shot("class-adult");
-  await page.locator("#adultList button", { hasText: /^like/ }).click();
-  const p2 = await page.evaluate(() => ClassWords.plan());
-  p2.manual && p2.week.indexOf("like") >= 0 ? ok("grown-ups: tapping 'like' makes it a this-week word") : fail("grown-ups tap: " + JSON.stringify(p2));
+  const adult = await page.evaluate(() => [document.querySelectorAll("#adultList .ww").length, document.querySelectorAll("#adultList button").length, document.getElementById("adultMode").textContent]);
+  adult[0] === 69 && adult[1] === 0 && /learned/.test(adult[2]) ? ok("grown-ups: shows how she's doing on all 69 words, nothing to pick (" + adult[2] + ")") : fail("grown-ups screen: " + JSON.stringify(adult));
   await page.click("#backBtn"); await page.click("#wallBtn"); await page.waitForTimeout(80); await shot("class-wall");
   await page.click("#backBtn");
   await shot("class-home-after");
@@ -1216,10 +1225,10 @@ const server = http.createServer((req, res) => {
   // Class Words home: however many words a grown-up puts in "this week", nothing spills over
   {
     await page.goto(base + "class-words.html"); await page.waitForTimeout(200);
-    const savedPlan = await page.evaluate(() => localStorage.getItem("classwords:plan"));
+    const savedPlan = await page.evaluate(() => localStorage.getItem("classwords:stats"));
     const crowd = [];
     for (const n of [2, 12, 30, 69]) {
-      await page.evaluate(n => { const C = ClassWords, plan = C.plan(); plan.week = C.LIST.slice(0, n); plan.manual = true; localStorage.setItem("classwords:plan", JSON.stringify(plan)); }, n);
+      await page.evaluate(n => { const st = {}; ClassWords.LIST.slice(0, n).forEach(w => st[w] = { ok:0, miss:3, last:0 }); localStorage.setItem("classwords:stats", JSON.stringify(st)); }, n);   // n tricky words
       await page.reload(); await page.waitForTimeout(1000);
       const r = await page.evaluate(() => {
         const wc = document.getElementById("weekChips"), rect = e => e.getBoundingClientRect();
@@ -1235,8 +1244,8 @@ const server = http.createServer((req, res) => {
       if (!r.fits || r.clash.length || r.shown + hiddenCount !== n || r.bottom > 800 || (n === 2 && r.font < 50)) crowd.push(n + " words: " + JSON.stringify(r));
       if (SHOTS && n === 30) await page.screenshot({ path: path.join(SHOTS, "class-words-30-words.png") });
     }
-    await page.evaluate(s => { if (s) localStorage.setItem("classwords:plan", s); else localStorage.removeItem("classwords:plan"); }, savedPlan);
-    crowd.length ? fail("class words home crowded: " + crowd.join(" | ")) : ok("class words home: 2, 12, 30 or 69 words this week fit their box (big chips for 2, \"+N more\" past that), nothing overlaps");
+    await page.evaluate(s => { if (s) localStorage.setItem("classwords:stats", s); else localStorage.removeItem("classwords:stats"); }, savedPlan);
+    crowd.length ? fail("class words home crowded: " + crowd.join(" | ")) : ok("class words home: 2, 12, 30 or 69 tricky words fit their box (big chips for 2, \"+N more\" past that), nothing overlaps");
   }
 
   // The frame can be turned to portrait (800 x 1280): nothing off the screen or under the Back button,

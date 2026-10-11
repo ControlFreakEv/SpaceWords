@@ -136,6 +136,7 @@ img{display:block}
 .ww.week{background:#FFD93D;color:#1F2A44}
 .ww.done{background:#7CFFB2;color:#14193A}
 .ww .n{font-family:"WHFun",sans-serif;font-size:2.2vmin;color:#4F5F80;margin-left:.6vmin}
+#adultList .ww{font-size:3.3vmin;margin:.5vmin;padding:.3vmin 1.2vmin .6vmin}
 .adulttext{font-size:3vmin;color:#B9C3F2;line-height:1.35;margin-bottom:1.4vmin}
 .adulttext b{color:#FFD93D}
 .legend span{display:inline-block;padding:0 1.4vmin;border-radius:1.2vmin;margin:0 .4vmin;color:#1F2A44}
@@ -169,7 +170,7 @@ img{display:block}
     <div><h1>Class Words</h1><p>My kindergarten words: read them and write them!</p></div>
   </div>
   <div class="paper week">
-    <span class="lbl">This<br>week:</span>
+    <span class="lbl">Tricky<br>words:</span>
     <span id="weekChips"></span>
     <span class="rev" id="reviewInfo"></span>
     <button class="paper press go" id="missionBtn">&#9654; Start mission</button>
@@ -208,11 +209,10 @@ img{display:block}
 <section class="screen" id="adult">
   <div class="head backroom"><div><h1>For grown-ups</h1><p id="adultMode"></p></div></div>
   <div class="adulttext">
-    Tap a word to change it: <span class="legend"><span style="background:#FFD93D">this week</span> &#8594; <span style="background:#7CFFB2">practiced (review)</span> &#8594; <span style="background:#D5DBEA">not yet</span></span><br>
-    The class handout says: <b>pick one or two new words each week</b> (use the class newsletter) and review the ones already practiced. Small numbers count her correct first tries.
+    Every mission mixes all of her words. <b>Words she misses on the first try come back more often</b>, words she knows come up less, and words she hasn't had for a while get a turn.<br>
+    <span class="legend"><span style="background:#FFD93D">tricky</span> <span style="background:#7CFFB2">learned</span> <span style="background:#D5DBEA">still learning</span></span> Small numbers: right first tries / tries.
   </div>
   <div class="wall" id="adultList"></div>
-  <div class="foot"><button class="paper press pill" id="autoBtn">Let the game pick 2 new words each week</button></div>
 </section>
 
 <script src="speech.js"></script>
@@ -286,32 +286,41 @@ function lookAlikes(w, n){
   return shuffle(others.slice(0, n + 3)).slice(0, n);
 }
 
-/* ---------- storage: this week's words, practiced words, her first-try record ---------- */
+/* ---------- storage: her first-try record per word, and how many missions she has played ---------- */
 function load(k, d){ try { var v = localStorage.getItem("classwords:" + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } }
 function save(k, v){ try { localStorage.setItem("classwords:" + k, JSON.stringify(v)); } catch(e){} }
-var DAY = 864e5, WEEK = 7 * DAY;
-var best = load("best", {}), stats = load("stats", {});
-var plan = load("plan", null);
-function nextNew(n){
-  var out = [];
-  for (var i = 0; i < LIST.length && out.length < n; i++){
-    var w = LIST[i];
-    if (plan.week.indexOf(w) < 0 && plan.done.indexOf(w) < 0) out.push(w);
+/* Nobody picks words: every mission draws from all of her words, in turns. A word's chance grows
+   with how often she has missed it on the first try and with how long since she last had it, so
+   tricky words come back more often, words she knows come up less, and every word keeps coming
+   round. stats[w] = { ok: right first tries, miss: missed, last: mission number she last had it }. */
+var best = load("best", {}), stats = load("stats", {}), missions = load("missions", 0);
+var force = { week:[] };   // tests only: draw from these words instead
+function ok(w){ return (stats[w] && stats[w].ok) || 0; }
+function missed(w){ return (stats[w] && stats[w].miss) || 0; }
+/* missed share of first tries, nudged toward 1/2 while there are only a few */
+function missRate(w){ return (missed(w) + 0.5) / (ok(w) + missed(w) + 1); }
+function learned(w){ return ok(w) >= 3 && missRate(w) < 0.3; }
+/* tricky: missed at least twice and about half the time or more, or missed and never yet right */
+function tricky(w){ return (missed(w) >= 2 && missRate(w) >= 0.45) || (missed(w) >= 1 && ok(w) === 0); }
+function weight(w){
+  var st = stats[w], since = st && st.last !== undefined ? missions - st.last : 99;
+  return (0.4 + 3 * missRate(w)) * Math.min(3, 0.4 + 0.35 * since);
+}
+/* n different words, drawn by weight */
+function wordsFor(n){
+  var pool = (force.week.length ? force.week : LIST).slice(), out = [];
+  if (force.week.length){ for (var j = 0; j < n; j++) out.push(pool[j % pool.length]); return shuffle(out); }
+  while (out.length < n && pool.length){
+    var ws = pool.map(weight), total = ws.reduce(function(a, b){ return a + b; }, 0), r = Math.random() * total, i = 0;
+    while (i < pool.length - 1 && (r -= ws[i]) > 0) i++;
+    out.push(pool.splice(i, 1)[0]);
   }
   return out;
 }
-/* The game's own plan follows the handout: two new words a week; last week's move to review. */
-function newWeek(){
-  plan.week.forEach(function(w){ if (plan.done.indexOf(w) < 0) plan.done.push(w); });
-  plan.week = []; plan.week = nextNew(2); plan.start = Date.now();
-  save("plan", plan);
-}
-if (!plan || !plan.week || !plan.done){ plan = { week:[], done:[], start:Date.now(), manual:false }; plan.week = nextNew(2); save("plan", plan); }
-if (!plan.manual && Date.now() - plan.start >= WEEK) newWeek();
-function ok(w){ return (stats[w] && stats[w].ok) || 0; }
-function learned(w){ return plan.done.indexOf(w) >= 0 || ok(w) >= 3; }
-function reviewPool(){
-  return LIST.filter(function(w){ return plan.week.indexOf(w) < 0 && (plan.done.indexOf(w) >= 0 || ok(w) > 0); });
+function seen(words){
+  missions++; save("missions", missions);
+  words.forEach(function(w){ var st = stats[w] || { ok:0, miss:0 }; st.last = missions; stats[w] = st; });
+  save("stats", stats);
 }
 function record(w, first){
   var st = stats[w] || { ok:0, miss:0 };
@@ -335,14 +344,14 @@ var COLORS = ["#FFC93C","#FF8A3D","#E5487A","#3FB37F","#4BA3D9"];
 
 /* ---------- home ---------- */
 function renderHome(){
-  if (!plan.manual && Date.now() - plan.start >= WEEK) newWeek();
-  var wc = $("weekChips");
-  wc.innerHTML = plan.week.length ? plan.week.map(function(w){ return '<span class="chip rw tw" data-say="' + wk(w) + '">' + w + '</span>'; }).join("")
-    : '<span class="lbl">all done!</span>';
+  /* her tricky words (missed most), so a grown-up can see them; all words still take turns */
+  var wc = $("weekChips"), hard = LIST.filter(tricky).sort(function(a, b){ return missRate(b) - missRate(a) || missed(b) - missed(a); });
+  wc.innerHTML = hard.length ? hard.map(function(w){ return '<span class="chip rw tw" data-say="' + wk(w) + '">' + w + '</span>'; }).join("")
+    : '<span class="lbl none">None yet! All ' + LIST.length + ' words take turns, and the ones she misses come back more.</span>';
   fitWeek();
-  var r = reviewPool().length;
-  $("reviewInfo").textContent = r ? "+ review " + r + (r === 1 ? " word" : " words") : "";
-  $("weekNote").textContent = plan.manual && Date.now() - plan.start >= WEEK ? "New week! Grown-ups: pick new words." : "";
+  var n = LIST.filter(learned).length;
+  $("reviewInfo").innerHTML = n ? "&#9733; " + n + " of " + LIST.length + " learned" : "";
+  $("weekNote").textContent = "";
   var acts = $("acts"); acts.innerHTML = "";
   ACTS.forEach(function(a){
     var b = el("button", "paper press act", img(a.icon) + '<span><span class="an">' + a.name + '</span><br><span class="ab">' +
@@ -399,7 +408,7 @@ $("wallBtn").onclick = function(){ renderWall(); show("wall"); };
 })();
 
 /* ---------- word wall (hers) and grown-ups list ---------- */
-function stateOf(w){ return plan.week.indexOf(w) >= 0 ? "week" : plan.done.indexOf(w) >= 0 ? "done" : ""; }
+function stateOf(w){ return learned(w) ? "done" : tricky(w) ? "week" : ""; }
 function renderWall(){
   var n = LIST.filter(learned).length, box = $("wallList"); box.innerHTML = "";
   $("wallInfo").innerHTML = "&#9733; " + n + " of " + LIST.length + " words learned. Tap a word to hear it.";
@@ -408,23 +417,15 @@ function renderWall(){
     box.appendChild(el("span", "ww rw tw " + c, (c === "done" ? "&#9733; " : "") + w)).setAttribute("data-say", wk(w));
   });
 }
+/* grown-ups: how she's doing with each word (nothing to pick: words take turns by themselves) */
 function renderAdult(){
-  $("adultMode").textContent = plan.manual ? "You choose this week's words." : "The game picks 2 new words each week, in the handout's order.";
+  $("adultMode").textContent = "Played " + missions + (missions === 1 ? " time" : " times") + ". " + LIST.filter(learned).length + " of " + LIST.length + " words learned, " + LIST.filter(tricky).length + " tricky.";
   var box = $("adultList"); box.innerHTML = "";
   LIST.forEach(function(w){
-    var b = el("button", "ww rw " + stateOf(w), w + (ok(w) ? '<span class="n">' + ok(w) + '</span>' : ""));
-    b.onclick = function(){
-      var s = stateOf(w);
-      plan.week = plan.week.filter(function(x){ return x !== w; });
-      plan.done = plan.done.filter(function(x){ return x !== w; });
-      if (s === "") plan.week.push(w); else if (s === "week") plan.done.push(w);
-      plan.manual = true; plan.start = Date.now();
-      save("plan", plan); renderAdult();
-    };
-    box.appendChild(b);
+    var tries = ok(w) + missed(w);
+    box.appendChild(el("span", "ww rw " + stateOf(w), w + (tries ? '<span class="n">' + ok(w) + "/" + tries + '</span>' : "")));
   });
 }
-$("autoBtn").onclick = function(){ plan.manual = false; if (!plan.week.length) plan.week = nextNew(2); save("plan", plan); renderAdult(); };
 
 /* ---------- Back: any screen -> home -> Word games ---------- */
 function goBack(){
@@ -437,17 +438,9 @@ window.goBack = goBack;
 
 /* ---------- playing ---------- */
 var G = null;
-function wordsFor(n){
-  var week = plan.week.length ? plan.week : [], rev = shuffle(reviewPool()), out = [], wi = 0, ri = 0;
-  if (!week.length && !rev.length) week = LIST.slice(0, 2);
-  for (var i = 0; i < n; i++){
-    var useReview = rev.length && (!week.length || i % 3 === 2);
-    if (useReview) out.push(rev[ri++ % rev.length]); else out.push(week[wi++ % week.length]);
-  }
-  return shuffle(out);
-}
 function start(kind){
   var n = kind === "mission" ? 8 : 6, words = wordsFor(n), types;
+  if (!force.week.length) seen(words);
   if (kind === "mission") types = shuffle(["find","teach","hunt","blank","spell","write",pick(["roll","say"]),"find"]);
   else { types = []; for (var i = 0; i < n; i++) types.push(kind); }
   /* one-letter words can't be spelled from tiles */
@@ -994,8 +987,8 @@ function confetti(target){
 })();
 
 /* hook for automated tests (harmless on the frame) */
-window.ClassWords = { LIST:LIST, SENT:SENT, sentenceOf:sentenceOf, tokens:tokens, plan:function(){ return plan; }, state:function(){ return G; },
-  start:start, newWeek:newWeek, stats:function(){ return stats; } };
+window.ClassWords = { LIST:LIST, SENT:SENT, sentenceOf:sentenceOf, tokens:tokens, plan:function(){ return force; }, state:function(){ return G; },
+  start:start, stats:function(){ return stats; }, weight:weight, wordsFor:wordsFor, tricky:tricky };
 
 document.addEventListener("touchstart", function(){}, true);
 renderHome();
