@@ -150,8 +150,9 @@ const server = http.createServer((req, res) => {
     if (kind === "pad") {
       const ans = await page.evaluate(() => MathGame.state().R.answer);
       const wrongDigit = String((ans + 1) % 10);
-      for (let t = 0; t < 3; t++) { await page.locator(".key", { hasText: new RegExp("^" + wrongDigit + "$") }).click(); await page.locator(".key.go").click(); }
-      const shown = await page.evaluate(() => document.getElementById("entry").textContent);
+      for (let t = 0; t < 3; t++) { await page.locator(".key", { hasText: new RegExp("^" + wrongDigit + "$") }).click(); if (t < 2) await page.locator(".key.go").click(); }
+      // the third miss and the read happen together: the round moves on soon after the reveal, which a slow machine can miss
+      const shown = await page.evaluate(() => { document.querySelector(".key.go").click(); return document.getElementById("entry").textContent; });
       await shot("keypad-reveal");
       shown === String(ans) ? ok("keypad reveals the answer after 3 misses") : fail("keypad reveal shows " + shown + " not " + ans);
       break;
@@ -255,6 +256,67 @@ const server = http.createServer((req, res) => {
     return bad;
   });
   sylBad.length ? fail("syllable clips don't match the syllables shown: " + sylBad.join("; ")) : ok("every syllable clip starts like the syllable on screen");
+
+  // Sound Lab word lists: no repeats, notation marks exactly what each round expects, every word and syllable has its clips.
+  const sld = await page.evaluate(() => {
+    const d = SoundLab.data, out = { parsed: {}, team: SoundLab.TEAM_VOWEL, r: SoundLab.R_KEY };
+    const specs = [].concat(d.CVC, [].concat.apply([], d.MAGIC), d.TEAMS, d.BOSSY, d.SYLL.map(e => e.split("|")[0]));
+    // only parse balanced notation (an unclosed bracket would make parse() loop)
+    const balanced = /^([a-z\-]|\[[a-z]+\]|\{[a-z]+\}|<[a-z]+>|\([a-z]+\)|\^[a-z]+\^)+$/;
+    specs.forEach(s => { out.parsed[s] = balanced.test(s) ? { parts: SoundLab.parse(s), plain: SoundLab.plain(s) } : { parts: [], plain: "" }; });
+    out.data = d; return out;
+  });
+  const slBad = [], slKeys = new Set(), V = "aeiou";
+  const marked = s => sld.parsed[s].parts.filter(p => p.kind !== "c");
+  const word = s => { slKeys.add("w_" + sld.parsed[s].plain); slKeys.add("ws_" + sld.parsed[s].plain); };
+  const dupes = (name, list) => { const seen = {}; list.forEach(x => { if (seen[x]) slBad.push(name + " repeats " + x); seen[x] = 1; }); };
+  const wellFormed = s => {
+    const P = sld.parsed[s];
+    if (!/^[a-z\[\]{}<>()^\-]+$/.test(s) || !/^[a-z]+$/.test(P.plain) || P.parts.map(p => p.text).join("") !== P.plain) return slBad.push(s + ": notation doesn't parse");
+    P.parts.forEach(p => {
+      const okPart = p.kind === "c" ? p.text.length === 1 : p.kind === "short" || p.kind === "long" ? p.text.length === 1 && V.indexOf(p.text) >= 0 :
+        p.kind === "silent" ? p.text === "e" : p.kind === "team" ? p.text in sld.team : p.text in sld.r;
+      if (!okPart) slBad.push(s + ": bad " + p.kind + " part \"" + p.text + "\"");
+    });
+  };
+  // consonant letters in one-vowel words must not be vowels (qu is fine)
+  const bareVowel = s => sld.parsed[s].parts.some((p, i, a) => p.kind === "c" && V.indexOf(p.text) >= 0 && !(p.text === "u" && i > 0 && a[i - 1].text === "q"));
+  const sd = sld.data;
+  dupes("SWAP", sd.SWAP.map(f => f.split(":")[0]));
+  sd.SWAP.forEach(f => {
+    const m = f.match(/^([a-z]+)_([a-z]+):([aeiou]+)$/);
+    if (!m || m[3].split("").sort().join("") !== m[3] || /(.)\1/.test(m[3])) return slBad.push("SWAP " + f + ": bad frame");
+    m[3].split("").forEach(v => { slKeys.add("w_" + m[1] + v + m[2]); slKeys.add("ws_" + m[1] + v + m[2]); });
+  });
+  dupes("CVC", sd.CVC);
+  sd.CVC.forEach(s => { wellFormed(s); word(s); const m = marked(s); if (m.length !== 1 || m[0].kind !== "short" || bareVowel(s)) slBad.push("CVC " + s + ": needs exactly one short vowel"); });
+  dupes("MAGIC", [].concat.apply([], sd.MAGIC));
+  sd.MAGIC.forEach(pr => {
+    pr.forEach(s => { wellFormed(s); word(s); });
+    const a = marked(pr[0]), b = marked(pr[1]), pb = sld.parsed[pr[1]].parts;
+    if (a.length !== 1 || a[0].kind !== "short" || bareVowel(pr[0]) || b.length !== 2 || b[0].kind !== "long" || b[1].kind !== "silent" ||
+        pb[pb.length - 1] !== b[1] || a[0].text !== b[0].text || sld.parsed[pr[1]].plain !== sld.parsed[pr[0]].plain + "e") slBad.push("MAGIC " + pr.join("/") + ": not a short / long + silent e pair");
+  });
+  dupes("TEAMS", sd.TEAMS);
+  sd.TEAMS.forEach(s => { wellFormed(s); word(s); const m = marked(s); if (m.length !== 1 || m[0].kind !== "team" || bareVowel(s)) slBad.push("TEAMS " + s + ": needs exactly one vowel team"); });
+  dupes("BOSSY", sd.BOSSY);
+  sd.BOSSY.forEach(s => {
+    wellFormed(s); word(s); const m = marked(s), P = sld.parsed[s].parts;
+    const extra = m.filter(p => p.kind !== "r");
+    if (m.length - extra.length !== 1 || extra.some(p => p.kind !== "silent" || p !== P[P.length - 1]) || bareVowel(s)) slBad.push("BOSSY " + s + ": needs exactly one bossy R");
+  });
+  dupes("SYLL", sd.SYLL.map(e => sld.parsed[e.split("|")[0]].plain));
+  sd.SYLL.forEach(e => {
+    const [spec, said] = e.split("|"), parts = said.split(" "), P = sld.parsed[spec].parts;
+    wellFormed(spec); word(spec);
+    const n = P.length ? P[P.length - 1].syl + 1 : 0;
+    if (n < 1 || n > 4 || parts.length !== n) slBad.push("SYLL " + e + ": " + n + " syllables, " + parts.length + " clips (1 to 4)");
+    for (let i = 0; i < n; i++) if (!/[aeiouy]/.test(P.filter(p => p.syl === i).map(p => p.text).join(""))) slBad.push("SYLL " + spec + ": syllable " + (i + 1) + " has no vowel");
+    parts.forEach(x => slKeys.add("sy_" + x.toLowerCase().replace(/[^a-z]/g, "")));
+  });
+  slBad.length ? fail("sound lab lists: " + slBad.slice(0, 12).join("; ")) : ok("sound lab lists: no repeats, notation right (" + ["SWAP", "CVC", "MAGIC", "TEAMS", "BOSSY", "SYLL"].map(k => k + " " + sd[k].length).join(", ") + ")");
+  const slMissing = [...slKeys].filter(k => !(k in phrases));
+  slMissing.length ? fail("sound lab words/syllables missing from phrases.json: " + slMissing.slice(0, 20).join(", ")) : ok("sound lab: all " + slKeys.size + " word, slow word and syllable keys exist");
 
   // Speech waits: say(keys, done) calls done once, after the last clip.
   const doneOk = await page.evaluate(() => new Promise(res => { let n = 0; Speech.say(["sy_bah", "sy_nah", "sy_nuh"], () => n++); setTimeout(() => res(n), 3000); }));

@@ -367,6 +367,12 @@ function fitWeek(){
   }
 }
 window.addEventListener("resize", function(){ if (hasClass($("home"), "on")) renderHome(); }, false);
+/* the chips' font can finish loading after the first fit (wider letters spill over), so fit again then */
+(function(){
+  function refit(){ if (hasClass($("home"), "on")) fitWeek(); }
+  try { if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", refit, false); } catch(e){}
+  setTimeout(refit, 700);
+})();
 $("missionBtn").onclick = function(){ start("mission"); };
 $("wallBtn").onclick = function(){ renderWall(); show("wall"); };
 

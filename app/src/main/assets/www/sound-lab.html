@@ -214,19 +214,72 @@ function sylKey(s){ return "sy_" + s.toLowerCase().replace(/[^a-z]/g, ""); }
 
 /* ---------- word lists ---------- */
 /* consonant frames: which vowels make a real word in the gap */
-var SWAP = ["b_g:aeiou","h_t:aiou","p_n:aei","b_d:aeiu","p_t:aeio","t_p:aio","c_t:aou","s_t:aei","m_p:ao","r_g:aiu","h_m:aiu","f_n:aiu","l_g:aeo","d_g:iou"];
-var CVC = ["c[a]t","h[a]t","m[a]p","b[e]d","h[e]n","p[e]n","p[i]g","s[i]t","l[i]p","d[o]g","h[o]t","t[o]p","b[u]g","s[u]n","c[u]p"];
+var SWAP = ["b_g:aeiou","h_t:aiou","p_n:aei","b_d:aeiu","p_t:aeio","t_p:aio","c_t:aou","s_t:aei","m_p:ao","r_g:aiu",
+  "h_m:aiu","f_n:aiu","l_g:aeo","d_g:iou","n_t:eou","p_g:eiu","h_g:ou","j_g:ou","m_d:au","t_n:aei",
+  "p_ck:aeiu","l_ck:iou","r_ck:ao","t_ck:iu","sh_p:io","ch_p:io","c_p:aou","c_b:au","t_b:au","r_b:iu",
+  "l_p:ai","h_p:io","b_t:aiu","r_t:ao","g_m:eu","h_d:ai","l_d:ei","r_d:eio","b_n:iu","n_p:ai",
+  "p_p:ou","t_g:au","d_sh:ai","r_sh:au","m_ss:eio","l_ss:eo","b_nd:ae","s_nd:ae","l_mp:aiu","st_p:eo",
+  "dr_p:io","tr_p:ai","fl_p:aio","cl_p:ai","sn_p:ai","cr_b:ai","sl_d:ei","sp_n:iu","st_ck:aiu","bl_ck:ao",
+  "cl_ck:io","tr_ck:aiu","ch_ck:ei","gr_b:au","z_p:ai","y_m:au","sw_m:ai","th_n:aei","d_sk:eiu","t_sk:au",
+  "m_st:iu","r_st:eu"];
+var CVC = ["c[a]t","h[a]t","m[a]p","b[e]d","h[e]n","p[e]n","p[i]g","s[i]t","l[i]p","d[o]g",
+  "h[o]t","t[o]p","b[u]g","s[u]n","c[u]p","b[a]g","c[a]n","f[a]n","j[a]m","r[a]t",
+  "b[a]t","v[a]n","p[a]n","c[a]p","t[a]g","r[a]m","m[a]t","s[a]d","d[a]d","w[a]x",
+  "y[a]k","n[e]t","j[e]t","w[e]b","l[e]g","t[e]n","r[e]d","v[e]t","w[e]t","y[e]s",
+  "p[e]t","g[e]t","b[e]g","f[i]n","b[i]b","k[i]t","w[i]g","z[i]p","d[i]g","s[i]x",
+  "f[i]x","l[i]d","p[i]n","b[i]g","t[i]n","m[i]x","r[i]b","w[i]n","m[o]p","p[o]t",
+  "b[o]x","f[o]x","l[o]g","c[o]t","j[o]g","r[o]d","h[o]p","p[o]p","d[o]t","r[u]g",
+  "m[u]d","t[u]b","b[u]s","c[u]b","n[u]t","h[u]t","g[u]m","p[u]p","h[u]g","j[u]g",
+  "r[u]n","b[u]n","f[u]n"];
 var MAGIC = [["c[a]p","c{a}p<e>"],["t[a]p","t{a}p<e>"],["m[a]d","m{a}d<e>"],["h[a]t","h{a}t<e>"],["k[i]t","k{i}t<e>"],["p[i]n","p{i}n<e>"],
-  ["b[i]t","b{i}t<e>"],["h[o]p","h{o}p<e>"],["n[o]t","n{o}t<e>"],["r[o]d","r{o}d<e>"],["c[u]b","c{u}b<e>"],["t[u]b","t{u}b<e>"],["c[u]t","c{u}t<e>"]];
-var TEAMS = ["r(ai)n","tr(ai)n","p(ai)l","d(ay)","pl(ay)","b(ee)","tr(ee)","s(ee)d","(ea)t","l(ea)f","b(oa)t","g(oa)t","c(oa)t","sn(ow)","gr(ow)","n(igh)t","l(igh)t","p(ie)","bl(ue)","gl(ue)"];
-var BOSSY = ["c^ar^","st^ar^","f^ar^m","p^ar^k","j^ar^","sh^ar^k","f^or^k","h^or^n","c^or^n","st^or^m","b^ir^d","g^ir^l","h^er^","f^er^n","t^ur^n","n^ur^s<e>","sh^ir^t","b^ur^n"];
+  ["b[i]t","b{i}t<e>"],["h[o]p","h{o}p<e>"],["n[o]t","n{o}t<e>"],["r[o]d","r{o}d<e>"],["c[u]b","c{u}b<e>"],["t[u]b","t{u}b<e>"],
+  ["c[u]t","c{u}t<e>"],["[a]t","{a}t<e>"],["c[a]n","c{a}n<e>"],["m[a]n","m{a}n<e>"],["p[a]n","p{a}n<e>"],["pl[a]n","pl{a}n<e>"],
+  ["m[a]t","m{a}t<e>"],["r[a]t","r{a}t<e>"],["p[a]l","p{a}l<e>"],["p[a]st","p{a}st<e>"],["scr[a]p","scr{a}p<e>"],["f[a]d","f{a}d<e>"],
+  ["st[a]g","st{a}g<e>"],["v[a]n","v{a}n<e>"],["h[i]d","h{i}d<e>"],["r[i]d","r{i}d<e>"],["d[i]m","d{i}m<e>"],["f[i]n","f{i}n<e>"],
+  ["sl[i]d","sl{i}d<e>"],["r[i]p","r{i}p<e>"],["sp[i]n","sp{i}n<e>"],["sh[i]n","sh{i}n<e>"],["sl[i]m","sl{i}m<e>"],["str[i]p","str{i}p<e>"],
+  ["qu[i]t","qu{i}t<e>"],["tw[i]n","tw{i}n<e>"],["c[o]d","c{o}d<e>"],["gl[o]b","gl{o}b<e>"],["sl[o]p","sl{o}p<e>"],["m[o]p","m{o}p<e>"],
+  ["[u]s","{u}s<e>"],["h[u]g","h{u}g<e>"],["pl[u]m","pl{u}m<e>"],["th[e]m","th{e}m<e>"]];
+var TEAMS = ["r(ai)n","tr(ai)n","p(ai)l","d(ay)","pl(ay)","b(ee)","tr(ee)","s(ee)d","(ea)t","l(ea)f",
+  "b(oa)t","g(oa)t","c(oa)t","sn(ow)","gr(ow)","n(igh)t","l(igh)t","p(ie)","bl(ue)","gl(ue)",
+  "m(ai)l","s(ai)l","t(ai)l","sn(ai)l","n(ai)l","p(ai)nt","w(ai)t","br(ai)n","ch(ai)n","s(ay)",
+  "m(ay)","w(ay)","h(ay)","tr(ay)","gr(ay)","st(ay)","cl(ay)","spr(ay)","f(ee)t","s(ee)",
+  "gr(ee)n","sh(ee)p","sl(ee)p","t(ee)th","b(ee)p","j(ee)p","qu(ee)n","f(ee)d","thr(ee)","w(ee)k",
+  "k(ee)p","s(ea)","t(ea)","p(ea)","b(ea)ch","p(ea)ch","l(ea)p","s(ea)l","b(ea)n","m(ea)t",
+  "h(ea)t","cl(ea)n","dr(ea)m","t(ea)m","b(ea)k","t(ea)ch","r(oa)d","t(oa)d","s(oa)p","g(oa)l",
+  "l(oa)f","(oa)k","fl(oa)t","t(oa)st","c(oa)ch","bl(ow)","sh(ow)","sl(ow)","cr(ow)","fl(ow)",
+  "gl(ow)","(ow)n","b(ow)l","thr(ow)","m(ow)","gr(ow)n","h(igh)","s(igh)","r(igh)t","t(igh)t",
+  "br(igh)t","fl(igh)t","m(igh)t","t(ie)","l(ie)","tr(ue)","cl(ue)","d(ue)"];
+var BOSSY = ["c^ar^","st^ar^","f^ar^m","p^ar^k","j^ar^","sh^ar^k","f^or^k","h^or^n","c^or^n","st^or^m",
+  "b^ir^d","g^ir^l","h^er^","f^er^n","t^ur^n","n^ur^s<e>","sh^ir^t","b^ur^n","b^ar^n","y^ar^n",
+  "c^ar^d","h^ar^d","y^ar^d","sc^ar^f","st^ar^t","sm^ar^t","h^ar^p","d^ar^k","b^ar^k","^ar^m",
+  "p^ar^t","c^ar^t","sp^ar^k","ch^ar^t","p^or^ch","t^or^ch","sh^or^t","sp^or^t","f^or^t","s^or^t",
+  "n^or^th","h^or^s<e>","b^or^n","f^or^","m^or^<e>","st^or^<e>","sn^or^<e>","sh^or^<e>","h^er^d","p^er^ch",
+  "v^er^b","g^er^m","f^ir^st","th^ir^d","d^ir^t","sk^ir^t","sw^ir^l","tw^ir^l","st^ir^","ch^ir^p",
+  "c^ur^l","f^ur^","c^ur^b","ch^ur^ch","b^ur^p","s^ur^f","sl^ur^p","bl^ur^"];
 /* syllables: notation | how each part is said (for its clip) */
 var SYLL = [
   "c[a]t|cat","d[o]g|dog","s[u]n|sun","f[i]sh|fish","fr[o]g|frog","sh[i]p|ship",
   "r[a]b-b[i]t|rab bit","p[u]mp-k[i]n|pump kin","r[o]ck-[e]t|rock it","c[u]p-c{a}k<e>|cup cake","s[u]n-s[e]t|sun set","p[i]c-n[i]c|pick nick",
-  "h[o]t-d[o]g|hot dog","m[a]g-n[e]t|mag nit","k[i]t-t[e]n|kit tin","n[a]p-k[i]n|nap kin",
-  "b[u]t-t^er^-fly|but ter fly","[e]l-[e]-ph[a]nt|ell uh fent","[o]c-t[o]-p[u]s|ock tuh puss","b[a]-n[a]-n[a]|bah nah nuh","[u]m-br[e]l-l[a]|um brell luh","t[e]l-[e]-sc{o}p<e>|tell uh scope",
-  "w[a]-t^er^-m[e]l-[o]n|wah ter mel un","m[a]c-[a]-r{o}-ni|mack uh row nee","[a]l-l[i]-g[a]-t^or^|al lih gay ter","c[a]t-^er^-p[i]l-l^ar^|cat er pill ler"
+  "h[o]t-d[o]g|hot dog","m[a]g-n[e]t|mag nit","k[i]t-t[e]n|kit tin","n[a]p-k[i]n|nap kin","b[u]t-t^er^-fly|but ter fly","[e]l-[e]-ph[a]nt|ell uh fent",
+  "[o]c-t[o]-p[u]s|ock tuh puss","b[a]-n[a]-n[a]|bah nah nuh","[u]m-br[e]l-l[a]|um brell luh","t[e]l-[e]-sc{o}p<e>|tell uh scope","w[a]-t^er^-m[e]l-[o]n|wah ter mel un","m[a]c-[a]-r{o}-ni|mack uh row nee",
+  "[a]l-l[i]-g[a]-t^or^|al lih gay ter","c[a]t-^er^-p[i]l-l^ar^|cat er pill ler","j[a]m|jam","d[u]ck|duck","b[e]ll|bell","n[e]st|nest",
+  "tr(ee)|tree","c{a}k<e>|cake","b(oa)t|boat","st^ar^|star","m[u]f-f[i]n|muff fin","w[a]g-[o]n|wag un",
+  "l[e]m-[o]n|lem un","t[e]n-n[i]s|ten niss","d[e]n-t[i]st|den tist","c[o]t-t[o]n|cot tin","b[u]t-t[o]n|but tin","m[i]t-t[e]n|mitt tin",
+  "z[i]g-z[a]g|zig zag","d[o]l-ph[i]n|doll fin","r{o}-b[o]t|row bot","p{a}-p^er^|pay per","w[i]n-t^er^|win ter","s[i]s-t^er^|sis ter",
+  "d[i]n-n^er^|din ner","s[u]m-m^er^|sum mer","h[a]m-m^er^|ham mer","l[a]d-d^er^|lad der","z[i]p-p^er^|zip per","b[u]t-t^er^|but ter",
+  "l[e]t-t^er^|let ter","[u]n-d^er^|un der","h[a]m-st^er^|ham ster","b{a}-by|bay bee","h[a]p-py|hap pea","p[u]p-py|pup pea",
+  "b[u]n-ny|bun nee","k[i]t-ty|kit tee","s[u]n-ny|sun nee","t[e]d-dy|ted dee","c[a]n-dy|can dee","p{o}-ny|poe nee",
+  "j[e]l-ly|jell lee","z{e}-br[a]|zee bruh","p[a]n-d[a]|pan duh","s{o}-f[a]|so fuh","p[i]l-l(ow)|pill low","w[i]n-d(ow)|win doe",
+  "y[e]l-l(ow)|yell low","[e]l-b(ow)|ell beau","sh[a]d-(ow)|shad oh","r(ai)n-b(ow)|rain beau","g^ar^-d[e]n|gar den","p^ar^-ty|par tee",
+  "f^ar^-m^er^|far mer","c^or^-n^er^|core ner","m^ar^-k^er^|mar ker","b^ir^th-d(ay)|birth day","p[o]p-c^or^n|pop corn","st^ar^-f[i]sh|star fish",
+  "s[a]nd-b[o]x|sand box","b[a]th-t[u]b|bath tub","h[i]ll-t[o]p|hill top","b[a]ck-p[a]ck|back pack","l[a]p-t[o]p|lap top","b[e]d-t{i}m<e>|bed time",
+  "p[a]n-c{a}k<e>|pan cake","s[u]n-sh{i}n<e>|sun shine","s(ai)l-b(oa)t|sail boat","r(ai)n-c(oa)t|rain coat","s(ea)-w(ee)d|sea weed","b(ee)-h{i}v<e>|bee hive",
+  "f[i]sh-b(ow)l|fish bowl","sn(ow)-m[a]n|snow man","sn(ow)-fl{a}k<e>|snow flake","sp{a}c<e>-sh[i]p|space ship","b{a}-c[o]n|bay kin","t{u}-l[i]p|too lip",
+  "h[i]p-p{o}|hip poe","r{o}-v^er^|row ver","w[a]-t^er^|wah ter","[i]n-s[e]ct|in sect","dr[a]g-[o]n|drag un","r[i]b-b[o]n|rib bin",
+  "t[i]ck-[e]t|tick it","p[o]ck-[e]t|pock it","j[a]ck-[e]t|jack it","b[u]ck-[e]t|buck it","pl[a]n-[e]t|plan it","c[o]m-[e]t|kahm it",
+  "tr[u]m-p[e]t|trum pit","p[u]p-p[e]t|pup pit","[a]n-[i]-m[a]l|an uh mull","f[a]m-[i]-ly|fam uh lee","f[a]n-t[a]s-t[i]c|fan tass tick","[a]c-r[o]-b[a]t|ack ruh bat",
+  "s[a]t-[e]l-l{i}t<e>|sat ell light","c[o]m-p{u}-t^er^|kum pew ter","c{o}-c{o}-n[u]t|coe coe nut","{a}-li-[e]n|ay lee un","t[o]-m{a}-t{o}|tuh may toe","p[o]-t{a}-t{o}|puh tay toe",
+  "g[o]-r[i]l-l[a]|guh rill luh","v[a]-n[i]l-l[a]|vuh nill luh","[e]l-[e]-v{a}-t^or^|ell uh vay ter"
 ];
 
 /* ---------- round makers: each returns { hint, say, build(stage) } ---------- */
@@ -389,11 +442,12 @@ function rWhichR(){
 
 function x(fn, n){ var a = []; for (var i = 0; i < n; i++) a.push(fn); return a; }
 var MAGIC_ALL = [].concat.apply([], MAGIC);
-var TEAMS_AND_SHORT = TEAMS.concat(CVC.slice(0, 8));
+/* short or long: about 3 in 10 rounds use a short-vowel word (the lists differ a lot in size) */
+function teamOrShort(){ return rShortLong(Math.random() < 0.3 ? CVC : TEAMS); }
 var LEVELS = [
   { name:"Short vowels", ex:'b<span class="v-a">a</span>g, b<span class="v-u">u</span>g', rounds:x(rSwap, 6).concat(x(rHearVowel, 4)) },
   { name:"Magic e", ex:'c<span class="v-a">a</span>p, c<span class="long v-a">a</span>p<span class="silent">e</span>', rounds:x(rWhichWord, 5).concat(x(function(){ return rShortLong(MAGIC_ALL); }, 5)) },
-  { name:"Vowel teams", ex:'r<span class="team v-a">ai</span>n, b<span class="team v-o">oa</span>t', rounds:x(function(){ return rFindTeam(TEAMS, "Tap the letters that make the vowel sound."); }, 6).concat(x(function(){ return rShortLong(TEAMS_AND_SHORT); }, 4)) },
+  { name:"Vowel teams", ex:'r<span class="team v-a">ai</span>n, b<span class="team v-o">oa</span>t', rounds:x(function(){ return rFindTeam(TEAMS, "Tap the letters that make the vowel sound."); }, 6).concat(x(teamOrShort, 4)) },
   { name:"Syllables", ex:'<span class="syl">but</span><span class="syl alt">ter</span><span class="syl">fly</span>', rounds:x(rSyllables, 10) },
   { name:"Bossy R", ex:'c<span class="rr">ar</span>, b<span class="rr">ir</span>d', rounds:x(rWhichR, 6).concat(x(function(){ return rFindTeam(BOSSY, "Tap the letters that make the bossy R sound."); }, 4)) }
 ];
@@ -538,7 +592,7 @@ function confetti(target){
 
 /* hook for automated tests (harmless on the frame) */
 window.SoundLab = { levels:LEVELS, state:function(){ return G; }, start:startLevel,
-  data:{ SWAP:SWAP, CVC:CVC, MAGIC:MAGIC, TEAMS:TEAMS, BOSSY:BOSSY, SYLL:SYLL }, plain:plain, sylKey:sylKey, wordHtml:wordHtml };
+  data:{ SWAP:SWAP, CVC:CVC, MAGIC:MAGIC, TEAMS:TEAMS, BOSSY:BOSSY, SYLL:SYLL }, parse:parse, TEAM_VOWEL:TEAM_VOWEL, R_KEY:R_KEY, plain:plain, sylKey:sylKey, wordHtml:wordHtml };
 
 document.addEventListener("touchstart", function(){}, true);
 renderHome();
