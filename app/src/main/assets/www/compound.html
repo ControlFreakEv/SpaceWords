@@ -169,15 +169,100 @@ function tapWord(w, cls){ return '<span class="' + (cls || "") + ' tw" data-say=
 
 /* ---------- words: "first second" (and a picture where there is one) ---------- */
 function parseList(s){ return s.split("|").map(function(x){ var p = x.split(" "); return { a:p[0], b:p[1], w:p[0] + p[1], img:p[2] || null }; }); }
-var PIC = parseList("sun flower 1f33b|rain bow 1f308|snow man 26c4|cup cake 1f9c1|pop corn 1f37f|lady bug 1f41e|butter fly 1f98b|pan cake 1f95e|foot ball 1f3c8|base ball 26be|basket ball 1f3c0|tooth brush 1faa5|sail boat 26f5|air plane 2708|cow boy 1f920|fire truck 1f692|water melon 1f349|pine apple 1f34d|straw berry 1f353|mail box 1f4eb|snow flake 2744|sea shell 1f41a|fire works 1f386|tea pot 1fad6|sun glasses 1f576|bath tub 1f6c1|hot dog 1f32d|back pack 1f392|skate board 1f6f9|drum stick 1f357|hand bag 1f45c|rain coat 1f9e5|jelly fish 1fabc");
-var MID = parseList("home work|play ground|bed room|class room|sun set|sun shine|rain drop|snow ball|door bell|bird house|dog house|fire fly|camp fire|sand box|tooth paste|hair cut|ear ring|eye ball|moon light|star light|night light|paint brush|horse shoe|farm house|key board|week end|lunch box|note book|bath room|cup board|gold fish|star fish|pop corn|snow man|rain bow|cup cake");
-var BIG = parseList("grass hopper|thunder storm|after noon|every thing|some body|any thing|water melon|basket ball|finger nail|tooth paste|police man|straw berry|pine apple|butter fly|skate board|fire fighter|grand mother|grand father|head light|news paper|class mate|birth day|play ground|lady bug|tooth brush|snow flake|motor cycle|sun flower");
-/* other real compound words: used only so a wrong choice can never also make a real word */
-var EXTRA = "sunroom sunrise sunburn sundown sunbeam sunlight sunfish sunspot rainfall raindrop raincoat snowfall snowstorm snowplow snowboard footprint footstep footpath bedtime bedside bedbug birdbath doorway doorstep doormat fireplace firewood fireman firehouse firelight homemade homesick housework playroom playmate playtime classwork daylight daytime nighttime starboard mailman mailroom bathrobe backyard backbone handshake handmade headband eyelid eyebrow earmuff hairbrush toothpick seashore seaweed seahorse seafood teacup teaspoon cupcake pancake popcorn bookcase bookworm notepad keyhole weekday lunchroom lunchtime goldfish starfish catfish dogfish jellybean jellyroll butterfly buttercup cowboy cowgirl skateboard sandcastle sandpaper paintbrush horseback farmyard fireball eyeglasses handball baseboard playhouse something someone anybody anyone everybody everyone moonshine keyring cowbell airbag sandbag teabag hotcake hotpot";
+var PIC = parseList("sun flower 1f33b|rain bow 1f308|snow man 26c4|cup cake 1f9c1|pop corn 1f37f|lady bug 1f41e|butter fly 1f98b|pan cake 1f95e|foot ball 1f3c8|base ball 26be|basket ball 1f3c0|tooth brush 1faa5|sail boat 26f5|air plane 2708|cow boy 1f920|fire truck 1f692|water melon 1f349|pine apple 1f34d|straw berry 1f353|mail box 1f4eb|snow flake 2744|sea shell 1f41a|fire works 1f386|tea pot 1fad6|sun glasses 1f576|bath tub 1f6c1|hot dog 1f32d|back pack 1f392|skate board 1f6f9|drum stick 1f357|hand bag 1f45c|rain coat 1f9e5|jelly fish 1fabc|dough nut 1f369|pea nut 1f95c|blue berry 1fad0|ham burger 1f354|soft ball 1f94e|volley ball 1f3d0|note book 1f4d3|book mark 1f516|clip board 1f4cb|news paper 1f4f0|birth day 1f382|grand mother 1f475|grand father 1f474|fire fighter 1f9d1-200d-1f692|snow board 1f3c2|row boat 1f6a3|speed boat 1f6a4|motor cycle 1f3cd|rail road 1f6e4|high way 1f6e3|stop light 1f6a6|thunder storm 26c8|sun rise 1f305|sun set 1f307|rain drop 1f4a7|house plant 1fab4|spider web 1f578|honey bee 1f41d|hedge hog 1f994|rein deer 1f98c|foot print 1f463|hand shake 1f91d|head phones 1f3a7|neck tie 1f454|suit case 1f9f3|tool box 1f9f0|chop sticks 1f962|lip stick 1f484|joy stick 1f579|lap top 1f4bb|key board 2328|screw driver 1fa9b|wheel chair 1f9bd|cart wheel 1f938|super hero 1f9b8|space ship 1f6f8|flash light 1f526|hour glass 231b|stop watch 23f1|wrist watch 231a|hair cut 1f487");
+var MID = parseList("home work|play ground|bed room|class room|sun set|sun shine|rain drop|snow ball|door bell|bird house|dog house|fire fly|camp fire|sand box|tooth paste|hair cut|ear ring|eye ball|moon light|star light|night light|paint brush|horse shoe|farm house|key board|week end|lunch box|note book|bath room|cup board|gold fish|star fish|pop corn|snow man|rain bow|cup cake|bed time|sun light|sun burn|rain fall|snow fall|back yard|door way|door mat|fire place|fire wood|mail man|play time|play mate|day light|night time|book case|book shelf|book worm|cow girl|cat fish|jelly bean|sea shore|sea weed|sea horse|tea cup|tea spoon|eye brow|hair brush|tooth pick|sand castle|snow storm|tree house|light house|doll house|blue bird|pig pen|pony tail|hill top|tree top|roof top|bull frog|pine cone|pin wheel|wind mill|bee hive|ant hill|head band|arm chair|door knob|key hole|meat ball|egg shell|oat meal|corn field|barn yard|hay stack|scare crow|sun screen|pillow case|bird bath|bird seed|shoe lace|shoe box|sand paper|in side|out side|up stairs|down stairs|gum ball|butter cup|fish bowl|milk shake|cheese cake|cook book|story book|tug boat");
+var BIG = parseList("grass hopper|thunder storm|after noon|every thing|some body|any thing|water melon|basket ball|finger nail|tooth paste|police man|straw berry|pine apple|butter fly|skate board|fire fighter|grand mother|grand father|head light|news paper|class mate|birth day|play ground|lady bug|tooth brush|snow flake|motor cycle|sun flower|every body|every one|every where|some thing|some one|some times|some where|any body|any where|water fall|under water|under ground|over night|rattle snake|dragon fly|honey comb|bumble bee|tumble weed|thunder bolt|grape fruit|ginger bread|pepper mint|cotton tail|wood pecker|humming bird|mocking bird|black berry|story teller|baby sitter|surf board|cheer leader|motor boat|rain water|camp ground|back ground|under line|hand writing|school house|summer time|winter time|spring time|dinner time|wild flower|wheel barrow|turtle neck|sweat shirt|finger print|finger tip|earth worm|candle light|life guard|goal keeper|zoo keeper|bee keeper|touch down|break fast|table cloth|table spoon|flower pot|grand parent");
+/* other real words made of a first half and a second half in play: used only so a wrong choice can never
+   also make a real word and a match board pairs up one way only. Every first x second pair found in a big
+   word list (npm word-list), plus open compounds and names it misses (hot tub, corn dog, Sunday...).
+   Check new halves against every other half before adding them. */
+var EXTRA = [
+  "afterbody afterguard aftertime aftertimes airbag airboard airboat airbrush airdrop airfield airhole airline",
+  "airman airplant airship airside airthing airtime airtimes airway antbird anyone anyplace anyroad anytime anyway",
+  "armband armhole backband backboard backbone backburn backcloth backcomb backdown backdrop backend backfall",
+  "backfield backfire backhouse backlight backroad backroom backset backshore backside backstairs backwater",
+  "backwood backwork backworks barnstorm baseband baseboard baseline baseman basketwork basketworks bathhouse",
+  "bathmat bathrobe bathtime bathwater bedbath bedboard bedbug bedchair bedfast bedmate bedside bedsitter bedtimes",
+  "beebee beebread beeline beeyard birddog birdman birdwatch birthmark birthnight birthplace blackball blackband",
+  "blackbean blackbird blackboard blackbody blackbox blackboy blackfish blackfly blackguard blackhole blacklight",
+  "blacksnake blacktail blacktop blackwater blackwood blueball bluebell bluebook bluecoat bluefish blueline",
+  "blueprint blueweed bluewood bookbag bookend bookkeeper booklight bookman bookwork bookworks breakdown breakneck",
+  "breaktime breaktimes breakwater bulldog bullfighter bullneck bullpen bullring bullsnake bullweed bumbleberry",
+  "butterball butterbean butterfish butternut butterweed campshirt candleberry candlefish candlenut candlestick",
+  "candlesticks candlewood carthorse cartroad cartway catbird catboat catfall cathole cathouse catmint cattail",
+  "cattie catworks catworm cheeseball cheeseboard cheeseburger cheesecloth cheesehopper cheesestick cheesesticks",
+  "cheesewood chophouse chopstick classman classwork classworks cookhouse cookroom cooktop cornball cornbread",
+  "corncake corndog cornflake cornflower cornfly cornmeal cornmill cornsnake cornworm cottonball cottonseed",
+  "cottonweed cottonwood cowbell cowberry cowbird cowfish cowhouse cowman cupman dayboat daybook dayboy dayflower",
+  "dayfly daygirl daymark daypack dayroom dayshell dayside daytime daytimes daywork dayworks dinnerbell dinnertimes",
+  "dogberry dogbolt dogfish doghole dogman dogship dogwatch dogwood doorcase doorkeeper doorman doornail doorstep",
+  "dooryard doughball doughboy downbow downfall downfield downhill downhole downlight downside downtime downtimes",
+  "dragonboat dragonfruit drumfire drumfish drumset drumsticks earball eardrop earmark earmuff earphones earpick",
+  "earthfall earthfast earthing earthlight earthman earthnut earthrise earthset earthshine earthwork earthworks",
+  "earworm eggcup eggfruit eggplant everyday everyman everyplace everytime everyway eyebath eyebolt eyecup eyedrop",
+  "eyedrops eyeglass eyeglasses eyehole eyelid eyeshine eyewater farmwork farmworks farmyard fingerboard fingerbowl",
+  "fingerglass fingerglasses fingerguard fingerhole fingermark fingerpick fireball firebell firebird fireboard",
+  "fireboat firebox firebug firedog fireguard firehouse firelight fireman firemark firepot fireroom firescreen",
+  "fireship fireside firestorm firewater fireweed firework fireworm fishball fishbolt fishburger fishcake fishline",
+  "fishmeal fishstick fishsticks fishtail fishway fishworm flashboard flowerbox flowergirl footbag footbath",
+  "footboard footboy footcloth footfall foothill footlight footman footmark footpath footstep footway footwork",
+  "footworks goalball goalline goldbug goldfield goldstick goldsticks goldtail goldwork goldworks grapeseed",
+  "grassbird grasssnake gumdrop gumline gumnut gumshoe gumweed gumwood hairball hairband hairbell hairbow haircloth",
+  "hairline hairtail hairtie hairwork hairworks hairworm handball handbarrow handbell handbook handfast handmade",
+  "handphones handpick handprint handset handwheel handwork handworks hayband haybox hayfield hayseed headboard",
+  "headcase headchair headcloth headend headfast headfish headguard headline headman headmark headring headroom",
+  "headset headshake headship headstick headsticks headwater headway headwork headworks hedgehopper highball",
+  "highboy highbrow highchair highlight highman highnoon highrise highroad hightail hightop highwater hillside",
+  "homebody homeboy homegirl homemade homeplace homering homeroom homescreen homesick homeworks honeypot horseback",
+  "horsebean horsebox horsefly horseman horsemint horsetail horseway horseweed hotbox hotcake hothouse hotline",
+  "hotpot hottie hottub hourglasses houseboat houseboy housecoat housefather housefly housekeeper houseline",
+  "houseman housemate housemother houseparent houseroom housesitter housetop housework houseworks inboard inbox",
+  "incase incut infall infield infighter inground inlace inmate inroad inset inshell inship inshore intime inwork",
+  "inworks jellyroll joysticks keyline keyring keyset keyway ladybird ladyboy ladyfish ladyfly ladyship lapboard",
+  "lapdog lapwork lapworks lifeboat lifecycle lifeline lifetime lifetimes lifeway lifework lifeworks lightfast",
+  "lightplane lightship lightwood lippen lipsticks lunchbag lunchroom lunchtime lunchtimes mailbag mailroom meatman",
+  "meatscreen milkfish milkman milksnake milkweed milkwood moonbow mooncake moonfish moonflower moonrise moonseed",
+  "moonset moonshine motorman motorship motortruck motorway neckband neckcloth necklace neckline neckweed newsboy",
+  "newsgirl newsman newsprint newsroom newswriting nightbird nightfall nightfire nightshirt nightside nightstick",
+  "nightsticks nighttimes nightwatch notecase notepad notepaper oatcake outboard outbox outburn outcrow outdrop",
+  "outfall outfast outfield outfire outfish outfly outguard outhouse outline outman outnight outplace outring",
+  "outset outshine outtop outwatch outweed outwork outworks outwriting overboard overbook overbrow overburn",
+  "overcoat overcrow overcut overdog overfall overfast overfish overfly overground overlight overman overpack",
+  "overplant overprint overseed overset overshine overshirt overshoe overside overtime overtimes overtip overtop",
+  "overwatch overwater overwork overworks overwriting paintball paintbox paintwork paintworks panfish panstick",
+  "pansticks pantie peaberry peacoat pepperbox peppercorn peppermill pepperpot pigboat pigfish pignut pigstick",
+  "pigsticks pigtail pigweed pinball pinboard pincase pindown pinenut pinewood pinfall pinfish pinhole pintail",
+  "pinweed pinwork pinworks pinworm playbook playboy playday playdown playfield playgirl playhouse playleader",
+  "playmat playpen playroom playset plaything playtimes playwriting policedog railbird railman railway railyard",
+  "rainband rainbird rainstick rainsticks rainstorm rattlebag rattlebox roofline rowhouse sailboard sailcloth",
+  "sailfish sailplane sailroom sandbag sandboy sandfish sandfly sandglass sandglasses sandhill sandhog sandman",
+  "sandshoe sandstorm sandworm schoolbag schoolbell schoolboard schoolbook schoolboy schoolday schoolgirl schoolman",
+  "schoolmate schoolroom schooltime schooltimes schoolwork schoolworks schoolyard screwball screwbean screwtop",
+  "screwworm seabag seabird seaboard seadog seafood seahog sealine seaman seamark seaplane searing seaside seasnake",
+  "seawater seaway seaworm shoepack shoeshine snowbell snowberry snowbird snowbrush snowcone snowday snowdrop",
+  "snowfield snowline snowpack snowplow snowshoe softshell softwood someday someplace sometime someway spaceband",
+  "spaceman spaceplane speedball speedway spiderman spiderplant spiderwood spiderwork spiderworks springboard",
+  "springhouse springkeeper springtail springtimes springwater springwood starboard starflower starfruit starring",
+  "starshine starship storyboard storyline storytime strawboard strawflower strawworm summerhouse summerset",
+  "summertimes summerwood sunbath sunbeam sunberry sunbird sunbow sunday sundog sundown sunfast sunfish sunglass",
+  "sunroom sunspot superboard superbowl superbug superfast superhive superlight superman superplane superroad",
+  "superscreen supertruck superweed surfbird surfboat surffish surfman surfside sweatband sweatbox tablemate",
+  "tabletop teabag teaberry teaboard teabowl teabox teabread teacake teahouse tealight tearing tearoom teaset",
+  "teatime teatimes thunderbird thunderbox toolbag toolhouse toolman toolroom toolset toothcomb toothfish",
+  "toothshell touchhole touchline touchmark touchpaper touchscreen touchwood treefrog treehopper treeline treenail",
+  "treeship treesnake tumblebug tumbledown tumbleset underbody underbrush undercoat undercut underdog underfire",
+  "underfish underkeeper underman underplant underset undershirt underside undertime undertimes underway underwood",
+  "underwork underworks underwriting upbow upend upfield uphill uplight uprise upset upside uptie uptime uptimes",
+  "waterbird waterbug watercycle waterdog waterglass waterglasses waterhole waterline waterman watermark watermill",
+  "waterside watersnake waterway waterweed waterwheel waterwork waterworks weekday weeknight wheelhorse wheelhouse",
+  "wheelman wheelwork wheelworks wildfire wildwood windbag windbell windburn windfall windflower windring",
+  "windscreen windshake windship windstorm windway winterberry wintertimes woodbox woodcut woodhole woodhorse",
+  "woodhouse woodman woodmeal woodprint woodwork woodworks woodworm woodyard wristband"
+].join(" ");
 var KNOWN = {};
 PIC.concat(MID, BIG).forEach(function(c){ KNOWN[c.w] = true; });
 EXTRA.split(" ").forEach(function(w){ KNOWN[w] = true; });
-var NOT = ["rabbit","pencil","carrot","tiger","zebra","monkey","turtle","candle","guitar","penguin","dragon","spider","lemon","robot","apple","pizza","window","yellow","purple","funny","table","happy","basket","jacket","kitten","garden","winter","summer","pocket","bucket","letter","flower","sister","doctor","pumpkin","helmet","button","giant"];
+var NOT = ["rabbit","pencil","carrot","tiger","zebra","monkey","turtle","candle","guitar","penguin","dragon","spider","lemon","robot","apple","pizza","window","yellow","purple","funny","table","happy","basket","jacket","kitten","garden","winter","summer","pocket","bucket","letter","flower","sister","doctor","pumpkin","helmet","button","giant","banana","tomato","elephant","kangaroo","dinosaur","octopus","squirrel","puppy","bubble","jungle","orange","cookie","noodle","pickle","pretzel","rocket","planet","silver","mitten","blanket","violin","piano","camel","lizard","giraffe","koala","panda","cactus","cherry","puzzle","tractor","picnic","waffle","bottle","circle","tunnel","river","dolphin","chicken","bunny","hamster","ladder"];
 
 /* second halves that can't join `first` into a real word */
 function wrongSeconds(first, right, pool, n){

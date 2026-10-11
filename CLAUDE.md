@@ -41,9 +41,9 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   say several clips (Sound Lab, Compound Words) move on from done, with a long timer only as a
   safety net; a fixed short timer cut the voice off mid-word.
 - **Compound Words** (compound.html): picture puzzles, match the halves, split it, build it, big
-  words. PIC/MID/BIG lists of "first second"; KNOWN (all of them plus EXTRA real compounds) makes
-  sure wrong choices never form a real word and match boards pair up one way only. Stars:
-  localStorage compound:best.
+  words. PIC/MID/BIG lists of "first second" (84/112/88, NOT 80 distractors); KNOWN (all of them
+  plus EXTRA real compounds) makes sure wrong choices never form a real word and match boards pair
+  up one way only. Stars: localStorage compound:best.
 - **Class Words** (class-words.html; first card in Word games): her kindergarten class handout
   "Support Reading at Home": 69 high-frequency words to read and write by year end, in the
   handout's order (the first two, "I" and "a", were under a crayon scribble in the photo; check with
