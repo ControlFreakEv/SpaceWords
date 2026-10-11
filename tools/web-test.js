@@ -55,20 +55,20 @@ const server = http.createServer((req, res) => {
     const levels = await page.evaluate(() => MathGame.game().levels.length);
 
     // Generated questions: answers, options and speech keys.
-    const report = await page.evaluate(() => {
-      const out = { bad: [], keys: {} }, G = MathGame.game();
+    const report = await page.evaluate(g => {
+      const out = { bad: [], keys: {} }, G = MathGame.game(), top = g === "pattern" ? 999 : 100;   // patterns go up to 999
       G.levels.forEach((lv, li) => lv.rounds.forEach((mk, ri) => {
         for (let t = 0; t < 150; t++) {
           const R = mk();
           const where = "L" + (li + 1) + " round " + ri + ": " + R.hint;
           (R.say || []).concat(R.answerSay || []).forEach(k => out.keys[k] = 1);
-          if (typeof R.answer === "number" && !(Number.isInteger(R.answer) && R.answer >= 0 && R.answer <= 100)) out.bad.push(where + " answer " + R.answer);
+          if (typeof R.answer === "number" && !(Number.isInteger(R.answer) && R.answer >= 0 && R.answer <= top)) out.bad.push(where + " answer " + R.answer);
           if (R.kind === "pad" && R.prompt.indexOf('id="entry"') < 0) out.bad.push(where + " keypad round without an answer box");
           const checkOpts = (opts, ans, w) => {
             const vals = opts.map(o => o.val);
             if (vals.indexOf(ans) < 0) out.bad.push(w + " answer missing from choices " + vals);
             if (new Set(vals).size !== vals.length) out.bad.push(w + " repeated choices " + vals);
-            if (vals.some(v => typeof v === "number" && (v < 0 || v > 100))) out.bad.push(w + " choice out of range " + vals);
+            if (vals.some(v => typeof v === "number" && (v < 0 || v > top))) out.bad.push(w + " choice out of range " + vals);
           };
           if (R.kind === "choice") checkOpts(R.options, R.answer, where);
           if (R.kind === "steps") {   // carrying in 2 parts: ones, then tens (with the carried 1)
@@ -81,7 +81,7 @@ const server = http.createServer((req, res) => {
       out.bad = out.bad.slice(0, 15);
       out.keys = Object.keys(out.keys);
       return out;
-    });
+    }, g);
     report.bad.length ? report.bad.forEach(b => fail(g + " " + b)) : ok(g + ": 150 generated questions per round type look right");
     const missing = report.keys.filter(k => !(k in phrases));
     missing.length ? fail(g + " speech keys missing from phrases.json: " + missing.join(", ")) : ok(g + ": all " + report.keys.length + " speech keys exist");
@@ -110,21 +110,130 @@ const server = http.createServer((req, res) => {
     saved && Object.keys(JSON.parse(saved)).length === levels ? ok(g + ": stars saved " + saved) : fail(g + " stars not saved: " + saved);
   }
 
-  // Alien Patterns: every round has a rule, and getting it right shows it.
+  // Alien Patterns: every round has a rule, the rule really makes the sequence (rebuilt here from
+  // rule.kind and its numbers), the step labels and the Rule line match it, and everything said has a clip.
   await page.goto(base + "math-game.html?g=pattern");
   const ruleCheck = await page.evaluate(() => {
-    const bad = [], keys = {};
-    MathGame.game().levels.forEach((lv, li) => lv.rounds.forEach(mk => { for (let t = 0; t < 60; t++) {
-      const R = mk();
-      if (!R.rule || !R.rule.html || !R.rule.say || !R.rule.say.length) bad.push("level " + (li + 1) + ": " + R.hint + " has no rule");
-      else R.rule.say.forEach(k => keys[k] = 1);
-      if (R.rule && R.rule.steps) { const d = document.createElement("div"); d.innerHTML = R.prompt; if (d.querySelectorAll(".step").length !== R.rule.steps.length) bad.push("step labels missing"); }
-    } }));
-    return { bad: bad.slice(0, 5), keys: Object.keys(keys) };
+    const bad = [], keys = {}, kinds = {}, MI = "−";
+    const signed = d => (d >= 0 ? "+" : MI) + Math.abs(d);
+    const numSay = v => v <= 100 ? ["n_" + v] : ["n_" + Math.floor(v / 100), "m_hundred"].concat(v % 100 ? ["n_" + v % 100] : []);
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    // the next number from the rule: i is the index of the number being made
+    const next = (r, out, i) => {
+      const p = out[i - 1];
+      switch (r.kind) {
+        case "arith": case "parity": return p + r.d;
+        case "times": return r.div ? p / r.m : p * r.m;
+        case "affine": return p * r.m + r.c;
+        case "grow": return p + r.d0 + (i - 1) * r.c;
+        case "fib": return out[i - 2] + p;
+        case "square": return (r.k + i) * (r.k + i);
+        case "tri": return (r.k + i) * (r.k + i + 1) / 2;
+        case "alt": return p + (i % 2 ? r.a : r.b);
+        case "two": return out[i - 2] + (i % 2 ? r.db : r.da);
+      }
+      return NaN;
+    };
+    // fewest numbers that must be showing for the rule to be the only sensible one
+    const MIN_SHOWN = { arith: 3, parity: 3, times: 3, affine: 4, grow: 5, fib: 5, square: 4, tri: 4, alt: 5, two: 6 };
+    const apply = (v, label) => { let x = v, m, re = /([+−×÷])(\d+)/g, used = "";
+      while ((m = re.exec(label))) { const k = +m[2]; used += m[0]; x = m[1] === "+" ? x + k : m[1] === MI ? x - k : m[1] === "×" ? x * k : x / k; }
+      return used === label ? x : NaN; };
+    const check = (R, where) => {
+      const r = R.rule;
+      if (!r || !r.html || !r.say || !r.say.length) { bad.push(where + ": no rule"); return; }
+      r.say.forEach(k => keys[k] = 1);
+      (R.say || []).concat(R.answerSay || []).forEach(k => keys[k] = 1);
+      if (r.kind === "repeat") return;
+      const v = R.seq, h = R.hide, w = where + " [" + v + "] " + r.kind;
+      kinds[r.kind] = 1;
+      if (!v || !(h >= 0 && h < v.length)) { bad.push(w + ": no sequence"); return; }
+      if (v.some(x => !Number.isInteger(x) || x < 0 || x > 999)) bad.push(w + ": numbers must be whole, 0 to 999");
+      if (R.answer !== v[h]) bad.push(w + ": answer " + R.answer + " is not the blank");
+      if (!same(R.answerSay, numSay(R.answer))) bad.push(w + ": answer said as " + R.answerSay);
+      if (R.hint.indexOf("next") >= 0 && !same(R.say, [].concat(...v.slice(0, h).map(numSay), ["m_next"]))) bad.push(w + ": says " + R.say);
+      if (!(r.kind in MIN_SHOWN)) { bad.push(w + ": unknown rule kind"); return; }
+      for (let i = r.kind === "fib" || r.kind === "two" ? 2 : 1; i < v.length; i++)
+        if (next(r, v, i) !== v[i]) { bad.push(w + ": number " + (i + 1) + " doesn't follow the rule"); break; }
+      if (v.length - 1 < MIN_SHOWN[r.kind]) bad.push(w + ": too few numbers showing");
+      if (r.kind === "square" && v[0] !== r.k * r.k || r.kind === "tri" && v[0] !== r.k * (r.k + 1) / 2) bad.push(w + ": wrong start");
+      if (r.kind === "fib" && !(v[0] >= 1 && v[1] >= v[0])) bad.push(w + ": should start small, then bigger");
+      if (r.kind === "two" && Math.abs(v[0] - v[1]) < 10) bad.push(w + ": the two patterns are too close");
+      if (r.kind === "parity" && (Math.abs(r.d) !== 2 || v[0] % 2 !== (r.odd ? 1 : 0))) bad.push(w + ": odd/even mixed up");
+      if (r.kind === "grow" && (!r.d0 || !r.c || Math.sign(r.d0 + (v.length - 2) * r.c) !== Math.sign(r.d0))) bad.push(w + ": jumps change direction");
+      if (r.kind === "alt" && r.a === r.b) bad.push(w + ": both steps the same");
+      // step labels: each one turns a number into the next
+      const d = document.createElement("div"); d.innerHTML = R.prompt;
+      const shown = [...d.querySelectorAll(".step")].map(e => e.textContent), bubs = [...d.querySelectorAll(".bub")];
+      if (bubs.length !== v.length || bubs[h].id !== "entry") bad.push(w + ": blank in the wrong place");
+      bubs.forEach((b, i) => { if (i !== h && (b.textContent !== String(v[i]) || b.getAttribute("data-say") !== numSay(v[i]).join(" "))) bad.push(w + ": bubble " + i + " shows/says the wrong number"); });
+      if (r.kind === "two") { if (r.steps || shown.length) bad.push(w + ": two patterns have no single step"); }
+      else if (!r.steps || r.steps.length !== v.length - 1 || !same(shown, r.steps)) bad.push(w + ": step labels missing");
+      else r.steps.forEach((s, i) => { if (apply(v[i], s) !== v[i + 1]) bad.push(w + ": step " + s + " doesn't take " + v[i] + " to " + v[i + 1]); });
+      // the Rule line and what's said
+      const html = r.html, op = (x, y) => [x >= 0 ? "m_plus" : "m_minus"].concat(numSay(Math.abs(x)));
+      const want = {
+        arith: () => html === signed(r.d) + " each time" && same(r.say, ["m_rule"].concat(op(r.d))),
+        parity: () => html.indexOf(r.odd ? "Odd" : "Even") === 0 && html.indexOf(signed(r.d)) > 0 && same(r.say, [r.odd ? "m_odd_nums" : "m_even_nums", "m_rule"].concat(op(r.d))),
+        times: () => html === (r.div ? "÷" : "×") + r.m + " each time" && same(r.say, ["m_rule", r.div ? "m_div" : "m_times", "n_" + r.m]),
+        affine: () => html.indexOf("×" + r.m + ", then " + signed(r.c)) === 0 && same(r.say, ["m_rule", "m_times", "n_" + r.m, "m_then"].concat(op(r.c))),
+        grow: () => html.indexOf([r.d0, r.d0 + r.c, r.d0 + 2 * r.c].map(signed).join(", ")) === 0 && html.indexOf("is " + Math.abs(r.c) + (r.c * r.d0 > 0 ? " bigger" : " smaller")) > 0 &&
+          same(r.say, [r.c * r.d0 < 0 ? "m_rule_shrink" : Math.abs(r.c) === 1 ? "m_rule_grow" : "m_rule_grow2"]) && (r.c * r.d0 > 0 || Math.abs(r.c) === 1),
+        fib: () => html.indexOf(v[v.length - 3] + " + " + v[v.length - 2] + " = " + v[v.length - 1]) > 0 && same(r.say, ["m_rule_fib"]),
+        square: () => html.indexOf(r.k + "×" + r.k) > 0 && html.indexOf((r.k + 4) + "×" + (r.k + 4)) > 0 && same(r.say, ["m_rule_square"]),
+        tri: () => html.indexOf("Triangle") === 0 && same(r.say, ["m_rule_triangle"]),
+        alt: () => html.indexOf(signed(r.a) + ", then " + signed(r.b)) === 0 && same(r.say, ["m_rule"].concat(op(r.a), ["m_then"], op(r.b))),
+        two: () => { const t = document.createElement("div"); t.innerHTML = html;
+          return t.textContent === "Two patterns: " + [v[0], v[2], v[4]].join(", ") + "... and " + [v[1], v[3], v[5]].join(", ") + "..." && same(r.say, ["m_rule_two"]); }
+      };
+      if (!want[r.kind]()) bad.push(w + ": Rule line or its words are wrong: " + html + " / " + r.say);
+      // choices: 4 different numbers, one of them the answer
+      if (R.kind === "choice") {
+        const vals = R.options.map(o => o.val);
+        if (vals.length !== 4 || new Set(vals).size !== 4 || vals.indexOf(R.answer) < 0 || vals.some(x => !Number.isInteger(x) || x < 0 || x > 999)) bad.push(w + ": choices " + vals);
+      } else if (R.kind !== "pad") bad.push(w + ": kind " + R.kind);
+    };
+    const levels = MathGame.game().levels, distinct = [];
+    levels.forEach((lv, li) => {
+      const seen = new Set();
+      lv.rounds.forEach((mk, ri) => { for (let t = 0; t < 400; t++) { const R = mk(); seen.add(R.hint + "|" + R.prompt); check(R, "L" + (li + 1) + " round " + ri); } });
+      distinct.push(seen.size);
+    });
+    MathGame.busters.forEach(type => { for (let t = 0; t < 300; t++) check(MathGame.makers.rBuster(t % 2 === 0, type), "buster " + type); });
+    return { bad: bad.slice(0, 8), nbad: bad.length, keys: Object.keys(keys), kinds: Object.keys(kinds).sort(), distinct };
   });
-  ruleCheck.bad.length ? fail("pattern rules: " + ruleCheck.bad.join("; ")) : ok("every Alien Patterns round has a rule");
+  ruleCheck.bad.length ? fail("pattern rules (" + ruleCheck.nbad + "): " + ruleCheck.bad.join("; ")) : ok("Alien Patterns: every sequence follows its rule; steps, Rule line, words and choices match (" + ruleCheck.kinds.join(", ") + ")");
   const ruleMissing = ruleCheck.keys.filter(k => !(k in phrases));
-  ruleMissing.length ? fail("rule clips missing: " + ruleMissing.join(", ")) : ok("every rule can be said (" + ruleCheck.keys.length + " clips)");
+  ruleMissing.length ? fail("rule clips missing: " + ruleMissing.join(", ")) : ok("every pattern round can be said (" + ruleCheck.keys.length + " clips)");
+  // plenty of different questions (4,000 sampled per level)
+  const MIN_DISTINCT = [1000, 1000, 1000, 1000, 1500], dd = ruleCheck.distinct;
+  dd.every((c, i) => c >= MIN_DISTINCT[i]) ? ok("Alien Patterns: different questions in 4,000 tries per level: " + dd.join(", ")) : fail("Alien Patterns: too few different questions: " + dd.join(", "));
+  // the row of numbers stays on one line, clear of the keypad, and the Rule line fits once it's solved
+  const fit = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const bad = [], W = innerWidth, H = innerHeight, levels = MathGame.game().levels;
+    const makers = [];
+    MathGame.busters.forEach(type => { makers.push([4, () => MathGame.makers.rBuster(false, type), type]); makers.push([4, () => MathGame.makers.rBuster(true, type), type + " keypad"]); });
+    levels.forEach((lv, li) => lv.rounds.forEach((mk, ri) => makers.push([li, mk, "L" + (li + 1) + " round " + ri])));
+    makers.forEach(([li, mk, name]) => { for (let t = 0; t < 12; t++) {
+      const R = mk();
+      MathGame.start(li, () => R);
+      const seq = document.querySelector("#stage .seq"), box = seq.getBoundingClientRect(), pad = document.querySelector("#stage .pad");
+      const tops = new Set([...seq.querySelectorAll(".bub")].map(b => Math.round(b.getBoundingClientRect().top)));
+      const where = name + " [" + (R.seq || "pictures") + "]";
+      if (tops.size !== 1 && R.seq) bad.push(where + ": numbers on " + tops.size + " lines");
+      if (box.left < 0 || box.right > W || (pad && box.right > pad.getBoundingClientRect().left)) bad.push(where + ": row doesn't fit");
+      // solve it, then measure the Rule line
+      if (R.kind === "choice") document.querySelectorAll("#stage .choice")[R.options.map(o => o.val).indexOf(R.answer)].click();
+      else { String(R.answer).split("").forEach(d => [...document.querySelectorAll(".key")].filter(k => k.textContent === d)[0].click()); document.querySelector(".key.go").click(); }
+      const rule = document.querySelector("#stage .rule");
+      if (!rule) { bad.push(where + ": no Rule line"); continue; }
+      const rb = rule.getBoundingClientRect();
+      if (rb.left < 0 || rb.right > W || rb.bottom > H || (pad && rb.right > pad.getBoundingClientRect().left) || rb.height > 0.12 * H) bad.push(where + ": Rule line doesn't fit (" + rule.textContent + ")");
+    } });
+    return { bad: bad.slice(0, 8), n: makers.length * 12 };
+  });
+  fit.bad.length ? fail("pattern layout: " + fit.bad.join("; ")) : ok("Alien Patterns: " + fit.n + " rounds fit on screen, rows on one line, Rule line clear of the keypad");
   for (const lv of [0, 3, 4]) {
     await page.evaluate(i => MathGame.start(i), lv);
     // the test speeds up long timers, so record the rule line the moment it appears
@@ -150,8 +259,11 @@ const server = http.createServer((req, res) => {
     if (kind === "pad") {
       const ans = await page.evaluate(() => MathGame.state().R.answer);
       const wrongDigit = String((ans + 1) % 10);
+      // the test speeds up long timers, so the next round can come before we look: record the reveal as it happens
+      await page.evaluate(() => { window.__revealed = null; new MutationObserver(() => { const e = document.getElementById("entry"); if (e && /\breveal\b/.test(e.className) && window.__revealed === null) window.__revealed = e.textContent; })
+        .observe(document.getElementById("stage"), { childList: true, subtree: true, attributes: true, characterData: true }); });
       for (let t = 0; t < 3; t++) { await page.locator(".key", { hasText: new RegExp("^" + wrongDigit + "$") }).click(); await page.locator(".key.go").click(); }
-      const shown = await page.evaluate(() => document.getElementById("entry").textContent);
+      const shown = await page.evaluate(() => window.__revealed);
       await shot("keypad-reveal");
       shown === String(ans) ? ok("keypad reveals the answer after 3 misses") : fail("keypad reveal shows " + shown + " not " + ans);
       break;
@@ -470,7 +582,7 @@ const server = http.createServer((req, res) => {
 
   // Tap any word: every tappable piece on screen has a clip.
   const tapKeys = new Set();
-  const collect = async () => (await page.evaluate(() => Array.prototype.map.call(document.querySelectorAll("[data-say]"), e => e.getAttribute("data-say")))).forEach(k => tapKeys.add(k));
+  const collect = async () => (await page.evaluate(() => Array.prototype.map.call(document.querySelectorAll("[data-say]"), e => e.getAttribute("data-say")))).forEach(k => k.split(" ").forEach(x => tapKeys.add(x)));
   for (const g of ["count", "ops", "pattern"]) {
     await page.goto(base + "math-game.html?g=" + g);
     for (let i = 0; i < 5; i++) for (let t = 0; t < 8; t++) { await page.evaluate(i => MathGame.start(i), i); await collect(); }

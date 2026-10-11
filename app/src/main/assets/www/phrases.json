@@ -1860,5 +1860,13 @@
  "w_ones": "ones",
  "ws_ones": "ones",
  "w_tens": "tens",
- "ws_tens": "tens"
+ "ws_tens": "tens",
+ "m_hundred": "hundred",
+ "m_rule_grow2": "Each jump is two bigger!",
+ "m_rule_shrink": "Each jump is one smaller!",
+ "m_rule_fib": "Add the two numbers before to get the next one!",
+ "m_rule_triangle": "These are triangle numbers! Each jump is one bigger.",
+ "m_odd_nums": "These are odd numbers.",
+ "m_even_nums": "These are even numbers.",
+ "m_rule_two": "Two patterns take turns! Look at every other number."
 }
