@@ -93,6 +93,13 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   turn / All done; the Back key closes it via Turns.back()). Browser fallback: localStorage
   speech:turnEnd. Said: p_your_turn, n_<min>, p_minutes|p_minute, p_have_fun; p_switch_turns. web-test.js checks the popup flow and that the
   countdown overlaps nothing on level lists and play screens.
+- **Hide for N hours** (grown-ups; owner's request): Pick a mission > "Grown-ups (hold)" 1.5 s >
+  1-24 hours (hub.js). AndroidApp.hideFor(h) -> HideTimer.kt (SharedPreferences "hide", so it lasts
+  through reboots): wall-clock end time plus the time left, saved each minute; before the frame's
+  clock is set after a power cut (it starts at Jan 1) the saved time left is used, and the smaller
+  of the two always wins. While hidden BubbleService keeps the UFO gone, won't open the game (turn
+  timer stopped, its popup can't open it) and checks each minute. Early unhide: unhide.bat (adb,
+  action com.wordhop.app.UNHIDE).
 - **Tap any word to hear it** (all games): `Speech.tapText(text)` wraps words in
   `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element
   with `data-say`. Words map to w_*, numbers to n_*, + - x / = to m_*. Every tappable word needs a

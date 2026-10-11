@@ -10,7 +10,9 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
@@ -33,24 +35,33 @@ class BubbleService : Service() {
         private const val CHANNEL = "bubble"
         private const val TAG = "SpaceWords"
         const val ACTION_OPEN_GAME = "com.wordhop.app.OPEN_GAME"
+        /** grown-ups (or unhide.bat over adb): show the UFO again before the hidden time is up */
+        const val ACTION_UNHIDE = "com.wordhop.app.UNHIDE"
     }
 
     private var wm: WindowManager? = null
     private var bubble: View? = null
     private var game: GameWindow? = null
     private var bubbleLp: WindowManager.LayoutParams? = null
+    private val ui = Handler(Looper.getMainLooper())
+    /** while hidden (HideTimer), look again every minute and bring the UFO back when the time is up */
+    private val hideCheck = Runnable { applyHidden() }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_OPEN_GAME) openGame()
+        when (intent?.action) {
+            ACTION_OPEN_GAME -> openGame()
+            ACTION_UNHIDE -> { HideTimer.clear(this); applyHidden() }
+        }
         return START_STICKY
     }
 
     /** Opens the games in their floating window; the UFO hides until the window closes. */
     private fun openGame() {
         if (!canOverlay(this)) return
-        val g = game ?: GameWindow(this) { bubble?.visibility = View.VISIBLE }.also { game = it }
+        if (HideTimer.left(this) > 0) { applyHidden(); return }
+        val g = game ?: GameWindow(this) { applyHidden() }.also { game = it }
         if (g.isShowing) return
         bubble?.visibility = View.GONE
         g.show()
@@ -77,7 +88,9 @@ class BubbleService : Service() {
             Log.e(TAG, "Couldn't add the UFO button window", e)
             bubble = null
             stopSelf()
+            return
         }
+        applyHidden()
     }
 
     @Suppress("DEPRECATION")
@@ -181,7 +194,22 @@ class BubbleService : Service() {
         }
     }
 
+    /** Hidden by a grown-up: no UFO, game closed, check again in a minute. Otherwise show the UFO
+     *  (unless the game window is open, which hides it). */
+    private fun applyHidden() {
+        ui.removeCallbacks(hideCheck)
+        val left = HideTimer.left(this)
+        if (left > 0) {
+            bubble?.visibility = View.GONE
+            if (game?.isShowing == true) game?.hide()
+            ui.postDelayed(hideCheck, minOf(left, 60_000L))
+        } else if (game?.isShowing != true) {
+            bubble?.visibility = View.VISIBLE
+        }
+    }
+
     override fun onDestroy() {
+        ui.removeCallbacks(hideCheck)
         TurnTimer.onOver = null
         game?.hide()
         game = null

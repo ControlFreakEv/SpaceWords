@@ -47,6 +47,19 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
 .seven .game img{width:11vmin;height:11vmin;margin:0 0 1.4vmin}
 .seven .t{font-size:4.4vmin}
 .seven .d{font-size:2.6vmin}
+/* grown-ups: hold the button 1.5 s, then pick how many hours to hide Space Words */
+.adultrow{display:-webkit-flex;display:flex;-webkit-justify-content:flex-end;justify-content:flex-end;margin-top:1.6vmin}
+.adultbtn{position:relative;overflow:hidden;padding:1.2vmin 2.8vmin;font-size:2.8vmin;border-radius:5vmin;background:#131A3D;color:#B9C3F2;border:0.4vmin solid #4F5F80}
+.adultbtn span{position:relative}
+.adultbtn .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:#4F5F80}
+.hidepop{position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(5,8,26,.88);display:-webkit-flex;display:flex;
+  -webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.hidecard{background:#F7F9FF;color:#1F2A44;border:0.6vmin solid #1F2A44;border-radius:3.4vmin;box-shadow:1vmin 1vmin 0 #05081A;padding:4vmin 5vmin;max-width:92vw;text-align:center}
+.hidecard h2{margin:0 0 1.4vmin;font-size:6vmin;font-weight:600}
+.hidecard p{margin:0 0 3vmin;font-size:3.4vmin;color:#4F5F80}
+.hours{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center;margin-bottom:2.4vmin}
+.hours button{min-width:15vmin;margin:1vmin;padding:2vmin 2.4vmin;font-size:4.2vmin;border-radius:2.4vmin;background:#FFD93D;color:#1F2A44;border:0.5vmin solid #1F2A44;text-align:center}
+.hidecancel{padding:1.6vmin 4vmin;font-size:3.6vmin;border-radius:5vmin;background:#F7F9FF;color:#1F2A44;border:0.5vmin solid #1F2A44}
 @media (orientation: portrait){
   .games{-webkit-flex-direction:column;flex-direction:column;margin:0 0 6vmin}
   .game{margin:1.6vmin 0}

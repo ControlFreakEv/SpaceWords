@@ -27,6 +27,16 @@
 </div>
 <!-- turn timer: 5 minutes each, then "Switch turns!" (filled in by speech.js) -->
 <div class="turnbar" id="turnbar"></div>
+<!-- grown-ups: hold to open, then hide Space Words for a few hours (hub.js; HideTimer.kt) -->
+<div class="adultrow"><button class="adultbtn" id="adultBtn"><i class="fill" id="adultFill"></i><span>Grown-ups (hold)</span></button></div>
+<div class="hidepop" id="hidePop" style="display:none">
+  <div class="hidecard">
+    <h2>Hide Space Words</h2>
+    <p id="hideMsg">The UFO goes away for a while and comes back by itself, even after a restart.</p>
+    <div class="hours" id="hideHours"></div>
+    <button class="hidecancel" id="hideCancel">Cancel</button>
+  </div>
+</div>
 <script src="speech.js"></script>
 <script src="hub.js"></script>
 </body>

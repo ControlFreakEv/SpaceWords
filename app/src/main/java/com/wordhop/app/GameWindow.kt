@@ -159,6 +159,14 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         @JavascriptInterface
         fun backToPhotos() { ui.post { hide() } }
 
+        /** grown-ups: hide Space Words for this many hours (the UFO comes back by itself) */
+        @JavascriptInterface
+        fun hideFor(hours: Int) {
+            HideTimer.hide(ctx, hours.coerceIn(1, 48) * 3_600_000L)
+            TurnTimer.stop()
+            ui.post { hide() }
+        }
+
         @JavascriptInterface
         fun turnStart(ms: Long) = TurnTimer.start(ms.coerceIn(1_000L, 60 * 60_000L))
 

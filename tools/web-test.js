@@ -150,8 +150,12 @@ const server = http.createServer((req, res) => {
     if (kind === "pad") {
       const ans = await page.evaluate(() => MathGame.state().R.answer);
       const wrongDigit = String((ans + 1) % 10);
-      for (let t = 0; t < 3; t++) { await page.locator(".key", { hasText: new RegExp("^" + wrongDigit + "$") }).click(); await page.locator(".key.go").click(); }
-      const shown = await page.evaluate(() => document.getElementById("entry").textContent);
+      // three wrong answers, read straight away (the test's fast timers move on to the next round quickly)
+      const shown = await page.evaluate(d => {
+        const keys = Array.from(document.querySelectorAll(".pad .key")), go = document.querySelector(".pad .key.go");
+        for (let t = 0; t < 3; t++) { keys.filter(b => b.textContent === d)[0].click(); go.click(); }
+        return document.getElementById("entry").textContent;
+      }, wrongDigit);
       await shot("keypad-reveal");
       shown === String(ans) ? ok("keypad reveals the answer after 3 misses") : fail("keypad reveal shows " + shown + " not " + ans);
       break;
@@ -966,6 +970,27 @@ const server = http.createServer((req, res) => {
     if (SHOTS) await pp.screenshot({ path: path.join(SHOTS, "portrait-class-write.png") });
     await pp.close();
     portraitBad.length ? fail("portrait: " + portraitBad.slice(0, 6).join(" | ")) : ok("portrait (800 x 1280): every picker, level list and game screen fits, nothing under the Back button");
+  }
+
+  // Grown-ups: hold 1.5 s on Pick a mission, then hide Space Words for some hours (the app keeps the time)
+  {
+    const hp = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await hp.addInitScript(() => { window.__hid = []; window.AndroidApp = { hideFor: h => window.__hid.push(h), backToPhotos: () => {} }; });
+    await hp.goto(base + "index.html"); await hp.waitForTimeout(200);
+    const open = () => hp.evaluate(() => document.getElementById("hidePop").style.display !== "none");
+    const bb = await hp.locator("#adultBtn").boundingBox();
+    await hp.mouse.move(bb.x + 20, bb.y + 10); await hp.mouse.down(); await hp.waitForTimeout(500); await hp.mouse.up();
+    const quick = await open();
+    await hp.mouse.down(); await hp.waitForTimeout(1700); await hp.mouse.up();
+    const held = await open();
+    await hp.evaluate(() => goBack()); const backCloses = !(await open());
+    await hp.mouse.down(); await hp.waitForTimeout(1700); await hp.mouse.up();
+    await hp.click('#hideHours button[data-hours="3"]'); await hp.waitForTimeout(1500);
+    const hid = await hp.evaluate(() => window.__hid);
+    await hp.close();
+    !quick && held && backCloses && hid.join() === "3"
+      ? ok("grown-ups: a quick tap does nothing, holding opens Hide; Back closes it; 3 hours asks the app to hide for 3")
+      : fail("grown-ups hide: " + JSON.stringify({ quick, held, backCloses, hid }));
   }
 
   // Hubs show star totals after playing.
