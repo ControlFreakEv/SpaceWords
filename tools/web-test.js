@@ -506,8 +506,9 @@ const server = http.createServer((req, res) => {
   await page.goto(base + "compound.html"); await page.waitForTimeout(150); await shot("compound-levels");
   const cw = await page.evaluate(() => {
     const d = Compound.data, all = d.PIC.concat(d.MID, d.BIG), bad = [];
-    for (let t = 0; t < 400; t++) {
+    for (let t = 0; t < all.length * 3; t++) {
       const c = all[t % all.length], wrong = Compound.wrongSeconds(c.a, c.b, all, 3);
+      if (wrong.length !== 3) bad.push("only " + wrong.length + " wrong choices for " + c.w);
       wrong.forEach(b => { if (d.KNOWN[c.a + b]) bad.push(c.a + "+" + b); });
       [d.PIC, d.MID, d.BIG].forEach(pool => {
         const set = Compound.matchSet(pool, 4);
@@ -518,6 +519,65 @@ const server = http.createServer((req, res) => {
     return bad.slice(0, 10);
   });
   cw.length ? cw.forEach(b => fail("compound: " + b)) : ok("compound: wrong choices never make real words; match boards pair up one way");
+  // The word lists: no repeats, a picture file for every picture puzzle, a clip (normal and slow) for every word said.
+  const cdata = await page.evaluate(() => {
+    const d = Compound.data, list = L => L.map(c => [c.a, c.b, c.w, c.img]);
+    return { PIC: list(d.PIC), MID: list(d.MID), BIG: list(d.BIG), NOT: d.NOT, KNOWN: Object.keys(d.KNOWN) };
+  });
+  const cbad = [], ckeys = new Set();
+  for (const name of ["PIC", "MID", "BIG"]) {
+    const L = cdata[name], seen = new Set();
+    L.forEach(([a, b, w, img]) => {
+      if (seen.has(w)) cbad.push(name + " repeats " + w);
+      seen.add(w);
+      if (!a || !b || !/^[a-z]+$/.test(w)) cbad.push(name + " bad entry " + a + "+" + b);
+      if (name === "PIC" && (!img || !fs.existsSync(path.join(WWW, "emoji", img + ".svg")))) cbad.push("no picture for " + w + " (" + img + ")");
+      [a, b, w].forEach(x => { ckeys.add("w_" + x); ckeys.add("ws_" + x); });
+    });
+  }
+  if (new Set(cdata.NOT).size !== cdata.NOT.length) cbad.push("NOT has repeats");
+  const cknown = new Set(cdata.KNOWN);
+  cdata.NOT.forEach(w => { if (cknown.has(w)) cbad.push("NOT word is a compound: " + w); });
+  const cmiss = [...ckeys].filter(k => !(k in phrases));
+  if (cmiss.length) cbad.push("words without clips: " + cmiss.join(", "));
+  cbad.length ? cbad.slice(0, 10).forEach(b => fail("compound: " + b))
+    : ok("compound: " + cdata.PIC.length + " picture, " + cdata.MID.length + " middle, " + cdata.BIG.length + " big words, " + cdata.NOT.length +
+      " not-compounds: no repeats, every picture there, all " + ckeys.size + " word clips listed");
+  // Generated rounds of every level, built off screen: one right answer each, and a wrong one never makes a real word.
+  const crounds = await page.evaluate(() => {
+    const d = Compound.data, bad = [], said = {};
+    let n = 0;
+    Compound.levels.forEach((lv, li) => {
+      for (let t = 0; t < 600; t++) {
+        const R = lv.rounds[t % lv.rounds.length](), st = document.createElement("div");
+        R.build(st); n++;
+        const tag = "L" + (li + 1) + " ";
+        st.querySelectorAll("[data-say]").forEach(e => { said[e.getAttribute("data-say")] = 1; });
+        R.say.forEach(k => { said[k] = 1; });
+        if (R.pairs) {
+          const p = R.pairs;
+          if (p.length !== 4) bad.push(tag + "match board has " + p.length + " pairs");
+          if (new Set(p.map(x => x.a)).size !== p.length || new Set(p.map(x => x.b)).size !== p.length) bad.push(tag + "match board repeats a half");
+          p.forEach(x => p.forEach(y => { if (x !== y && d.KNOWN[x.a + y.b]) bad.push(tag + "match board also makes " + x.a + y.b); }));
+          continue;
+        }
+        const oks = st.querySelectorAll("[data-ok]");
+        if (oks.length !== 1) { bad.push(tag + oks.length + " right answers"); continue; }
+        if (st.querySelector(".gap")) continue;  // split it: one right cut
+        const ch = [].map.call(st.querySelectorAll(".choice"), b => b.textContent), right = oks[0].textContent;
+        if (new Set(ch).size !== ch.length || ch.length !== (R.say[0] === "i_cbuild" ? 4 : 3)) bad.push(tag + "choices " + ch.join("/"));
+        if (R.say[0] === "i_cpic" && !st.querySelector("img.pic")) bad.push(tag + "picture puzzle without a picture");
+        const half = st.querySelector(".eqrow .half");
+        if (half) ch.forEach(b => { if (b !== right && d.KNOWN[half.textContent + b]) bad.push(tag + half.textContent + " + " + b + " is a word too"); });
+        else ch.forEach(w => { if ((w === right) !== !!d.KNOWN[w]) bad.push(tag + "which: " + w); });
+      }
+    });
+    return { n: n, bad: bad.slice(0, 10), said: Object.keys(said) };
+  });
+  const csaid = crounds.said.filter(k => !(k in phrases));
+  crounds.bad.forEach(b => fail("compound: " + b));
+  csaid.length ? fail("compound rounds say keys missing from phrases.json: " + csaid.join(", ")) : null;
+  if (!crounds.bad.length && !csaid.length) ok("compound: " + crounds.n + " generated rounds each have one right answer; wrong choices make no real word; " + crounds.said.length + " keys said exist");
   for (let i = 0; i < 5; i++) {
     await page.evaluate(i => Compound.start(i), i);
     for (let r = 0; r < 10; r++) {
