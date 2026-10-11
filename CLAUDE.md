@@ -32,7 +32,9 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Sound Lab** (sound-lab.html): pronunciation. Word notation `[a]` short, `{a}` long (bar on
   top), `<e>` silent, `(ai)` vowel team, `^ar^` bossy R, `-` syllable break; vowel colors a red,
   e orange, i green, o blue, u purple. Levels: short vowels (vowel swap), magic e, vowel teams,
-  syllables (sy_* clips are respellings, e.g. "ell uh fent"), bossy R. Stars: localStorage sound:best.
+  syllables (sy_* clips are respellings, e.g. "ell uh fent"), bossy R. Lists: 72 swap frames, 83 CVC,
+  46 magic e pairs, 98 vowel teams, 68 bossy R, 129 syllable words (web-test.js checks repeats, notation, clips).
+  Stars: localStorage sound:best.
   Each syllable clip must say the syllable *as shown*, split the same way (ba-na-na = "bah nah nuh",
   not the dictionary "buh NAN uh"); web-test.js checks every clip starts like its syllable.
 - `Speech.say(keys, done)`: done runs once after the last clip (not if interrupted). Look-then-spell rounds
