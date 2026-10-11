@@ -7,8 +7,8 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Picture Planet** (picture-planet.html): picture words in 5 levels. Rounds: read the word and
   tap the picture, hear it and tap the word, spell it from letter tiles.
 - **Sight Word Saucer** (saucer.html): all 220 Dolch words over 5 planets (Pre-primer to Grade 3).
-  Rounds: hear a word and beam it up from look-alikes, fill-in-the-blank sentences (67 curated,
-  each with its own distractors), look-cover-spell with a Peek button.
+  Rounds: hear a word and beam it up from look-alikes, fill-in-the-blank sentences (220 curated,
+  one per word, each with its own distractors), look-cover-spell with a Peek button.
 - **Math games** (math-game.html?g=count|ops|pattern): Star Count, Rocket Math, Alien Patterns.
   5 levels each, kindergarten starter to about 3rd grade; she's advanced, so keep the range wide.
   Choice rounds plus keypad rounds (3 misses reveal the answer). Stars: localStorage math:<g>:best.

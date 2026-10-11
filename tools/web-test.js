@@ -502,6 +502,32 @@ const server = http.createServer((req, res) => {
   const sentWords = await page.locator(".sentence .tw").count();
   sentWords > 2 ? ok("saucer sentence has " + sentWords + " tappable words") : fail("saucer sentence words not tappable");
   await shot("saucer-sentence");
+  // Saucer fill-in-the-blank data: one blank, 3 distinct distractors from the same planet, a clip of the
+  // whole sentence (the word may be capitalized at the start of a sentence), and a clip for every word.
+  {
+    const LV = JSON.parse(/^var LEVELS = (\[.*\]);$/m.exec(fs.readFileSync(path.join(WWW, "saucer.html"), "utf8"))[1]);
+    const bad = []; let n = 0;
+    LV.forEach(lv => {
+      const ws = lv.words.map(x => x.w);
+      lv.words.forEach(x => {
+        if (!x.s) return;
+        n++;
+        const id = lv.planet + " '" + x.w + "': ";
+        if (x.s.split("___").length !== 2) bad.push(id + "needs exactly one ___");
+        if (!Array.isArray(x.d) || x.d.length !== 3 || new Set(x.d).size !== 3 || x.d.indexOf(x.w) >= 0 || x.d.some(d => ws.indexOf(d) < 0))
+          bad.push(id + "distractors " + JSON.stringify(x.d));
+        const filled = x.s.replace("___", x.w), cap = x.s.replace("___", x.w.charAt(0).toUpperCase() + x.w.slice(1));
+        if (x.sk !== "s_" + x.k.slice(2) || !(x.sk in phrases)) bad.push(id + "no phrase " + x.sk);
+        else if (phrases[x.sk] !== filled && phrases[x.sk] !== cap) bad.push(id + "phrase '" + phrases[x.sk] + "' is not '" + filled + "'");
+        filled.split(/\s+/).forEach(t => {
+          const m = /^[^A-Za-z0-9']*([A-Za-z']+)[^A-Za-z0-9']*$/.exec(t), k = m && "w_" + m[1].toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (!m) bad.push(id + "odd token " + t);
+          else if (!(k in phrases) || !(("ws_" + k.slice(2)) in phrases)) bad.push(id + "no clip for " + k);
+        });
+      });
+    });
+    bad.length ? bad.slice(0, 20).forEach(b => fail("saucer sentence " + b)) : ok("all " + n + " saucer sentences: one blank, 3 distractors, a sentence clip and word clips");
+  }
 
   await page.goto(base + "words.html"); await page.waitForTimeout(150); await shot("words-after");
 
