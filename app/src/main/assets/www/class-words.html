@@ -372,6 +372,15 @@ function fitWeek(){
   }
 }
 window.addEventListener("resize", function(){ if (hasClass($("home"), "on")) renderHome(); }, false);
+/* the reading font can arrive after the first fit and make the words wider: fit again once it has
+   (Chromium 39: document.fonts.ready is a function; newer: a promise), and on timers as a fallback */
+function refitWeek(){ if (hasClass($("home"), "on")) fitWeek(); }
+try {
+  var fontsReady = document.fonts && document.fonts.ready;
+  if (typeof fontsReady === "function") fontsReady = fontsReady.call(document.fonts);
+  if (fontsReady && typeof fontsReady.then === "function") fontsReady.then(refitWeek);
+} catch(e){}
+setTimeout(refitWeek, 800); setTimeout(refitWeek, 2500);
 $("missionBtn").onclick = function(){ start("mission"); };
 $("wallBtn").onclick = function(){ renderWall(); show("wall"); };
 

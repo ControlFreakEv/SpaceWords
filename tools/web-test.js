@@ -625,6 +625,9 @@ const server = http.createServer((req, res) => {
       playRate: (k, t, r) => { window.__calls.push([k, r]); setTimeout(() => window.__clipDone(t), 5); }
     };
   });
+  // every phrase counts as recorded here: new words get their clips when update.bat runs make_audio.py,
+  // and a word without a clip is skipped (silent), which would make this check depend on the word drawn
+  await spd.route("**/audio/index.json", r => r.fulfill({ contentType: "application/json", body: JSON.stringify(Object.keys(phrases)) }));
   await spd.goto(base + "picture-planet.html"); await spd.waitForTimeout(150);
   await spd.evaluate(() => localStorage.removeItem("speech:slow"));
   let found = false;
@@ -952,7 +955,7 @@ const server = http.createServer((req, res) => {
     const crowd = [];
     for (const n of [2, 12, 30, 69]) {
       await page.evaluate(n => { const C = ClassWords, plan = C.plan(); plan.week = C.LIST.slice(0, n); plan.manual = true; localStorage.setItem("classwords:plan", JSON.stringify(plan)); }, n);
-      await page.reload(); await page.waitForTimeout(300);
+      await page.reload(); await page.waitForTimeout(1000);
       const r = await page.evaluate(() => {
         const wc = document.getElementById("weekChips"), rect = e => e.getBoundingClientRect();
         const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
