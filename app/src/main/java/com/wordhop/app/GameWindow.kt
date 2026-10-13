@@ -1,7 +1,10 @@
 package com.wordhop.app
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.AudioManager
@@ -77,6 +80,17 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         }
     }
 
+    /** If the screen goes off anyway (Skylight's sleep schedule, the power button), close the game
+     *  like the idle timeout does, so the photos are there when it comes back on, not the game. */
+    private val screenOff = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            if (!isShowing) return
+            Log.i(TAG, "Screen went off: back to the photos")
+            TurnTimer.stop()
+            hide()
+        }
+    }
+
     @Suppress("DEPRECATION")
     @SuppressLint("SetJavaScriptEnabled", "AddJavascriptInterface")
     fun show() {
@@ -115,9 +129,15 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, type,
             // focusable (no FLAG_NOT_FOCUSABLE) so the Back key reaches us
+            // KEEP_SCREEN_ON: the frame mustn't go to sleep (a black screen) mid-game; the idle close
+            // below brings the photos back after 10 minutes without a touch, and then Skylight decides.
             WindowManager.LayoutParams.FLAG_FULLSCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-            PixelFormat.OPAQUE
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+            // TRANSLUCENT, not OPAQUE (it still looks opaque: the page paints every pixel). Android ignores
+            // the brightness and keep-awake settings of a window hidden behind a full-screen OPAQUE one, so
+            // with OPAQUE, Skylight's screen brightness was dropped (the frame went to its system
+            // brightness) and its keep-awake too (the screen slept to black) while the game was open.
+            PixelFormat.TRANSLUCENT
         )
         try {
             wm.addView(frame, lp)
@@ -129,6 +149,7 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         }
         root = frame
         frame.requestFocus()
+        try { ctx.registerReceiver(screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF)) } catch (e: Exception) { Log.w(TAG, "screen-off watch", e) }
         web.loadUrl(HOME_URL)
 
         frameVolume = am.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -142,6 +163,7 @@ class GameWindow(private val ctx: Context, private val onClosed: () -> Unit) {
         val r = root ?: return
         root = null
         ui.removeCallbacks(idleCheck)
+        try { ctx.unregisterReceiver(screenOff) } catch (e: Exception) {}
         stopClip()
         pool?.release(); pool = null
         tts?.shutdown(); tts = null; ttsReady = false

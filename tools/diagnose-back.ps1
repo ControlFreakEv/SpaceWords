@@ -39,6 +39,11 @@ function Snapshot([string]$label) {
             }
         }
     }
+    # brightness and sleep: Skylight's window settings (sbrt= brightness, KEEP_SCREEN_ON) and what the screen uses
+    $s += "===== ${label}: screen brightness / sleep ====="
+    $s += A shell dumpsys power | Where-Object { $_ -match 'mWakefulness=|mScreenBrightnessSetting|mScreenBrightnessOverrideFromWindowManager|mScreenOffTimeoutSetting|mStayOn|mUserActivityTimeoutOverride|SCREEN_BRIGHT_WAKE_LOCK|mHoldingDisplaySuspendBlocker' } | ForEach-Object { "$_".TrimEnd() }
+    $s += "screen_off_timeout=$(A shell settings get system screen_off_timeout) brightness=$(A shell settings get system screen_brightness) auto=$(A shell settings get system screen_brightness_mode)"
+    $s += $win | Where-Object { $_ -match 'Window #.*skylight' -or ($_ -match 'mAttrs=' -and $_ -match 'skylight') } | ForEach-Object { "$_".TrimEnd() }
     return $s
 }
 

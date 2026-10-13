@@ -182,6 +182,12 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   only a translucent launcher trampoline. The WebView is created on open and destroyed on close
   (low RAM); the window closes itself after 10 minutes without a touch (any touch resets it, so a
   long turn isn't cut short), and that idle close also cancels the turn timer.
+  The window is PixelFormat.TRANSLUCENT (looks opaque) on purpose: Android ignores the brightness and
+  keep-awake settings of windows behind a full-screen OPAQUE one, so with OPAQUE the frame dropped
+  Skylight's brightness and fell asleep to a black screen during play. It also has FLAG_KEEP_SCREEN_ON
+  (the idle close hands the screen back to Skylight), and if the screen goes off anyway it closes like
+  the idle timeout (stopping the turn timer), so the photos are there when it wakes.
+  diagnose-back.ps1 records brightness/sleep settings and Skylight's window flags.
 - `ro.config.low_ram=true`. On 2026-10-05 the old build froze on "Back to photos" and Android
   silently killed it ("user request after error": the frame shows no ANR dialog), which explains
   both the long black screen and the vanished UFO. Prime suspect: WebView's media player stuck
