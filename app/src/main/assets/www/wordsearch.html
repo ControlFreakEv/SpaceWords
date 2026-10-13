@@ -68,6 +68,22 @@ img{display:block}
 .wi.done{border-color:#7CFFB2;color:#7CFFB2}
 .wi.done span{text-decoration:line-through}
 .helpb{margin-top:1.6vmin;padding:1.4vmin 3vmin;font-size:3.4vmin;border-radius:5vmin;background:#F7F9FF;color:#1F2A44;border:0.5vmin solid #1F2A44}
+/* now and then: "Which way does <word> go?" (left/right/up/down or north/south/east/west) in place of the word list */
+.cell.ask{box-shadow:0 0 0 0.4vmin #1F2A44 inset}
+.cell.askfirst{box-shadow:0 0 0 0.8vmin #E5487A inset}
+.qbox{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;padding:2vmin 2.4vmin;max-width:50vmin}
+.qinfo{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center}
+.qtop{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+.qtext{margin:0;font-size:4.4vmin;line-height:1.2;text-align:center}
+.qsub{margin:1vmin 0 0;font-size:3.2vmin;color:#4F5F80;text-align:center}
+.pad{position:relative;width:43vmin;height:37vmin;margin-top:2vmin;-webkit-flex:none;flex:none}
+.way{position:absolute;width:13vmin;height:11.5vmin;border-radius:2vmin;background:#FFFFFF;border:0.5vmin solid #1F2A44;box-shadow:0.5vmin 0.5vmin 0 #05081A;color:#1F2A44;
+  font-size:3.2vmin;line-height:1.1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.way b{font-size:5.4vmin;line-height:1}
+.way.u{left:15vmin;top:0}.way.d{left:15vmin;top:25.5vmin}.way.l{left:0;top:12.75vmin}.way.r{left:30vmin;top:12.75vmin}
+.way.ok{background:#7CFFB2}
+.way.bad{background:#FFC2E6;opacity:.55}
+.pad img{position:absolute;left:16.5vmin;top:14.25vmin;width:10vmin;height:10vmin}
 .nope{-webkit-animation:shake .4s;animation:shake .4s}
 @-webkit-keyframes shake{20%{-webkit-transform:translateX(-1.4vmin)}40%{-webkit-transform:translateX(1.4vmin)}60%{-webkit-transform:translateX(-.8vmin)}80%{-webkit-transform:translateX(.8vmin)}}
 @keyframes shake{20%{transform:translateX(-1.4vmin)}40%{transform:translateX(1.4vmin)}60%{transform:translateX(-.8vmin)}80%{transform:translateX(.8vmin)}}
@@ -94,6 +110,9 @@ img{display:block}
   .side{margin:3vmin 0 0;-webkit-align-items:center;align-items:center}
   .list{-webkit-flex-direction:row;flex-direction:row;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center}
   .wi{margin:.6vmin}
+  .qbox{-webkit-flex-direction:row;flex-direction:row;max-width:none}
+  .qinfo{width:34vmin;margin-right:3vmin}
+  .pad{margin-top:0}
 }
 </style>
 <link rel="stylesheet" href="back.css">
@@ -164,6 +183,9 @@ LEVELS.forEach(function(L){
   L.pool.forEach(function(i){ POOLS[i].split(" ").forEach(function(p){ var a = p.split(":"); L.words.push({ w:a[0], img:a[1] }); }); });
 });
 var PUZZLES = 3;
+var ASK_RATE = 0.35;   // chance a found word (across or up/down, not the last one) brings a "Which way?" question; at most 2 a puzzle
+var WAYS = { lr:{ u:"up", d:"down", l:"left", r:"right" }, map:{ u:"north", d:"south", l:"west", r:"east" } };
+var ARROWS = { u:"&#8593;", d:"&#8595;", l:"&#8592;", r:"&#8594;" };
 var COLORS = ["#FFC93C","#FF8A3D","#E5487A","#3FB37F","#4BA3D9"];
 var FOUND = ["#7CFFB2","#5CE1E6","#FFD93D","#FF9ED8","#B9A2FF","#FFB27C","#A8E36B"];
 /* filler letters (no q, x, z: they'd stand out), and words that must never show up by chance */
@@ -256,7 +278,7 @@ function renderDots(){
 }
 function renderPuzzle(){
   var P = makePuzzle(G.level);
-  G.P = P; G.found = 0; G.misses = 0; G.helps = 0; G.locked = false; G.anchor = null;
+  G.P = P; G.found = 0; G.misses = 0; G.helps = 0; G.locked = false; G.anchor = null; G.asks = 0; G.q = null;
   renderDots();
   var stage = $("stage"); stage.innerHTML = "";
   var hr = el("div", "hintrow");
@@ -285,7 +307,7 @@ function renderPuzzle(){
   side.appendChild(list); side.appendChild(help);
   play.appendChild(grid); play.appendChild(side);
   stage.appendChild(play);
-  G.grid = grid; G.play = play; G.side = side;
+  G.grid = grid; G.play = play; G.side = side; G.list = list; G.help = help;
   layout();
   bind(grid);
   setTimeout(function(){ if (G && G.P === P) say(["i_search"]); }, 400);
@@ -375,7 +397,69 @@ function check(path){
   hit.cells.forEach(function(p){ var ce = G.cells[p[0]][p[1]]; ce.style.background = hit.color; removeClass(ce, "flash"); });
   addClass(hit.item, "done");
   if (G.found === G.P.words.length) puzzleDone(hit);
+  else if (G.asks < 2 && wayOf(hit) && Math.random() < ASK_RATE) askWay(hit, Math.random() < 0.5 ? "map" : "lr");
   else say([key(hit.w)]);
+}
+/* which way a word reads, first letter to last: "u", "d", "l", "r", or null if it's slanted */
+function wayOf(p){
+  var dr = p.cells[1][0] - p.cells[0][0], dc = p.cells[1][1] - p.cells[0][1];
+  return dr && dc ? null : dr < 0 ? "u" : dr > 0 ? "d" : dc < 0 ? "l" : "r";
+}
+/* "Which way does rocket go?": four arrow buttons around its picture, the word ringed on the grid
+   (its first letter in pink). Not counted for stars: 2 wrong tries and it shows the answer. */
+function askWay(p, kind){
+  var names = WAYS[kind], q = { p:p, kind:kind, ans:names[wayOf(p)], tries:0, done:false, btn:{} };
+  G.asks++; G.locked = true; G.q = q;
+  p.cells.forEach(function(c, i){ addClass(G.cells[c[0]][c[1]], i ? "ask" : "askfirst"); });
+  var box = el("div", "paper qbox"), info = el("div", "qinfo"), top = el("div", "qtop"), pad = el("div", "pad");
+  var instr = kind === "map" ? "i_way_map" : "i_way_lr";
+  top.appendChild(el("p", "qtext", Speech.tapText("Which way does " + p.w + " go?")));
+  if (Speech.canTalk()){
+    var sb = el("button", "press sayb flex", '<img src="emoji/1f50a.svg" alt="">');
+    sb.setAttribute("aria-label", "Hear the question");
+    sb.onclick = function(){ say([instr]); };
+    top.appendChild(sb);
+  }
+  info.appendChild(top);
+  info.appendChild(el("p", "qsub", Speech.tapText(kind === "map" ? "North is up, like on a map." : "Start at the pink letter.")));
+  pad.appendChild(el("img", "", undefined)).src = "emoji/" + p.img + ".svg";
+  ["u", "l", "r", "d"].forEach(function(k){
+    var b = el("button", "press way " + k, "<b>" + ARROWS[k] + "</b>" + names[k]);
+    b.setAttribute("data-way", names[k]);
+    b.onclick = function(){ answerWay(q, b, names[k]); };
+    q.btn[names[k]] = b; pad.appendChild(b);
+  });
+  box.appendChild(info); box.appendChild(pad);
+  q.box = box; q.pad = pad;
+  G.list.style.display = G.help.style.display = "none";
+  G.side.appendChild(box);
+  layout();
+  say([key(p.w), instr]);
+}
+function answerWay(q, b, dir){
+  if (!G || G.q !== q || q.done || hasClass(b, "bad")) return;
+  var closed = false;
+  function close(){ if (closed) return; closed = true; setTimeout(function(){ endAsk(q); }, 400); }
+  if (dir === q.ans){
+    q.done = true; addClass(b, "ok");
+    say(["p_praise_" + Math.floor(Math.random()*6), "p_it_goes", key(dir)], close);
+    setTimeout(close, 7000);
+    return;
+  }
+  q.tries++; addClass(b, "bad");
+  removeClass(q.pad, "nope"); void q.pad.offsetWidth; addClass(q.pad, "nope");
+  if (q.tries < 2){ say(["p_try"]); return; }
+  q.done = true; addClass(q.btn[q.ans], "ok");
+  say(["p_it_goes", key(q.ans)], close);
+  setTimeout(close, 7000);
+}
+function endAsk(q){
+  if (!G || G.q !== q) return;
+  G.q = null; G.locked = false;
+  q.p.cells.forEach(function(c){ var ce = G.cells[c[0]][c[1]]; removeClass(ce, "ask"); removeClass(ce, "askfirst"); });
+  if (q.box.parentNode) q.box.parentNode.removeChild(q.box);
+  G.list.style.display = G.help.style.display = "";
+  layout();
 }
 /* stuck? the first letter of a word still hidden flashes, and the word is said */
 function hint(){
@@ -446,7 +530,8 @@ function confetti(target){
 
 /* hooks for automated tests (harmless on the frame) */
 window.WordSearch = { levels:LEVELS, pools:POOLS, rude:RUDE, make:makePuzzle, lines:lines, count:count, state:function(){ return G; }, start:startLevel,
-  find:function(i){ var p = G.P.words[i]; check(p.cells); }, puzzles:PUZZLES };
+  find:function(i){ var p = G.P.words[i]; check(p.cells); }, puzzles:PUZZLES, wayOf:wayOf, ask:function(i, kind){ askWay(G.P.words[i], kind); },
+  askRate:function(r){ ASK_RATE = r; } };
 
 document.addEventListener("touchstart", function(){}, true);
 renderHome();

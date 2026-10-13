@@ -50,6 +50,11 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   (lines snap to 45 degrees). makePuzzle re-rolls until every word appears exactly once in all 8
   directions and no RUDE word shows up by chance (no q/x/z filler). Hint flashes a first letter and
   says "Look for <word>". Stars: localStorage search:best.
+  Now and then (ASK_RATE 0.35, at most 2 a puzzle, never the last word, never slanted words) a find
+  brings "Which way does <word> go?" in place of the word list: 4 arrow buttons around its picture,
+  half the time left/right/up/down, half north/south/east/west ("North is up, like on a map"); the
+  word's first letter is ringed pink. 2 wrong taps show the answer; not counted for stars.
+  WordSearch.askRate(r) in tests.
 - **Compound Words** (compound.html): picture puzzles, match the halves, split it, build it, big
   words. PIC/MID/BIG lists of "first second" (84/112/88, NOT 80 distractors); KNOWN (all of them
   plus EXTRA real compounds) makes sure wrong choices never form a real word and match boards pair

@@ -594,6 +594,7 @@ const server = http.createServer((req, res) => {
 
   // Word Search: every puzzle hides each word exactly once (in the level's directions), nothing rude, words match Picture Planet.
   await page.goto(base + "wordsearch.html"); await page.evaluate(() => localStorage.removeItem("search:best")); await page.reload(); await page.waitForTimeout(150);
+  await page.evaluate(() => WordSearch.askRate(0));   // "Which way?" questions get their own test below
   await shot("search-levels");
   {
     const ppSrc = fs.readFileSync(path.join(WWW, "picture-planet.html"), "utf8");
@@ -653,6 +654,59 @@ const server = http.createServer((req, res) => {
     await page.click(".helpb");
     const mh = await page.evaluate(() => { const G = WordSearch.state(); return [G.misses, G.helps, document.querySelectorAll(".cell.flash").length]; });
     mh[0] === 1 && mh[1] === 1 && mh[2] === 1 ? ok("word search: a wrong line is a miss, Hint flashes one first letter") : fail("word search miss/hint: " + JSON.stringify(mh));
+  }
+  // "Which way does <word> go?": now and then after a find (across/down/backwards words only, at most 2 a puzzle).
+  {
+    const WAYS = { lr: { "0,1": "right", "0,-1": "left", "1,0": "down", "-1,0": "up" }, map: { "0,1": "east", "0,-1": "west", "1,0": "south", "-1,0": "north" } };
+    const bad = [], kinds = {};
+    for (const vp of [{ width: 1280, height: 800 }, { width: 800, height: 1280 }]) {
+      await page.setViewportSize(vp);
+      for (let t = 0; t < 6; t++) {
+        await page.evaluate(() => { WordSearch.askRate(1); WordSearch.start(3); }); await page.waitForTimeout(60);
+        const straight = await page.evaluate(() => WordSearch.state().P.words.map((p, i) => WordSearch.wayOf(p) ? i : -1).filter(i => i >= 0));
+        if (straight.length < 3) continue;
+        const asked = [];
+        for (const i of straight.slice(0, 3)) {
+          await page.evaluate(i => WordSearch.find(i), i); await page.waitForTimeout(40);
+          const q = await page.evaluate(() => { const G = WordSearch.state(), q = G.q; if (!q) return null;
+            const c = q.p.cells, box = q.box.getBoundingClientRect(), g = G.grid.getBoundingClientRect();
+            const over = !(box.right <= g.left || box.left >= g.right || box.bottom <= g.top || box.top >= g.bottom);
+            const outside = box.left < 0 || box.top < 0 || box.right > innerWidth + 1 || box.bottom > innerHeight + 1;
+            const tw = [].map.call(q.box.querySelectorAll(".tw"), e => e.getAttribute("data-say"));
+            return { kind: q.kind, ans: q.ans, d: [c[1][0] - c[0][0], c[1][1] - c[0][1]].join(","), ways: [].map.call(q.box.querySelectorAll(".way"), b => b.getAttribute("data-way")),
+              over, outside, tw, say: !!q.box.querySelector(".sayb"), listHidden: G.list.style.display === "none", locked: G.locked, ring: document.querySelectorAll(".cell.askfirst").length }; });
+          asked.push(q);
+          if (!q) continue;
+          kinds[q.kind] = 1;
+          const want = WAYS[q.kind][q.d];
+          if (q.ans !== want) bad.push(q.d + " should be " + want + ", asked " + q.ans);
+          if (q.ways.sort().join() !== Object.values(WAYS[q.kind]).sort().join()) bad.push("buttons " + q.ways);
+          if (q.over || q.outside) bad.push("question box " + (q.over ? "covers the grid" : "is off screen") + " at " + vp.width + "x" + vp.height);
+          if (!q.say || !q.listHidden || !q.locked || q.ring !== 1) bad.push("question screen " + JSON.stringify(q));
+          q.tw.forEach(k => { if (!(k in phrases)) bad.push(k + " has no clip"); });
+          ["i_way_" + q.kind, "p_it_goes", "w_" + q.ans, "ws_" + q.ans].forEach(k => { if (!(k in phrases)) bad.push(k + " has no clip"); });
+          if (t === 0) await shot("search-way-" + q.kind + (vp.width < vp.height ? "-portrait" : ""));
+          const wrong = q.ways.filter(w => w !== q.ans);
+          if (asked.length === 1) {   // two wrong taps: try again, then it shows the answer
+            await page.click('.way[data-way="' + wrong[0] + '"]');
+            const mid = await page.evaluate(() => [!!WordSearch.state().q, document.querySelectorAll(".way.bad").length, document.querySelectorAll(".way.ok").length]);
+            if (!mid[0] || mid[1] !== 1 || mid[2] !== 0) bad.push("after one wrong tap " + mid);
+            await page.click('.way[data-way="' + wrong[1] + '"]');
+            const shown = await page.evaluate(a => !!document.querySelector('.way.ok[data-way="' + a + '"]'), q.ans);
+            if (!shown) bad.push("2 wrong taps didn't show " + q.ans);
+          } else await page.click('.way[data-way="' + q.ans + '"]');
+          await page.waitForFunction(() => !WordSearch.state().q, null, { timeout: 4000 });
+          const back = await page.evaluate(() => { const G = WordSearch.state(); return [G.locked, G.list.style.display, !!document.querySelector(".qbox"), document.querySelectorAll(".cell.ask,.cell.askfirst").length, G.misses]; });
+          if (back.join() !== "false,,false,0,0") bad.push("after the question " + back);
+        }
+        if (!asked[0] || !asked[1] || asked[2]) bad.push("questions after 3 finds: " + asked.map(q => !!q));
+      }
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.evaluate(() => WordSearch.askRate(0));
+    if (!kinds.lr || !kinds.map) bad.push("only saw " + Object.keys(kinds));
+    bad.length ? fail("word search which way: " + bad.slice(0, 8).join("; "))
+      : ok("word search: \"Which way does it go?\" left/right/up/down and north/south/east/west, right answer from the word's cells, 2 tries then shown, at most 2 a puzzle, fits beside/under the grid");
   }
   for (let i = 0; i < 5; i++) {
     await page.evaluate(i => WordSearch.start(i), i);

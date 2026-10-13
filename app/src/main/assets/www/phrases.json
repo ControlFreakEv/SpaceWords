@@ -4035,5 +4035,14 @@
  "i_search": "Find the words. Slide your finger along the letters.",
  "p_look_for": "Look for",
  "w_along": "along",
- "ws_along": "along"
+ "ws_along": "along",
+ "i_way_lr": "Which way does it go? Left, right, up, or down?",
+ "i_way_map": "Which way does it go? North, south, east, or west? North is up, like on a map.",
+ "p_it_goes": "It goes",
+ "w_south": "south",
+ "ws_south": "south",
+ "w_east": "east",
+ "ws_east": "east",
+ "w_west": "west",
+ "ws_west": "west"
 }
