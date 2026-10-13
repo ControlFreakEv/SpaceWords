@@ -4044,5 +4044,18 @@
  "w_east": "east",
  "ws_east": "east",
  "w_west": "west",
- "ws_west": "west"
+ "ws_west": "west",
+ "p_which_way_is": "Which way is the",
+ "p_from_alien": "from the alien?",
+ "p_north_up": "North is up, like on a map.",
+ "p_its": "It's",
+ "p_its_the": "It's the",
+ "dq_up": "Tap the picture up from the alien.",
+ "dq_down": "Tap the picture down from the alien.",
+ "dq_left": "Tap the picture to the left of the alien.",
+ "dq_right": "Tap the picture to the right of the alien.",
+ "dq_north": "Tap the picture north of the alien.",
+ "dq_south": "Tap the picture south of the alien.",
+ "dq_east": "Tap the picture east of the alien.",
+ "dq_west": "Tap the picture west of the alien."
 }

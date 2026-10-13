@@ -36,7 +36,7 @@ const server = http.createServer((req, res) => {
   page.on("pageerror", e => errors.push(e.message));
   page.on("console", m => { if (m.type() === "error" && !/audio|mp3|Failed to load resource/i.test(m.text())) errors.push(m.text()); });
   // Fast-forward the pauses between rounds.
-  await page.addInitScript(() => { const st = window.setTimeout; window.setTimeout = (f, d, ...a) => st(f, d >= 1500 ? 5 : d, ...a); });
+  await page.addInitScript(() => { const st = window.setTimeout; window.setTimeout = (f, d, ...a) => st(f, d >= 1500 ? 5 : d, ...a); window.__waysRate = 0; });
   const shot = async name => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: path.join(SHOTS, name + ".png") }); } };
 
   // Pickers
@@ -722,6 +722,86 @@ const server = http.createServer((req, res) => {
   const wsGot = await page.evaluate(() => document.querySelector('[data-go="wordsearch.html"] .got').textContent);
   /15/.test(wsGot) ? ok("words.html: Word Search card shows its 15 stars") : fail("Word Search card shows " + JSON.stringify(wsGot));
 
+  // "Which way?" bonus questions (ways.js) in the other word games: wired in between rounds, every kind
+  // of question answered from the board, 2 tries then shown, fits the screen both ways up, Back drops it.
+  {
+    const bad = [];
+    const ppSrc = fs.readFileSync(path.join(WWW, "picture-planet.html"), "utf8");
+    const pp = {}; JSON.parse(ppSrc.match(/^var RAW = (\[.*\]);$/m)[1]).forEach(l => l.forEach(([w, c]) => pp[w] = c));
+    const pages = { "picture-planet.html": "renderRound", "saucer.html": "renderRound", "sound-lab.html": "renderRound", "compound.html": "renderRound", "class-words.html": "renderRound", "match.html": "renderBoard" };
+    for (const [pg, fn] of Object.entries(pages)) {
+      const src = fs.readFileSync(path.join(WWW, pg), "utf8");
+      if (!src.includes('<script src="ways.js"></script>')) bad.push(pg + " doesn't load ways.js");
+      if (!src.includes("else Ways.between(" + fn + ");")) bad.push(pg + " doesn't ask between rounds");
+      if (!/function show\(id\)\{[^\n]*Ways\.close\(\);/.test(src)) bad.push(pg + " show() doesn't close a question");
+    }
+    const pics = await (async () => { await page.goto(base + "picture-planet.html"); await page.waitForTimeout(100); return page.evaluate(() => Ways.pics); })();
+    pics.forEach(p => { if (pp[p.w] !== p.img) bad.push(p.w + " isn't in Picture Planet with the same picture");
+      ["w_", "ws_"].forEach(k => { if (!((k + p.w) in phrases)) bad.push(k + p.w + " has no clip"); }); });
+    const kinds = {};
+    for (const vp of [{ width: 1280, height: 800 }, { width: 800, height: 1280 }]) {
+      await page.setViewportSize(vp);
+      for (const pg of ["picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "class-words.html"]) {
+        await page.goto(base + pg); await page.waitForTimeout(100);
+        let n = 0;
+        for (const form of ["way", "pick"]) for (const kind of ["lr", "map"]) {
+          n++;
+          const q = await page.evaluate(([form, kind]) => { window.__next = 0; const q = Ways.ask(() => window.__next++, form, kind);
+            const box = q.el.querySelector(".wy-card").getBoundingClientRect(), bk = document.getElementById("backBtn").getBoundingClientRect();
+            const near = { u: "d", d: "u", l: "r", r: "l" };
+            return { form, kind, target: q.target, ans: q.ans, at: Object.keys(q.at).reduce((o, k) => (o[k] = q.at[k].w, o), {}), keys: q.keys,
+              tw: [].map.call(q.el.querySelectorAll(".tw"), e => e.getAttribute("data-say")), say: !!q.el.querySelector(".sayb"),
+              choices: [].map.call(q.el.querySelectorAll(form === "way" ? ".wy-way" : "button.wy-slot"), b => b.getAttribute(form === "way" ? "data-way" : "data-pic")),
+              off: box.left < 0 || box.top < 0 || box.right > innerWidth + 1 || box.bottom > innerHeight + 1,
+              underBack: !(box.left >= bk.right || box.top >= bk.bottom),
+              slots: [].map.call(q.el.querySelectorAll(".wy-slot"), s => { const r = s.getBoundingClientRect(); return [s.className.split(" ")[1], r.left + r.width / 2, r.top + r.height / 2]; }) }; }, [form, kind]);
+          kinds[form + kind] = 1;
+          const names = kind === "lr" ? { u: "up", d: "down", l: "left", r: "right" } : { u: "north", d: "south", l: "west", r: "east" };
+          // where each picture really is on screen, relative to the alien
+          const c = q.slots.filter(s => s[0] === "c")[0], dirOf = s => { const dx = s[1] - c[1], dy = s[2] - c[2]; return Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "l" : "r") : (dy < 0 ? "u" : "d"); };
+          q.slots.filter(s => s[0] !== "c").forEach(s => { if (dirOf(s) !== s[0]) bad.push(pg + ": slot " + s[0] + " is drawn " + dirOf(s)); });
+          const want = form === "way" ? names[q.target] : q.at[q.target];
+          if (q.ans !== want) bad.push(pg + " " + form + "/" + kind + ": answer " + q.ans + ", should be " + want);
+          if (q.choices.length !== 4 || q.choices.indexOf(q.ans) < 0) bad.push(pg + " choices " + q.choices);
+          if (q.off || q.underBack) bad.push(pg + " " + form + "/" + kind + " card " + (q.off ? "off screen" : "under the Back button") + " at " + vp.width + "x" + vp.height);
+          if (!q.say) bad.push(pg + " question has no speaker button");
+          q.tw.concat(q.keys).forEach(k => { if (!(k in phrases)) bad.push(k + " has no clip"); });
+          ["p_its", "p_its_the", "w_" + names[q.target], "ws_" + names[q.target]].forEach(k => { if (!(k in phrases)) bad.push(k + " has no clip"); });
+          if (pg === "picture-planet.html") await shot("ways-" + form + "-" + kind + (vp.width < vp.height ? "-portrait" : ""));
+          const sel = v => form === "way" ? '.wy-way[data-way="' + v + '"]' : 'button.wy-slot[data-pic="' + v + '"]';
+          const wrong = q.choices.filter(v => v !== q.ans);
+          if (n === 1) {   // two wrong taps: try again, then it shows the answer
+            await page.click(sel(wrong[0]));
+            const mid = await page.evaluate(() => [!!Ways.state(), document.querySelectorAll(".wy-bad").length, window.__next]);
+            if (mid.join() !== "true,1,0") bad.push(pg + " after one wrong tap " + mid);
+            await page.click(sel(wrong[1]));
+            if (!(await page.evaluate(s => !!document.querySelector(s + ".wy-ok"), sel(q.ans)))) bad.push(pg + " 2 wrong taps didn't show the answer");
+          } else await page.click(sel(q.ans));
+          await page.waitForFunction(() => !Ways.state() && window.__next === 1, null, { timeout: 4000 }).catch(() => bad.push(pg + " " + form + "/" + kind + " didn't move on"));
+          if (await page.locator(".wy-back").count()) bad.push(pg + " question still on screen");
+        }
+        // Back while a question is up: it goes, and the next round doesn't start
+        if (pg === "class-words.html") await page.evaluate(() => ClassWords.start("find")); else await page.locator("#path button").first().click();
+        await page.waitForTimeout(60);
+        const inGame = await page.evaluate(() => document.body.getAttribute("data-screen"));
+        if (inGame !== "game") bad.push(pg + " didn't start a game (" + inGame + ")");
+        await page.evaluate(() => { window.__next = 0; Ways.ask(() => window.__next++); window.goBack(); });
+        await page.waitForTimeout(50);
+        const gone = await page.evaluate(() => [!!Ways.state(), document.querySelectorAll(".wy-back").length, window.__next]);
+        if (gone.join() !== "false,0,0") bad.push(pg + " Back left the question " + gone);
+      }
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+    // between(): mostly straight on, at most 1 question in 3 rounds, and some questions
+    const mix = await page.evaluate(() => { Ways.rate(0.22); let asked = 0, ran = 0, last = -9, close = 0;
+      for (let i = 0; i < 400; i++) { Ways.between(() => ran++); if (Ways.state()) { asked++; if (i - last < 3) close++; last = i; Ways.close(); ran++; } }
+      Ways.rate(0); return [asked, ran, close]; });
+    if (mix[1] !== 400 || mix[2] || mix[0] < 15 || mix[0] > 110) bad.push("between() mix " + mix);
+    if (Object.keys(kinds).length !== 4) bad.push("kinds " + Object.keys(kinds));
+    bad.length ? fail("which way questions: " + bad.slice(0, 8).join("; "))
+      : ok("which way questions in 6 word games: wired between rounds, left/right/up/down and north/south/east/west, which-way and tap-the-picture, right answers from the board, 2 tries, fit both ways up, Back drops them; " + mix[0] + " in 400 rounds");
+  }
+
   // Class Words (her kindergarten list): data, every activity, words taking turns, grown-ups screen.
   await page.goto(base + "class-words.html"); await page.evaluate(() => localStorage.clear()); await page.reload(); await page.waitForTimeout(150);
   await shot("class-home");
@@ -1382,7 +1462,7 @@ const server = http.createServer((req, res) => {
   // and Connect the Pairs lines follow the cards when it turns
   {
     const pp = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-    await pp.addInitScript(() => { const st = window.setTimeout; window.setTimeout = (f, d, ...a) => st(f, d >= 1500 ? 5 : d, ...a); });
+    await pp.addInitScript(() => { const st = window.setTimeout; window.setTimeout = (f, d, ...a) => st(f, d >= 1500 ? 5 : d, ...a); window.__waysRate = 0; });
     // a matched pair, then turn the frame
     await pp.goto(base + "match.html?g=connect"); await pp.evaluate(() => MatchGame.start(0)); await pp.waitForTimeout(200);
     await pp.evaluate(() => { const p = MatchGame.state().pairs[0], items = Array.from(document.querySelectorAll(".item"));

@@ -55,6 +55,14 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   half the time left/right/up/down, half north/south/east/west ("North is up, like on a map"); the
   word's first letter is ringed pink. 2 wrong taps show the answer; not counted for stars.
   WordSearch.askRate(r) in tests.
+- **"Which way?" bonus questions** (ways.js; owner's request, in all the other word games): each page's
+  nextRound/board-done calls `Ways.between(renderRound)` instead of renderRound(); now and then
+  (RATE 0.22, at least 3 rounds apart, never before the end screen) a popup over the game asks first,
+  then starts the round. 4 easy Picture Planet pictures around the alien; "Which way is the cat from
+  the alien?" (4 arrow buttons) or "Tap the picture north of the alien." (dq_* clips), each with
+  left/right/up/down or north/south/east/west. 2 wrong taps show the answer; not counted for stars.
+  Each page's show() calls Ways.close() so Back drops it. Tests set window.__waysRate = 0 in the init
+  script and call Ways.ask(next, form, kind) directly.
 - **Compound Words** (compound.html): picture puzzles, match the halves, split it, build it, big
   words. PIC/MID/BIG lists of "first second" (84/112/88, NOT 80 distractors); KNOWN (all of them
   plus EXTRA real compounds) makes sure wrong choices never form a real word and match boards pair

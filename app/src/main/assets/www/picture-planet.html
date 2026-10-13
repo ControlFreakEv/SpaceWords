@@ -153,6 +153,7 @@ img{display:block}
 </section>
 
 <script src="speech.js"></script>
+<script src="ways.js"></script>
 <script>
 (function(){
 "use strict";
@@ -170,7 +171,7 @@ function $(id){ return document.getElementById(id); }
 function el(tag, cls, html){ var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
 function shuffle(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
-function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); }
+function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); Ways.close(); }
 function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ") >= 0; }
 function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
 function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
@@ -367,7 +368,7 @@ function wrong(target, dim){
 
 function nextRound(){
   G.round++;
-  if (G.round >= ROUNDS) showEnd(); else renderRound();
+  if (G.round >= ROUNDS) showEnd(); else Ways.between(renderRound);
 }
 
 function showEnd(){

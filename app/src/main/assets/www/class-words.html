@@ -216,6 +216,7 @@ img{display:block}
 </section>
 
 <script src="speech.js"></script>
+<script src="ways.js"></script>
 <script>
 (function(){
 "use strict";
@@ -228,7 +229,7 @@ function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ")
 function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
 function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
 var SCREENS = ["home","game","end","wall","adult"];
-function show(id){ SCREENS.forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); if (id === "home") fitWeek(); }
+function show(id){ SCREENS.forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); Ways.close(); if (id === "home") fitWeek(); }
 function wk(w){ return Speech.key(w); }
 function sk(w){ return "cs_" + w.toLowerCase(); }
 function img(code){ return '<img src="emoji/' + code + '.svg" alt="">'; }
@@ -501,7 +502,7 @@ function wrong(target, keys){
 }
 function nextRound(){
   G.round++;
-  if (G.round >= G.n) showEnd(); else renderRound();
+  if (G.round >= G.n) showEnd(); else Ways.between(renderRound);
 }
 function showEnd(){
   var k = G.kind, s = G.stars;
