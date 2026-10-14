@@ -55,7 +55,16 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   half the time left/right/up/down, half north/south/east/west ("North is up, like on a map"); the
   word's first letter is ringed pink. 2 wrong taps show the answer; not counted for stars.
   WordSearch.askRate(r) in tests.
-- **"Which way?" bonus questions** (ways.js; owner's request, in all the other word games): each page's
+- **Read and Answer** (read.html; last card in Word games, words.html has 9 cards: `.nine` in hub.css
+  = 5 + 4 in landscape, 3 x 3 in portrait): reading comprehension. 5 levels x 26 stories (One
+  sentence, Little details, Two sentences, Short stories, Think about it = inference), 8 a game,
+  stories not played lately first (localStorage read:recent). Each line "story | question | answer |
+  wrong | wrong | clue": 3 answer buttons (not tappable), every story and question word tappable (all
+  have w_/ws_ clips; names like Sam, Mia, Liv too). The clue (words in the story that give the
+  answer) lights up yellow after a right answer or 2 misses (p_story_says). Star = right first try;
+  stars: localStorage read:best. The story is never read aloud (she reads it). web-test.js checks
+  clues, answers, clips, and that levels 1-4 answers are in the story.
+- **"Which way?" bonus questions** (ways.js; owner's request, in all the other word games, Read and Answer too): each page's
   nextRound/board-done calls `Ways.between(renderRound)` instead of renderRound(); now and then
   (RATE 0.22, at least 3 rounds apart, never before the end screen) a popup over the game asks first,
   then starts the round. 4 easy Picture Planet pictures around the alien; "Which way is the cat from
@@ -236,7 +245,7 @@ The repo must stay **private**: the clips come from an unofficial Microsoft TTS 
 
 ## Build and check
 - `node tools/check-es5.js`: ES5 and Chromium 39 checks for all web code.
-- `node tools/web-test.js [shot-dir]`: plays every math, match, Sound Lab, Compound Words, Word Search and Class Words level in headless Chromium at 1280x800,
+- `node tools/web-test.js [shot-dir]`: plays every math, match, Sound Lab, Compound Words, Word Search, Read and Answer and Class Words level in headless Chromium at 1280x800,
   checks generated questions and speech keys, optional screenshots. Modern Chromium, so run
   check-es5 too. `python3 tools/sync_phrases.py --check`: speech.js matches phrases.json.
 - PowerShell scripts can be syntax-checked with a portable pwsh (GitHub release tarball).

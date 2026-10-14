@@ -283,7 +283,7 @@ const server = http.createServer((req, res) => {
     await shot(w.replace(".html", "") + "-round");
   }
   const literalKeys = [];
-  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html", "compound.html", "class-words.html", "wordsearch.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "math-game.html", "match.html", "sound-lab.html", "compound.html", "class-words.html", "wordsearch.html", "read.html"]) {
     const src = fs.readFileSync(path.join(WWW, w), "utf8"), re = /"((?:[pmi])_[a-z_]+)"/g; let m;
     while ((m = re.exec(src))) if (!/_$/.test(m[1])) literalKeys.push(m[1]);
   }
@@ -722,13 +722,69 @@ const server = http.createServer((req, res) => {
   const wsGot = await page.evaluate(() => document.querySelector('[data-go="wordsearch.html"] .got').textContent);
   /15/.test(wsGot) ? ok("words.html: Word Search card shows its 15 stars") : fail("Word Search card shows " + JSON.stringify(wsGot));
 
+  // Read and Answer: every story's clue is in it, 3 different answers, every word has a clip; play every level.
+  {
+    await page.goto(base + "read.html"); await page.evaluate(() => localStorage.clear()); await page.reload(); await page.waitForTimeout(150);
+    await shot("read-levels");
+    const levels = await page.evaluate(() => ReadAnswer.levels.map(L => ({ name: L.name, items: L.items })));
+    const bad = [], seen = {};
+    const STOP = new Set("the a an and his her its my some it he she they we".split(" "));
+    levels.forEach((L, li) => {
+      if (L.items.length < 24) bad.push(L.name + " has only " + L.items.length + " stories");
+      L.items.forEach(it => {
+        if (seen[it.story]) bad.push("story twice: " + it.story); seen[it.story] = 1;
+        const at = it.story.indexOf(it.clue);
+        if (at < 0) bad.push("clue not in story: " + it.clue);
+        else if ((at > 0 && /[A-Za-z]/.test(it.story[at - 1])) || /[A-Za-z]/.test(it.story[at + it.clue.length] || "")) bad.push("clue cuts a word: " + it.clue);
+        const ch = [it.a].concat(it.wrong).map(x => x.toLowerCase());
+        if (new Set(ch).size !== 3 || ch.some(x => !x)) bad.push("answers not 3 different: " + ch);
+        if (!/\?$/.test(it.q)) bad.push("question without ?: " + it.q);
+        (it.story + " " + it.q).split(/\s+/).forEach(t => { const w = t.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (w && (!(("w_" + w) in phrases) || !(("ws_" + w) in phrases))) bad.push("no clip for " + w); });
+        // the first 4 levels are said right in the story: the answer's words are in it (level 5 is "think about it")
+        if (li < 4) it.a.toLowerCase().split(" ").filter(w => !STOP.has(w)).forEach(w => { if (!new RegExp("\\b" + w + "\\b", "i").test(it.story)) bad.push(L.name + ": \"" + w + "\" of " + it.a + " isn't in: " + it.story); });
+        // a wrong answer is never the clue itself
+        it.wrong.forEach(w => { if (it.clue.toLowerCase() === w.toLowerCase()) bad.push("wrong answer is the clue: " + w); });
+      });
+    });
+    ["i_read_answer", "p_story_says"].forEach(k => { if (!(k in phrases)) bad.push(k + " has no clip"); });
+    bad.length ? fail("read and answer: " + bad.slice(0, 8).join("; ")) : ok("read and answer: " + levels.map(L => L.items.length).join("/") + " stories, clues in the stories, 3 different answers, every word has a clip");
+    const played = [];
+    for (let i = 0; i < levels.length; i++) {
+      await page.evaluate(i => ReadAnswer.start(i), i); await page.waitForTimeout(50);
+      if (i === 0) await shot("read-round");
+      for (let r = 0; r < 8; r++) {
+        const it = await page.evaluate(() => { const R = ReadAnswer.state().R; return { a: R.it.a, wrong: R.it.wrong }; });
+        if (r === 3) {   // two misses: the answer and the clue light up, no star
+          await page.click('.choice[data-ans="' + it.wrong[0] + '"]');
+          const mid = await page.evaluate(() => [document.querySelectorAll(".choice.wrong").length, document.querySelector(".story").className.indexOf("show") >= 0]);
+          if (mid.join() !== "1,false") bad.push("after one miss " + mid);
+          await page.click('.choice[data-ans="' + it.wrong[1] + '"]');
+          const shown = await page.evaluate(() => [!!document.querySelector(".choice.right"), document.querySelector(".story").className.indexOf("show") >= 0]);
+          if (shown.join() !== "true,true") bad.push("2 misses didn't show the answer " + shown);
+          if (i === 4) await shot("read-shown");
+        } else await page.click('.choice[data-ans="' + it.a + '"]');
+        await page.waitForFunction(r => { const G = ReadAnswer.state(); return (G && G.round > r) || document.getElementById("end").className.indexOf("on") >= 0; }, r, { timeout: 12000 });
+      }
+      played.push(await page.evaluate(i => [document.getElementById("end").className.indexOf("on") >= 0, JSON.parse(localStorage.getItem("read:best") || "{}")[i]], i));
+    }
+    played.every(p => p[0] && p[1] === 7) ? ok("read and answer: all 5 levels played, 7 of 8 stars with one round missed twice") : fail("read and answer play: " + JSON.stringify(played) + " " + bad.slice(0, 4).join("; "));
+    // the next game of a level starts with stories not played lately
+    const fresh = await page.evaluate(() => { ReadAnswer.start(0); const a = ReadAnswer.state().items.map(x => x.story); ReadAnswer.start(0); const b = ReadAnswer.state().items.map(x => x.story); return a.filter(s => b.indexOf(s) >= 0).length; });
+    fresh === 0 ? ok("read and answer: a new game picks stories not played lately") : fail("read and answer repeated " + fresh + " stories right away");
+    await page.goto(base + "words.html"); await page.waitForTimeout(150);
+    const got = await page.evaluate(() => document.querySelector('[data-go="read.html"] .got').textContent);
+    /35/.test(got) ? ok("words.html: Read and Answer card shows its 35 stars") : fail("Read and Answer card shows " + JSON.stringify(got));
+    await shot("words-9");
+  }
+
   // "Which way?" bonus questions (ways.js) in the other word games: wired in between rounds, every kind
   // of question answered from the board, 2 tries then shown, fits the screen both ways up, Back drops it.
   {
     const bad = [];
     const ppSrc = fs.readFileSync(path.join(WWW, "picture-planet.html"), "utf8");
     const pp = {}; JSON.parse(ppSrc.match(/^var RAW = (\[.*\]);$/m)[1]).forEach(l => l.forEach(([w, c]) => pp[w] = c));
-    const pages = { "picture-planet.html": "renderRound", "saucer.html": "renderRound", "sound-lab.html": "renderRound", "compound.html": "renderRound", "class-words.html": "renderRound", "match.html": "renderBoard" };
+    const pages = { "read.html": "renderRound", "picture-planet.html": "renderRound", "saucer.html": "renderRound", "sound-lab.html": "renderRound", "compound.html": "renderRound", "class-words.html": "renderRound", "match.html": "renderBoard" };
     for (const [pg, fn] of Object.entries(pages)) {
       const src = fs.readFileSync(path.join(WWW, pg), "utf8");
       if (!src.includes('<script src="ways.js"></script>')) bad.push(pg + " doesn't load ways.js");
@@ -741,7 +797,7 @@ const server = http.createServer((req, res) => {
     const kinds = {};
     for (const vp of [{ width: 1280, height: 800 }, { width: 800, height: 1280 }]) {
       await page.setViewportSize(vp);
-      for (const pg of ["picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "class-words.html"]) {
+      for (const pg of ["picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "class-words.html", "read.html"]) {
         await page.goto(base + pg); await page.waitForTimeout(100);
         let n = 0;
         for (const form of ["way", "pick"]) for (const kind of ["lr", "map"]) {
@@ -799,7 +855,7 @@ const server = http.createServer((req, res) => {
     if (mix[1] !== 400 || mix[2] || mix[0] < 15 || mix[0] > 110) bad.push("between() mix " + mix);
     if (Object.keys(kinds).length !== 4) bad.push("kinds " + Object.keys(kinds));
     bad.length ? fail("which way questions: " + bad.slice(0, 8).join("; "))
-      : ok("which way questions in 6 word games: wired between rounds, left/right/up/down and north/south/east/west, which-way and tap-the-picture, right answers from the board, 2 tries, fit both ways up, Back drops them; " + mix[0] + " in 400 rounds");
+      : ok("which way questions in 7 word games: wired between rounds, left/right/up/down and north/south/east/west, which-way and tap-the-picture, right answers from the board, 2 tries, fit both ways up, Back drops them; " + mix[0] + " in 400 rounds");
   }
 
   // Class Words (her kindergarten list): data, every activity, words taking turns, grown-ups screen.
@@ -983,7 +1039,7 @@ const server = http.createServer((req, res) => {
   await page.goto(base + "class-words.html");
   for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) for (let t = 0; t < 6; t++) { await page.evaluate(k => ClassWords.start(k), k); await collect(); }
   await page.evaluate(() => { document.getElementById("backBtn").click(); document.getElementById("wallBtn").click(); }); await collect();
-  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html"]) {
     await page.goto(base + w); await page.waitForTimeout(100); await collect();
     const n = await page.locator("#path button").count();
     for (let i = 0; i < n; i++) for (let t = 0; t < 6; t++) {
@@ -1043,7 +1099,7 @@ const server = http.createServer((req, res) => {
     ok("Back on " + hub + " goes to Pick a mission");
   }
   const games = { "picture-planet.html": "words", "saucer.html": "words", "match.html?g=connect": "words", "match.html?g=rhyme": "words",
-    "sound-lab.html": "words", "compound.html": "words", "wordsearch.html": "words", "math-game.html?g=count": "math", "math-game.html?g=ops": "math", "math-game.html?g=pattern": "math" };
+    "sound-lab.html": "words", "compound.html": "words", "wordsearch.html": "words", "read.html": "words", "math-game.html?g=count": "math", "math-game.html?g=ops": "math", "math-game.html?g=pattern": "math" };
   for (const g of Object.keys(games)) {
     await page.goto(base + g); await page.waitForTimeout(80); await box(g + " levels");
     await page.locator("#path button").first().click(); await page.waitForTimeout(80); await box(g + " game");
@@ -1074,7 +1130,7 @@ const server = http.createServer((req, res) => {
     : fail("Back button moves around: " + JSON.stringify(boxes));
 
   // Volume control: on pickers and level lists, hidden while playing; -, +, bars; 0 means silent.
-  for (const pg of ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "math-game.html?g=ops"]) {
+  for (const pg of ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=ops"]) {
     await page.goto(base + pg); await page.waitForTimeout(80);
     const v = await page.evaluate(() => { const b = document.querySelector(".volbox"); return !!b && b.offsetWidth > 0 && !document.getElementById("soundBtn"); });
     v ? ok(pg + ": volume control shown, no talking toggle") : fail(pg + ": volume control missing or talking toggle still there");
@@ -1175,7 +1231,7 @@ const server = http.createServer((req, res) => {
 
   // Every round of every game has the speaker button to hear the instructions again.
   const noSay = [];
-  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
     await spd.goto(base + w); await spd.waitForTimeout(150);
     const n = await spd.locator("#path button").count();
     for (let i = 0; i < n; i++) for (let t = 0; t < 3; t++) {
@@ -1210,7 +1266,7 @@ const server = http.createServer((req, res) => {
 
   // Volume control: top right, never overlapping text, pictures, buttons or cards (screen by screen).
   const volPages = ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html",
-    "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "math-game.html?g=count", "math-game.html?g=pattern"];
+    "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=pattern"];
   for (const pg of volPages) {
     await page.goto(base + pg); await page.waitForTimeout(250);
     const hits = await page.evaluate(() => {
@@ -1283,7 +1339,7 @@ const server = http.createServer((req, res) => {
   const pillBad = [];
   const pillCheck = async label => { const h = await pillHits(); if (h.length) pillBad.push(label + ": " + h.join(", ")); };
   for (const pg of ["words.html", "math.html"]) { await page.goto(base + pg); await page.waitForTimeout(150); await pillCheck(pg); }
-  for (const g of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html",
+  for (const g of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html",
                    "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
     await page.goto(base + g); await page.waitForTimeout(150); await pillCheck(g + " levels");
     const n = await page.locator("#path button").count();
@@ -1491,7 +1547,7 @@ const server = http.createServer((req, res) => {
       if (r.length) portraitBad.push(name + ": " + r.join(", "));
     };
     for (const p of ["index", "words", "math"]) { await pp.goto(base + p + ".html"); await check(p); }
-    for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+    for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
       await pp.goto(base + u); await check(u + " levels");
       const cnt = await pp.locator("#path button").count();
       for (const i of [0, cnt - 1]) { await pp.goto(base + u); await pp.waitForTimeout(100); await pp.locator("#path button").nth(i).click(); await check(u + " level " + (i + 1)); }

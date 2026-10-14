@@ -47,6 +47,11 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
 .seven .game img{width:11vmin;height:11vmin;margin:0 0 1.4vmin}
 .seven .t{font-size:4.4vmin}
 .seven .d{font-size:2.6vmin}
+/* nine games: five then four per row, smaller pictures */
+.nine .game{-webkit-flex:0 0 17.6%;flex:0 0 17.6%;margin:1.2vmin 1.2%;padding:1.8vmin 1.6vmin}
+.nine .game img{width:9.5vmin;height:9.5vmin;margin:0 0 1.2vmin}
+.nine .t{font-size:3.9vmin}
+.nine .d{font-size:2.4vmin}
 /* grown-ups: hold the button 1.5 s, then pick how many hours to hide Space Words */
 .adultrow{display:-webkit-flex;display:flex;-webkit-justify-content:flex-end;justify-content:flex-end;margin-top:1.6vmin}
 .adultbtn{position:relative;overflow:hidden;padding:1.2vmin 2.8vmin;font-size:2.8vmin;border-radius:5vmin;background:#131A3D;color:#B9C3F2;border:0.4vmin solid #4F5F80}
@@ -72,4 +77,9 @@ h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-sha
   .seven .game{-webkit-flex:0 0 47%;flex:0 0 47%;margin:1.2vmin 1.5%;-webkit-flex-direction:row;flex-direction:row;-webkit-align-items:center;align-items:center;padding:2vmin 2.4vmin}
   .seven .game img{width:13vmin;height:13vmin;margin:0 2.4vmin 0 0}
   .seven .txt{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;min-width:0}
+  /* nine games: three per row, picture on top */
+  .nine .game{-webkit-flex:0 0 31%;flex:0 0 31%;margin:1.2vmin 1.1%;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:flex-start;align-items:flex-start;padding:2vmin 2vmin}
+  .nine .game img{width:12vmin;height:12vmin;margin:0 0 1.2vmin}
+  .nine .t{font-size:4.4vmin}
+  .nine .d{font-size:2.8vmin}
 }
