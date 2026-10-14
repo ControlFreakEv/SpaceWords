@@ -722,60 +722,107 @@ const server = http.createServer((req, res) => {
   const wsGot = await page.evaluate(() => document.querySelector('[data-go="wordsearch.html"] .got').textContent);
   /15/.test(wsGot) ? ok("words.html: Word Search card shows its 15 stars") : fail("Word Search card shows " + JSON.stringify(wsGot));
 
-  // Read and Answer: every story's clue is in it, 3 different answers, every word has a clip; play every level.
+  // Read and Answer: every story's clue is in it, answers make sense for each kind of question, every word has a clip; play every level.
   {
     await page.goto(base + "read.html"); await page.evaluate(() => localStorage.clear()); await page.reload(); await page.waitForTimeout(150);
     await shot("read-levels");
-    const levels = await page.evaluate(() => ReadAnswer.levels.map(L => ({ name: L.name, items: L.items })));
-    const bad = [], seen = {};
+    const data = await page.evaluate(() => ({ levels: ReadAnswer.levels.map(L => ({ name: L.name, items: L.items })), pics: ReadAnswer.pics }));
+    const levels = data.levels, bad = [], seen = {}, kinds = {};
+    const ppSrc = fs.readFileSync(path.join(WWW, "picture-planet.html"), "utf8");
+    const pp = {}; JSON.parse(ppSrc.match(/^var RAW = (\[.*\]);$/m)[1]).forEach(l => l.forEach(([w, c]) => pp[w] = c));
     const STOP = new Set("the a an and his her its my some it he she they we".split(" "));
+    const inStory = (w, story) => new RegExp("\\b" + w + "(s|es)?\\b", "i").test(story);
     levels.forEach((L, li) => {
-      if (L.items.length < 24) bad.push(L.name + " has only " + L.items.length + " stories");
+      if (L.items.length < (li < 5 ? 48 : 20)) bad.push(L.name + " has only " + L.items.length + " stories");
       L.items.forEach(it => {
-        if (seen[it.story]) bad.push("story twice: " + it.story); seen[it.story] = 1;
+        kinds[it.kind] = (kinds[it.kind] || 0) + 1;
+        if (seen[it.story + it.q]) bad.push("story and question twice: " + it.story); seen[it.story + it.q] = 1;
         const at = it.story.indexOf(it.clue);
         if (at < 0) bad.push("clue not in story: " + it.clue);
-        else if ((at > 0 && /[A-Za-z]/.test(it.story[at - 1])) || /[A-Za-z]/.test(it.story[at + it.clue.length] || "")) bad.push("clue cuts a word: " + it.clue);
-        const ch = [it.a].concat(it.wrong).map(x => x.toLowerCase());
-        if (new Set(ch).size !== 3 || ch.some(x => !x)) bad.push("answers not 3 different: " + ch);
+        else if (it.clue && ((at > 0 && /[A-Za-z]/.test(it.story[at - 1])) || /[A-Za-z]/.test(it.story[at + it.clue.length] || ""))) bad.push("clue cuts a word: " + it.clue);
         if (!/\?$/.test(it.q)) bad.push("question without ?: " + it.q);
         (it.story + " " + it.q).split(/\s+/).forEach(t => { const w = t.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
           if (w && (!(("w_" + w) in phrases) || !(("ws_" + w) in phrases))) bad.push("no clip for " + w); });
-        // the first 4 levels are said right in the story: the answer's words are in it (level 5 is "think about it")
+        if (it.kind === "order") {
+          if (it.events.length !== 3 || new Set(it.events).size !== 3) bad.push("order needs 3 different events: " + it.story);
+          if ((it.story.match(/[.!?](\s|$)/g) || []).length < 2) bad.push("order story is one sentence: " + it.story);
+          return;
+        }
+        const ch = [it.a].concat(it.wrong).map(x => x.toLowerCase());
+        if (new Set(ch).size !== ch.length || ch.some(x => !x)) bad.push("answers not all different: " + ch);
+        if (it.kind === "yes") { if (["Yes", "No"].indexOf(it.a) < 0) bad.push("yes/no answer " + it.a); return; }
+        if (it.kind === "pic") {
+          // every picture is a Picture Planet word; the right one is all in the story, each wrong one has something that isn't
+          [it.a].concat(it.wrong).forEach(c => c.split("+").forEach(w => { if (!data.pics[w] || pp[w] !== data.pics[w] || !fs.existsSync(path.join(WWW, "emoji", data.pics[w] + ".svg"))) bad.push("picture " + w); }));
+          if (!it.a.split("+").every(w => inStory(w, it.story))) bad.push("right picture not in story: " + it.a + " / " + it.story);
+          it.wrong.forEach(c => { if (c.split("+").every(w => inStory(w, it.story))) bad.push("wrong picture fits the story too: " + c); });
+          return;
+        }
+        // the first 4 levels are said right in the story: the answer's words are in it
         if (li < 4) it.a.toLowerCase().split(" ").filter(w => !STOP.has(w)).forEach(w => { if (!new RegExp("\\b" + w + "\\b", "i").test(it.story)) bad.push(L.name + ": \"" + w + "\" of " + it.a + " isn't in: " + it.story); });
-        // a wrong answer is never the clue itself
         it.wrong.forEach(w => { if (it.clue.toLowerCase() === w.toLowerCase()) bad.push("wrong answer is the clue: " + w); });
       });
+      const yes = L.items.filter(x => x.kind === "yes"), nYes = yes.filter(x => x.a === "Yes").length;
+      if (yes.length && Math.abs(nYes * 2 - yes.length) > 2) bad.push(L.name + ": " + nYes + " of " + yes.length + " yes/no answers are Yes");
     });
-    ["i_read_answer", "p_story_says"].forEach(k => { if (!(k in phrases)) bad.push(k + " has no clip"); });
-    bad.length ? fail("read and answer: " + bad.slice(0, 8).join("; ")) : ok("read and answer: " + levels.map(L => L.items.length).join("/") + " stories, clues in the stories, 3 different answers, every word has a clip");
-    const played = [];
+    ["i_read_answer", "i_read_yesno", "i_read_order", "i_read_pic", "p_story_says", "p_order_shown", "p_first", "p_next"].forEach(k => { if (!(k in phrases)) bad.push(k + " has no clip"); });
+    bad.length ? fail("read and answer: " + bad.slice(0, 8).join("; "))
+      : ok("read and answer: " + levels.map(L => L.items.length).join("/") + " stories (" + Object.keys(kinds).map(k => kinds[k] + " " + k).join(", ") + "), clues in the stories, answers and pictures check out, every word has a clip");
+    const played = [], shots = {};
     for (let i = 0; i < levels.length; i++) {
       await page.evaluate(i => ReadAnswer.start(i), i); await page.waitForTimeout(50);
-      if (i === 0) await shot("read-round");
+      const mix = await page.evaluate(() => { const G = ReadAnswer.state(), k = {}; G.items.forEach(x => k[x.kind] = 1); return { kinds: Object.keys(k).sort().join(), stories: new Set(G.items.map(x => x.story)).size }; });
+      const want = [...new Set(levels[i].items.map(x => x.kind))].sort().join();
+      if (mix.kinds !== want || mix.stories !== 8) bad.push(levels[i].name + " game has " + JSON.stringify(mix) + ", want " + want);
       for (let r = 0; r < 8; r++) {
-        const it = await page.evaluate(() => { const R = ReadAnswer.state().R; return { a: R.it.a, wrong: R.it.wrong }; });
-        if (r === 3) {   // two misses: the answer and the clue light up, no star
-          await page.click('.choice[data-ans="' + it.wrong[0] + '"]');
-          const mid = await page.evaluate(() => [document.querySelectorAll(".choice.wrong").length, document.querySelector(".story").className.indexOf("show") >= 0]);
-          if (mid.join() !== "1,false") bad.push("after one miss " + mid);
-          await page.click('.choice[data-ans="' + it.wrong[1] + '"]');
-          const shown = await page.evaluate(() => [!!document.querySelector(".choice.right"), document.querySelector(".story").className.indexOf("show") >= 0]);
-          if (shown.join() !== "true,true") bad.push("2 misses didn't show the answer " + shown);
-          if (i === 4) await shot("read-shown");
+        const it = await page.evaluate(() => { const R = ReadAnswer.state().R; return R.it; });
+        if (!shots[it.kind]) { shots[it.kind] = 1; await shot("read-" + it.kind); }
+        const say = await page.evaluate(() => [!!document.querySelector(".hintrow .sayb") || !window.Speech.canTalk(), document.querySelectorAll(".choice").length]);
+        if (!say[0]) bad.push("no instructions button");
+        if (r === 3) {   // missed: the answer (and the clue) show, no star
+          if (it.kind === "order") {
+            await page.click('.choice[data-ord="2"]'); await page.click('.choice[data-ord="1"]');
+            const o = await page.evaluate(() => [].map.call(document.querySelectorAll(".choice"), b => b.querySelector(".ordnum").textContent + b.getAttribute("data-ord")).sort().join());
+            if (o !== "10,21,32") bad.push("2 order misses didn't show the order: " + o);
+          } else {
+            await page.click('.choice[data-ans="' + it.wrong[0] + '"]');
+            if (it.kind !== "yes") {
+              const mid = await page.evaluate(() => [document.querySelectorAll(".choice.wrong").length, document.querySelector(".story").className.indexOf("show") >= 0]);
+              if (mid.join() !== "1,false") bad.push("after one miss " + mid);
+              await page.click('.choice[data-ans="' + it.wrong[1] + '"]');
+            }
+            const shown = await page.evaluate(() => [!!document.querySelector(".choice.right"), document.querySelector(".story").className.indexOf("show") >= 0]);
+            if (shown.join() !== "true,true") bad.push(it.kind + " misses didn't show the answer " + shown);
+          }
+        } else if (it.kind === "order") {
+          for (const k of [0, 1, 2]) await page.click('.choice[data-ord="' + k + '"]');
         } else await page.click('.choice[data-ans="' + it.a + '"]');
         await page.waitForFunction(r => { const G = ReadAnswer.state(); return (G && G.round > r) || document.getElementById("end").className.indexOf("on") >= 0; }, r, { timeout: 12000 });
       }
       played.push(await page.evaluate(i => [document.getElementById("end").className.indexOf("on") >= 0, JSON.parse(localStorage.getItem("read:best") || "{}")[i]], i));
     }
-    played.every(p => p[0] && p[1] === 7) ? ok("read and answer: all 5 levels played, 7 of 8 stars with one round missed twice") : fail("read and answer play: " + JSON.stringify(played) + " " + bad.slice(0, 4).join("; "));
+    played.every(p => p[0] && p[1] === 7) && !bad.length ? ok("read and answer: all " + levels.length + " levels played (every kind of question in each game), 7 of 8 stars with one round missed")
+      : fail("read and answer play: " + JSON.stringify(played) + " " + bad.slice(0, 4).join("; "));
+    // every story and its answers fit on the screen, sideways and upright
+    const fit = [];
+    for (const vp of [{ width: 1280, height: 800 }, { width: 800, height: 1280 }]) {
+      await page.setViewportSize(vp); await page.evaluate(() => ReadAnswer.start(0));
+      const r = await page.evaluate(() => { const out = [];
+        ReadAnswer.levels.forEach(L => L.items.forEach(it => { ReadAnswer.render(it);
+          const st = document.getElementById("stage"), last = st.lastChild.getBoundingClientRect(), first = st.firstChild.getBoundingClientRect();
+          if (last.bottom > innerHeight + 1 || first.top < document.querySelector("#game .bar").getBoundingClientRect().bottom - 1 || document.documentElement.scrollWidth > innerWidth) out.push(it.story.slice(0, 30)); }));
+        return out; });
+      r.forEach(x => fit.push(vp.width + "x" + vp.height + ": " + x));
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+    fit.length ? fail("read and answer stories that don't fit: " + fit.slice(0, 6).join("; ")) : ok("read and answer: all 274 stories fit on screen sideways and upright");
     // the next game of a level starts with stories not played lately
     const fresh = await page.evaluate(() => { ReadAnswer.start(0); const a = ReadAnswer.state().items.map(x => x.story); ReadAnswer.start(0); const b = ReadAnswer.state().items.map(x => x.story); return a.filter(s => b.indexOf(s) >= 0).length; });
     fresh === 0 ? ok("read and answer: a new game picks stories not played lately") : fail("read and answer repeated " + fresh + " stories right away");
     await page.goto(base + "words.html"); await page.waitForTimeout(150);
     const got = await page.evaluate(() => document.querySelector('[data-go="read.html"] .got').textContent);
-    /35/.test(got) ? ok("words.html: Read and Answer card shows its 35 stars") : fail("Read and Answer card shows " + JSON.stringify(got));
-    await shot("words-9");
+    const total = 7 * levels.length;
+    new RegExp("\\b" + total + "\\b").test(got) ? ok("words.html: Read and Answer card shows its " + total + " stars") : fail("Read and Answer card shows " + JSON.stringify(got));
   }
 
   // "Which way?" bonus questions (ways.js) in the other word games: wired in between rounds, every kind

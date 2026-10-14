@@ -56,14 +56,19 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   word's first letter is ringed pink. 2 wrong taps show the answer; not counted for stars.
   WordSearch.askRate(r) in tests.
 - **Read and Answer** (read.html; last card in Word games, words.html has 9 cards: `.nine` in hub.css
-  = 5 + 4 in landscape, 3 x 3 in portrait): reading comprehension. 5 levels x 26 stories (One
-  sentence, Little details, Two sentences, Short stories, Think about it = inference), 8 a game,
-  stories not played lately first (localStorage read:recent). Each line "story | question | answer |
-  wrong | wrong | clue": 3 answer buttons (not tappable), every story and question word tappable (all
-  have w_/ws_ clips; names like Sam, Mia, Liv too). The clue (words in the story that give the
-  answer) lights up yellow after a right answer or 2 misses (p_story_says). Star = right first try;
-  stars: localStorage read:best. The story is never read aloud (she reads it). web-test.js checks
-  clues, answers, clips, and that levels 1-4 answers are in the story.
+  = 5 + 4 in landscape, 3 x 3 in portrait): reading comprehension. 6 levels (One sentence, Little
+  details, Two sentences, Short stories, Think about it = inference, Longer stories), 50/50/50/50/50/24
+  stories, 8 a game: not played lately first (localStorage read:recent, indexes, so add new lines at
+  the END of a level), at least one of each kind the level has, no story twice. Four kinds of line:
+  "story | question | answer | wrong | wrong | clue"; "yes: story | question | Yes/No | clue" (one
+  miss shows the answer); "order: story | first / next / last" (tap them in order, numbered; 2 misses
+  show the order; L5 orders differ from the sentence order: "before/after"); "pic: story | a+b | c+d |
+  e+f | clue" (two Picture Planet pictures per button, PICS; each wrong one has a picture not in the
+  story). Answers aren't tappable; every story/question word is (w_/ws_ clips, names too). Avoid words
+  whose clip would be said wrong in context (past-tense "read", "tears"). The clue lights up yellow
+  after a right answer or the misses (p_story_says). Star = right first try; localStorage read:best.
+  The story is never read aloud (she reads it). web-test.js checks all of this, plus that every story
+  fits on screen both ways up (ReadAnswer.render(it)).
 - **"Which way?" bonus questions** (ways.js; owner's request, in all the other word games, Read and Answer too): each page's
   nextRound/board-done calls `Ways.between(renderRound)` instead of renderRound(); now and then
   (RATE 0.22, at least 3 rounds apart, never before the end screen) a popup over the game asks first,
