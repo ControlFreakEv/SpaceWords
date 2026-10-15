@@ -33,9 +33,23 @@ function Stop-With([string]$why, [string]$fix) {
 
 # 1. Latest code from GitHub
 Step 1 "Get the latest code (git pull)"
-& git pull
+# Two things on this PC change by themselves and would block the update: Android Studio's settings
+# (.idea) and the voice clip list (audio\index.json, which step 2 writes again anyway). Put them back.
+& git checkout -- .idea "app/src/main/assets/www/audio/index.json" 2>$null
+& git pull --ff-only
 if ($LASTEXITCODE -ne 0) {
-    Stop-With "git pull didn't work." "If it says your local changes would be overwritten, tell Claude what it printed. If it's a network or sign-in error, check the internet and run this again."
+    # Still blocked: files here differ from GitHub (copied in by hand, or edited). All the code comes
+    # from GitHub, so offer to make the folder match it. Recorded voice clips aren't touched.
+    & git fetch origin
+    if ($LASTEXITCODE -ne 0) { Stop-With "Couldn't reach GitHub." "Check the internet (or the GitHub sign-in) and run this again." }
+    Write-Host ""
+    Write-Host "Some files in this folder don't match GitHub (listed above), so git won't update them." -ForegroundColor Yellow
+    Write-Host "All the code comes from GitHub, so the fix is to make this folder match it." -ForegroundColor Yellow
+    Write-Host "Your recorded voice clips are kept." -ForegroundColor Yellow
+    $answer = Read-Host "Make this folder match GitHub? Type Y and press Enter"
+    if ($answer -notmatch '^[Yy]') { Stop-With "Update cancelled; nothing was changed." "" }
+    & git reset --hard '@{u}'
+    if ($LASTEXITCODE -ne 0) { Stop-With "Couldn't make the folder match GitHub." "Tell Claude what it printed." }
 }
 
 # 2. Voice clips (only records the ones that are missing, so it's quick when nothing is new)
