@@ -23,6 +23,10 @@ function ok(msg){ console.log("ok   " + msg); }
 
 const server = http.createServer((req, res) => {
   const p = path.join(WWW, decodeURIComponent(req.url.split("?")[0]).replace(/^\/+/, "") || "index.html");
+  // Voice clips are never served: each one "ends" at once (a load error), so the rounds' waits on
+  // Speech.say's done don't take real seconds now that the repo has every clip. audio/index.json is
+  // served, so speech.js still treats every recorded key as a clip.
+  if (/\.mp3$/.test(p)) { res.writeHead(404); res.end(); return; }
   fs.readFile(p, (err, data) => {
     if (err) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { "Content-Type": TYPES[path.extname(p)] || "application/octet-stream" }); res.end(data);
@@ -485,7 +489,10 @@ const server = http.createServer((req, res) => {
   slMissing.length ? fail("sound lab words/syllables missing from phrases.json: " + slMissing.slice(0, 20).join(", ")) : ok("sound lab: all " + slKeys.size + " word, slow word and syllable keys exist");
 
   // Speech waits: say(keys, done) calls done once, after the last clip.
-  const doneOk = await page.evaluate(() => new Promise(res => { let n = 0; Speech.say(["sy_bah", "sy_nah", "sy_nuh"], () => n++); setTimeout(() => res(n), 3000); }));
+  // (waits out here: the page's long timers are fast-forwarded, and the clips now take a moment to fail)
+  await page.evaluate(() => { window.__doneN = 0; Speech.say(["sy_bah", "sy_nah", "sy_nuh"], () => window.__doneN++); });
+  await page.waitForTimeout(3000);
+  const doneOk = await page.evaluate(() => window.__doneN);
   doneOk === 1 ? ok("Speech.say calls its done callback once") : fail("Speech.say done callback ran " + doneOk + " times");
 
   // Swap round: a wrong vowel says the word it made and costs the gold star.

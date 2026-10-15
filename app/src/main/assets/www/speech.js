@@ -82,7 +82,7 @@ function stop(){
   doneCb = null;
   clipToken++;
   if (nativeAudio){ try { nativeAudio.stop(); } catch(e){} }
-  if (playing){ try { playing.onended = null; playing.onerror = null; playing.pause(); } catch(e){} playing = null; }
+  if (playing){ release(playing); playing = null; }
   try { if (bridge) bridge.cancel(); else if (browserTTS) browserTTS.cancel(); } catch(e){}
 }
 
@@ -99,12 +99,20 @@ function playNext(){
     } catch(e){ playNext(); }
     return;
   }
-  var a = new Audio("audio/" + key + ".mp3");
+  /* browsers (tests): one <audio> per clip, freed when it ends, or Chrome runs out of media players
+     (it allows about 75); the token ignores a stopped clip's late "ended", error or rejected play() */
+  clipToken++;
+  var tok = clipToken, a = new Audio("audio/" + key + ".mp3");
   playing = a;
   try { a.volume = Math.min(1, level / 4); a.playbackRate = r; } catch(e){}
-  a.onended = playNext;
-  a.onerror = playNext;
-  try { var p = a.play(); if (p && p["catch"]) p["catch"](function(){ playNext(); }); } catch(e){ playNext(); }
+  function next(){ if (tok !== clipToken) return; release(a); playNext(); }
+  a.onended = next;
+  a.onerror = next;
+  try { var p = a.play(); if (p && p["catch"]) p["catch"](next); } catch(e){ next(); }
+}
+function release(a){
+  a.onended = a.onerror = null;
+  try { a.pause(); a.removeAttribute("src"); a.load(); } catch(e){}
 }
 
 function sayTTS(texts){

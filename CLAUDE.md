@@ -160,7 +160,15 @@ its localStorage turn timer. The owner builds it with **android-app.bat** (= upd
 sends the file; update.ps1 otherwise builds only :app. Screens must fit on phones and tablets
 too: speech.js fitScreen() CSS-zooms pickers and level lists that overflow (not play screens;
 nothing on the frame), Read and Answer shrinks a long story (fitStory), and web-test.js checks
-every screen and story at 6 phone/tablet sizes (DEVICES). Not tested on a real device yet.
+every screen and story at 6 phone/tablet sizes (DEVICES). Not tested on a real device yet, but
+tested on an emulator (2026-10-15): sound, silly/turtle voices, Back, rotation, Home/resume, stars
+and volume after a restart, Word Search drag. Emulator in a cloud session (no KVM): sdkmanager
+"system-images;android-24;default;x86", `emulator -avd X -no-window -no-audio -accel off -gpu
+swiftshader_indirect` boots in ~2 min (ARM images don't run on this emulator). Drive the page over
+CDP: adb forward tcp:9222 localabstract:webview_devtools_remote_<pid> (Chrome 52: Runtime.evaluate
+without awaitPromise). There, canvases over ~256x256 stay blank unless /data/local/tmp/webview-command-line
+has "_ --disable-accelerated-2d-canvas", and rainbow-ink strokes get touchcancel (the shimmer is too
+slow under CPU emulation); both are emulator limits.
 Every :home build is signed with home/spacewords-home.jks (committed; password spacewords), so
 updates built on the owner's PC or in any cloud session install over each other and keep the
 stars. Never replace that key: a differently signed update can't install without uninstalling.
@@ -193,6 +201,10 @@ The owner is a controls engineer who is new to Android. Explain Android Studio a
   **Run `node tools/check-es5.js` after any web change.**
 - Speech plays pre-recorded MP3s (see Speech below). The frame has only the Pico TTS engine, which
   the app starts only when clips are missing (`AndroidTTS.enable()`), to keep it off the low-RAM frame.
+- Fonts: old Chrome's font checker (OTS) rejects TrueType glyphs with the OVERLAP_SIMPLE flag that
+  variable-font instancing sets; fredoka.ttf had it on 121 glyphs and silently fell back to the
+  system font (seen on Chrome 52, 2026-10-15; fixed by clearing the flags with fontTools). Check any
+  new font the same way.
 - Old emoji font, so pictures are bundled Twemoji SVGs in assets/www/emoji (CC-BY 4.0, credited).
 - Skylight packages: `com.skylight` (main app) and `skylight.watchdog` (relaunches Skylight if it
   leaves the screen). Never disable or uninstall either without asking the owner.
