@@ -22,7 +22,8 @@ param(
     [string]$JavaHome = "",
     [switch]$Open,
     [switch]$SkipAudio,
-    [switch]$AndroidApp
+    [switch]$AndroidApp,
+    [switch]$Pulled   # internal: step 1 is done (this script restarted itself after git pull changed it)
 )
 
 $root = Split-Path -Parent $PSScriptRoot
@@ -43,30 +44,41 @@ $gitWho = @()
 if (-not (& git config user.email)) { $gitWho = @("-c", "user.name=Space Words update", "-c", "user.email=update@spacewords.local") }
 
 # 1. Latest code from GitHub
-Step 1 "Get the latest code (git pull)"
-# Two things on this PC change by themselves and would block the update: Android Studio's settings
-# (.idea) and the voice clip list (audio\index.json, which step 2 writes again anyway). Put them back.
-& git checkout -- .idea "app/src/main/assets/www/audio/index.json" 2>$null
-& git pull --ff-only
-if ($LASTEXITCODE -ne 0) {
-    # Voice clips saved here last time but not uploaded (step 2) while new code arrived on GitHub:
-    # put the clips on top of the new code.
-    & git @gitWho pull --rebase 2>$null
-    if ($LASTEXITCODE -ne 0) { & git rebase --abort 2>$null; $global:LASTEXITCODE = 1 }
-}
-if ($LASTEXITCODE -ne 0) {
-    # Still blocked: files here differ from GitHub (copied in by hand, or edited). All the code comes
-    # from GitHub, so offer to make the folder match it. Recorded voice clips aren't touched.
-    & git fetch origin
-    if ($LASTEXITCODE -ne 0) { Stop-With "Couldn't reach GitHub." "Check the internet (or the GitHub sign-in) and run this again." }
-    Write-Host ""
-    Write-Host "Some files in this folder don't match GitHub (listed above), so git won't update them." -ForegroundColor Yellow
-    Write-Host "All the code comes from GitHub, so the fix is to make this folder match it." -ForegroundColor Yellow
-    Write-Host "Your recorded voice clips are kept." -ForegroundColor Yellow
-    $answer = Read-Host "Make this folder match GitHub? Type Y and press Enter"
-    if ($answer -notmatch '^[Yy]') { Stop-With "Update cancelled; nothing was changed." "" }
-    & git reset --hard '@{u}'
-    if ($LASTEXITCODE -ne 0) { Stop-With "Couldn't make the folder match GitHub." "Tell Claude what it printed." }
+if ($Pulled) {
+    Write-Host ""; Write-Host "== Step 1 of 4: done (this update script was new, so it restarted) ==" -ForegroundColor DarkGray
+} else {
+    $scriptBefore = (Get-FileHash -LiteralPath $PSCommandPath).Hash
+    Step 1 "Get the latest code (git pull)"
+    # Two things on this PC change by themselves and would block the update: Android Studio's settings
+    # (.idea) and the voice clip list (audio\index.json, which step 2 writes again anyway). Put them back.
+    & git checkout -- .idea "app/src/main/assets/www/audio/index.json" 2>$null
+    & git pull --ff-only
+    if ($LASTEXITCODE -ne 0) {
+        # Voice clips saved here last time but not uploaded (step 2) while new code arrived on GitHub:
+        # put the clips on top of the new code.
+        & git @gitWho pull --rebase 2>$null
+        if ($LASTEXITCODE -ne 0) { & git rebase --abort 2>$null; $global:LASTEXITCODE = 1 }
+    }
+    if ($LASTEXITCODE -ne 0) {
+        # Still blocked: files here differ from GitHub (copied in by hand, or edited). All the code comes
+        # from GitHub, so offer to make the folder match it. Recorded voice clips aren't touched.
+        & git fetch origin
+        if ($LASTEXITCODE -ne 0) { Stop-With "Couldn't reach GitHub." "Check the internet (or the GitHub sign-in) and run this again." }
+        Write-Host ""
+        Write-Host "Some files in this folder don't match GitHub (listed above), so git won't update them." -ForegroundColor Yellow
+        Write-Host "All the code comes from GitHub, so the fix is to make this folder match it." -ForegroundColor Yellow
+        Write-Host "Your recorded voice clips are kept." -ForegroundColor Yellow
+        $answer = Read-Host "Make this folder match GitHub? Type Y and press Enter"
+        if ($answer -notmatch '^[Yy]') { Stop-With "Update cancelled; nothing was changed." "" }
+        & git reset --hard '@{u}'
+        if ($LASTEXITCODE -ne 0) { Stop-With "Couldn't make the folder match GitHub." "Tell Claude what it printed." }
+    }
+    # PowerShell read this whole script before step 1, so if git pull just changed it, the rest of
+    # this run would be the old version: run the new one instead (it skips step 1).
+    if ((Get-FileHash -LiteralPath $PSCommandPath).Hash -ne $scriptBefore) {
+        & $PSCommandPath @PSBoundParameters -Pulled
+        exit $LASTEXITCODE
+    }
 }
 
 # 2. Voice clips (only records the ones that are missing, so it's quick when nothing is new)
