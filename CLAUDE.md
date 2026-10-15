@@ -161,6 +161,9 @@ sends the file; update.ps1 otherwise builds only :app. Screens must fit on phone
 too: speech.js fitScreen() CSS-zooms pickers and level lists that overflow (not play screens;
 nothing on the frame), Read and Answer shrinks a long story (fitStory), and web-test.js checks
 every screen and story at 6 phone/tablet sizes (DEVICES). Not tested on a real device yet.
+Every :home build is signed with home/spacewords-home.jks (committed; password spacewords), so
+updates built on the owner's PC or in any cloud session install over each other and keep the
+stars. Never replace that key: a differently signed update can't install without uninstalling.
 
 Pickers: index.html (Word games / Math games) -> words.html or math.html -> game. Shared picker
 look: hub.css/hub.js.

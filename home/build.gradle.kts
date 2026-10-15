@@ -18,11 +18,24 @@ android {
         versionName = "1.0"
     }
 
+    // One signing key for every build (the owner's PC and Claude's cloud sessions), so an update
+    // always installs over the copy on the other device and its stars are kept. Android only
+    // accepts an update signed with the same key. Kept in this private repo; it signs nothing else.
+    signingConfigs {
+        create("shared") {
+            storeFile = file("spacewords-home.jks")
+            storePassword = "spacewords"
+            keyAlias = "spacewords"
+            keyPassword = "spacewords"
+        }
+    }
+
     sourceSets["main"].assets.srcDirs("../app/src/main/assets")
     sourceSets["main"].res.srcDirs("../app/src/main/res")
 
     buildTypes {
-        release { isMinifyEnabled = false }
+        debug { signingConfig = signingConfigs.getByName("shared") }
+        release { isMinifyEnabled = false; signingConfig = signingConfigs.getByName("shared") }
     }
 
     compileOptions {
