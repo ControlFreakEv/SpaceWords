@@ -56,7 +56,9 @@ Double-click **update.bat** in this folder. It runs the four steps in order and 
 a plain message if one fails:
 
 1. git pull (latest code)
-2. python tools\make_audio.py (records only the clips that are new)
+2. python tools\make_audio.py (records only the clips that are new), then uploads new clips
+   to GitHub (the repo is private) so builds made elsewhere have the whole voice too. If the
+   upload fails it says so and carries on; it tries again next time.
 3. build the APK (same as Android Studio's Generate APKs)
 4. tools\deploy.ps1 (install on the frame over Wi-Fi, or USB if Wi-Fi isn't answering)
 

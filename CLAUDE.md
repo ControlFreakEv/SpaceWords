@@ -260,6 +260,11 @@ m_*). To add spoken text:
    rate -10%). It needs internet access to Microsoft's service, so it can't run in the cloud.
 New keys without a clip stay silent on the frame until the clips are regenerated, so list
 them for the owner.
+update.ps1 commits and pushes new clips (audio/*.mp3 + index.json) after recording (Save-Clips;
+on a failed push it rebases once, else carries on), so the repo has the whole voice once the
+owner has run update.bat or android-app.bat since. Then a cloud build of :home is complete and
+can be sent to the owner as a file; check audio/index.json covers phrases.json first. Don't edit
+files in audio/ from the cloud (the owner's PC rebases its clip commits onto ours).
 
 The repo must stay **private**: the clips come from an unofficial Microsoft TTS client.
 

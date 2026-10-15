@@ -37,12 +37,23 @@ function Stop-With([string]$why, [string]$fix) {
     exit 1
 }
 
+# git needs a name for the voice clip uploads (step 2) and to put them on top of new code; use this
+# one if none is set on this PC
+$gitWho = @()
+if (-not (& git config user.email)) { $gitWho = @("-c", "user.name=Space Words update", "-c", "user.email=update@spacewords.local") }
+
 # 1. Latest code from GitHub
 Step 1 "Get the latest code (git pull)"
 # Two things on this PC change by themselves and would block the update: Android Studio's settings
 # (.idea) and the voice clip list (audio\index.json, which step 2 writes again anyway). Put them back.
 & git checkout -- .idea "app/src/main/assets/www/audio/index.json" 2>$null
 & git pull --ff-only
+if ($LASTEXITCODE -ne 0) {
+    # Voice clips saved here last time but not uploaded (step 2) while new code arrived on GitHub:
+    # put the clips on top of the new code.
+    & git @gitWho pull --rebase 2>$null
+    if ($LASTEXITCODE -ne 0) { & git rebase --abort 2>$null; $global:LASTEXITCODE = 1 }
+}
 if ($LASTEXITCODE -ne 0) {
     # Still blocked: files here differ from GitHub (copied in by hand, or edited). All the code comes
     # from GitHub, so offer to make the folder match it. Recorded voice clips aren't touched.
@@ -59,6 +70,27 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 2. Voice clips (only records the ones that are missing, so it's quick when nothing is new)
+# New clips are uploaded to GitHub (the repo is private), so builds made elsewhere, like Claude's in
+# the cloud, have the whole voice too. If the upload fails the update carries on; it's tried again next time.
+function Save-Clips {
+    $audio = "app/src/main/assets/www/audio"
+    & git add -- $audio
+    & git diff --cached --quiet -- $audio
+    if ($LASTEXITCODE -eq 0) { Write-Host "The voice clips on GitHub are up to date."; return }
+    $n = @(& git diff --cached --name-only -- $audio).Count
+    & git @gitWho commit -q -m "Voice clips: $n new or changed files (recorded by update.ps1)" -- $audio
+    if ($LASTEXITCODE -ne 0) { Write-Host "  (couldn't save the voice clips for GitHub; carrying on)" -ForegroundColor Yellow; return }
+    Write-Host "Uploading $n voice clip files to GitHub (the first time takes a few minutes)..."
+    & git push -q 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        # GitHub got new code while the clips were recording: put the clips on top and try once more
+        & git @gitWho pull --rebase -q
+        if ($LASTEXITCODE -eq 0) { & git push -q } else { & git rebase --abort 2>$null; $global:LASTEXITCODE = 1 }
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  Couldn't upload the voice clips to GitHub. They're saved on this PC and will be uploaded next time; the update carries on." -ForegroundColor Yellow
+    } else { Write-Host "Voice clips uploaded." }
+}
 if ($SkipAudio) {
     Write-Host ""; Write-Host "== Step 2 of 4: voice clips skipped (-SkipAudio) ==" -ForegroundColor DarkGray
 } else {
@@ -72,7 +104,9 @@ if ($SkipAudio) {
     & $py.Source -m pip install --upgrade --quiet --disable-pip-version-check edge-tts
     if ($LASTEXITCODE -ne 0) { Write-Host "  (couldn't update edge-tts; trying with the one installed)" -ForegroundColor Yellow }
     & $py.Source tools\make_audio.py
-    if ($LASTEXITCODE -ne 0) {
+    $recorded = $LASTEXITCODE
+    Save-Clips   # whatever was recorded, even if some clips failed
+    if ($recorded -ne 0) {
         Stop-With "Recording voice clips failed." "Read the lines just above for why. If it says 'pip install edge-tts', run that once. If clips failed to download, check the internet and run this again (finished clips are kept). To build without the new clips: double-click update.bat again after adding -SkipAudio (or run: powershell -ExecutionPolicy Bypass -File tools\update.ps1 -SkipAudio)"
     }
 }
