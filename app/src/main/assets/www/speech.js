@@ -413,6 +413,64 @@ function turnTick(){
   // move the countdown as soon as the screen changes (pages set body[data-screen] in show())
   if (window.MutationObserver) new MutationObserver(turnTick).observe(document.body, { attributes:true, attributeFilter:["data-screen"] });
 })();
+/* Squarer screens than the frame's (4:3 tablets): pickers and level lists that don't fit get scaled
+   down (CSS zoom) until they do. Play screens lay themselves out. The fixed Back button, volume
+   control and popups keep their size. On the frame everything fits, so nothing is zoomed. */
+var fitted = [], fitTimer = null;
+function fitTargets(){
+  var s = document.body.getAttribute("data-screen");
+  if (s === "home"){ var on = document.querySelector(".screen.on"); return on ? [on] : []; }
+  if (s) return [];
+  var out = [], kids = document.body.children;
+  for (var i = 0; i < kids.length; i++){
+    var k = kids[i];
+    if (/^(SCRIPT|STYLE)$/.test(k.tagName) || !k.offsetWidth) continue;
+    if (window.getComputedStyle(k).position === "fixed") continue;
+    out.push(k);
+  }
+  return out;
+}
+function fitMeasure(els){
+  var b = 0, r = 0;
+  for (var i = 0; i < els.length; i++){
+    var all = els[i].querySelectorAll("button, img, canvas, h1, h2, p, .paper, .card, .chip");
+    for (var j = 0; j < all.length; j++){
+      var e = all[j];
+      if (!e.offsetWidth) continue;
+      var q = e.getBoundingClientRect();
+      if (q.bottom > b) b = q.bottom;
+      if (q.right > r) r = q.right;
+    }
+  }
+  return { b: b, r: r };
+}
+function fitScreen(){
+  fitTimer = null;
+  if (!document.body) return;
+  var els = fitTargets(), i, z = 1;
+  for (i = 0; i < fitted.length; i++) fitted[i].style.zoom = "";
+  fitted = els;
+  if (!els.length) return;
+  var W = window.innerWidth, H = window.innerHeight, pad = Math.min(W, H) * 0.015;
+  for (var n = 0; n < 4; n++){
+    var m = fitMeasure(els);
+    var need = Math.min(m.b > H ? (H - pad) / m.b : 1, m.r > W ? (W - pad) / m.r : 1);
+    if (need >= 0.999) break;
+    var nz = Math.max(0.6, Math.floor(z * need * 1000) / 1000);
+    if (nz >= z) break;
+    z = nz;
+    for (i = 0; i < els.length; i++) els[i].style.zoom = String(z);
+  }
+}
+function fitSoon(){ if (!fitTimer) fitTimer = setTimeout(fitScreen, 30); }
+(function(){
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fitSoon, false); else fitSoon();
+  window.addEventListener("load", fitSoon, false);
+  window.addEventListener("resize", fitSoon, false);
+  // pages set body[data-screen] in show(); the turn countdown adds body.turnon
+  if (window.MutationObserver) new MutationObserver(fitSoon).observe(document.body, { attributes:true, attributeFilter:["data-screen", "class"] });
+})();
+
 /* the frame's Back key: while the popup is up it closes it (same as "All done") */
 window.Turns = {
   start: turnStart,
@@ -427,6 +485,7 @@ window.Speech = {
   setSlow: setSlow,
   tapText: tapText,
   tokenKey: tokenKey,
+  fit: fitScreen,
   say: say,
   stop: stop,
   mode: mode,

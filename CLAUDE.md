@@ -147,6 +147,21 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - Don't store objects on DOM elements under names modern Chromium owns (`el.part` is a built-in
   there and silently breaks tests even though Chromium 39 doesn't have it).
 
+**Other Android phones and tablets** (owner's request, for a friend's kids; no web hosting): the
+`home/` module is a separate app, applicationId `com.wordhop.home` (never change it either), that
+uses :app's assets/www and res directly (sourceSets, not copies). MainActivity.kt: a plain
+full-screen activity (immersive, both orientations, configChanges so turning doesn't reload,
+textZoom 100, screen kept on until 5 min without a touch) with the same bridges: AndroidAudio
+(MediaPlayer; level 1-4 = clip volume, 5-6 + LoudnessEnhancer, default 4; device volume untouched;
+silly voices via PlaybackParams on API 23+), AndroidTTS, and AndroidApp with only backToPhotos()
+(= finish()). No hideFor, so hub.js hides "Grown-ups (hold)"; no turn* either, so speech.js uses
+its localStorage turn timer. The owner builds it with **android-app.bat** (= update.ps1
+-AndroidApp: steps 1-3, then copies SpaceWords-Android.apk to the repo root, gitignored) and
+sends the file; update.ps1 otherwise builds only :app. Screens must fit on phones and tablets
+too: speech.js fitScreen() CSS-zooms pickers and level lists that overflow (not play screens;
+nothing on the frame), Read and Answer shrinks a long story (fitStory), and web-test.js checks
+every screen and story at 6 phone/tablet sizes (DEVICES). Not tested on a real device yet.
+
 Pickers: index.html (Word games / Math games) -> words.html or math.html -> game. Shared picker
 look: hub.css/hub.js.
 

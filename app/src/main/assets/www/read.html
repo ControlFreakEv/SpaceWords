@@ -549,9 +549,22 @@ function renderRound(){
   }
   stage.appendChild(ch);
   R.story = story; R.choices = ch;
+  fitStory();
   if (G.round === 0 || it.kind !== G.lastKind) setTimeout(function(){ if (G && G.R === R) say([instr[1]]); }, 400);
   G.lastKind = it.kind;
 }
+/* squarer screens than the frame's (4:3 tablets): a long story gets smaller text until it all fits */
+function fitStory(){
+  var R = G && G.R, stage = $("stage");
+  if (!R || !R.story || !stage.firstChild) return;
+  R.story.style.fontSize = "";
+  var box = stage.getBoundingClientRect();
+  for (var n = 0; n < 8; n++){
+    if (stage.firstChild.getBoundingClientRect().top >= box.top - 1 && stage.lastChild.getBoundingClientRect().bottom <= box.bottom + 1) return;
+    R.story.style.fontSize = (parseFloat(window.getComputedStyle(R.story).fontSize) * 0.94) + "px";
+  }
+}
+window.addEventListener("resize", fitStory, false);
 /* "frog+log": the two pictures side by side */
 function picHtml(c){
   return c.split("+").map(function(w){ return '<img src="emoji/' + PICS[w] + '.svg" alt="">'; }).join("");

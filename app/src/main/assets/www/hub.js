@@ -33,6 +33,8 @@ document.getElementById("backBtn").onclick = goBack;
 (function(){
   var btn = document.getElementById("adultBtn"), pop = document.getElementById("hidePop");
   if (!btn || !pop) return;
+  // the Android app for other phones and tablets can't hide itself (no AndroidApp.hideFor): no button there
+  if (window.AndroidApp && !window.AndroidApp.hideFor){ btn.parentNode.style.display = "none"; return; }
   var fill = document.getElementById("adultFill"), t = null, HOURS = [1, 2, 3, 4, 6, 8, 12, 24];
   function begin(e){
     if (e && e.preventDefault) e.preventDefault();

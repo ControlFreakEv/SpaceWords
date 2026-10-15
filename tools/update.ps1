@@ -6,6 +6,11 @@
   Or from a terminal in the SpaceWords folder:
       powershell -ExecutionPolicy Bypass -File tools\update.ps1
 
+  The Android app for other phones and tablets (android-app.bat):
+      powershell -ExecutionPolicy Bypass -File tools\update.ps1 -AndroidApp
+  does steps 1-3 for that app instead and leaves SpaceWords-Android.apk in the SpaceWords folder
+  (the frame isn't touched).
+
   Options:
       -Open        open the games on the frame afterwards
       -SkipAudio   don't record voice clips (faster, when you know nothing new was added)
@@ -16,7 +21,8 @@ param(
     [string]$Frame = "192.168.1.242:5555",
     [string]$JavaHome = "",
     [switch]$Open,
-    [switch]$SkipAudio
+    [switch]$SkipAudio,
+    [switch]$AndroidApp
 )
 
 $root = Split-Path -Parent $PSScriptRoot
@@ -72,7 +78,9 @@ if ($SkipAudio) {
 }
 
 # 3. Build the APK (the same build as Android Studio's Generate APKs)
-Step 3 "Build the app"
+# :app is the frame's app; :home is Space Words for other phones and tablets (-AndroidApp).
+$task = if ($AndroidApp) { ":home:assembleDebug" } else { ":app:assembleDebug" }
+Step 3 $(if ($AndroidApp) { "Build the app for other phones and tablets" } else { "Build the app" })
 
 # Gradle 8.7 runs on Java 17 to 21 only (on Java 25 it fails with just "25.0.3").
 # Find one: Android Studio's built-in Java first, then other installed JDKs.
@@ -136,12 +144,25 @@ if ($isWin) {
         $sdk = (Join-Path $env:LOCALAPPDATA "Android\Sdk") -replace '\\', '\\' -replace ':', '\:'
         Set-Content -Encoding ASCII (Join-Path $root "local.properties") "sdk.dir=$sdk"
     }
-    & (Join-Path $root "gradlew.bat") assembleDebug
+    & (Join-Path $root "gradlew.bat") $task
 } else {
-    & (Join-Path $root "gradlew") assembleDebug
+    & (Join-Path $root "gradlew") $task
 }
 if ($LASTEXITCODE -ne 0) {
     Stop-With "The build failed." "Copy the red error lines above and send them to Claude. (If Android Studio is building at the same moment, wait for it and run this again.)"
+}
+
+# 4. The app for other phones and tablets: put it where it's easy to find and send
+if ($AndroidApp) {
+    Step 4 "Copy the app for other phones and tablets"
+    $apk = Join-Path $root "SpaceWords-Android.apk"
+    Copy-Item (Join-Path $root "home\build\outputs\apk\debug\home-debug.apk") $apk -Force
+    Write-Host ""
+    Write-Host "All done: $apk" -ForegroundColor Green
+    Write-Host "Send that file to the other phone or tablet (email, Google Drive, a USB cable) and tap it there to install."
+    Write-Host "Android asks once to allow installing apps from that place (Files, Gmail, Drive...): allow it."
+    Write-Host "To update it later, run this again and install the new file over the old one: the stars are kept."
+    exit 0
 }
 
 # 4. Install on the frame

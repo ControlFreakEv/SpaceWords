@@ -63,6 +63,23 @@ a plain message if one fails:
 From a terminal instead: `powershell -ExecutionPolicy Bypass -File tools\update.ps1`
 Add `-Open` to open the games afterwards, or `-SkipAudio` to skip recording.
 
+## Space Words on another Android phone or tablet
+Double-click **android-app.bat** in this folder. It gets the latest code, records any new clips
+and builds a separate app for ordinary Android phones and tablets (Android 5.1 or newer), then
+leaves **SpaceWords-Android.apk** in this folder. The frame isn't touched.
+
+To install it on the other device:
+1. Send it the file (email, Google Drive, or copy it over a USB cable).
+2. On that device, tap the file. Android asks once to allow installing apps from that app
+   (Files, Gmail, Drive...): allow it, then tap Install. If Play Protect warns about an
+   unknown app, tap "More details" > "Install anyway" (it's built on your PC, not from the Play Store).
+3. "Space Words" appears with the other apps. Stars stay on that device.
+
+It's the same games with all the voice clips, full screen, both ways up (screens shrink to fit
+squarer tablets). There is no UFO and no Grown-ups "Hide" button there, and Back on "Pick a
+mission" closes the app. To update it, run android-app.bat again and install the new file over
+the old one; the stars are kept. Keep the file private (the voice clips can't be shared publicly).
+
 ## 1. Record the voice (the frame has no text-to-speech engine)
 Needs Python 3 on your PC (python.org) and internet for a few minutes.
 Open Command Prompt in this SpaceWords folder (not platform-tools), then:

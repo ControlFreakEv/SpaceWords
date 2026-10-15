@@ -7,3 +7,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SpaceWords"
 include(":app")
+include(":home")   // Space Words for other Android phones and tablets (android-app.bat)

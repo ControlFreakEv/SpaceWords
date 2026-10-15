@@ -12,6 +12,8 @@ try { playwright = require("playwright"); }
 catch (e) { playwright = require(path.join(require("child_process").execSync("npm root -g").toString().trim(), "playwright")); }
 
 const WWW = path.join(__dirname, "..", "app", "src", "main", "assets", "www");
+// Other phones and tablets (the home/ Android app): screens must fit there too, menus shrink to fit (speech.js fitScreen)
+const DEVICES = [{ width: 412, height: 915 }, { width: 915, height: 412 }, { width: 768, height: 1024 }, { width: 1024, height: 768 }, { width: 834, height: 1194 }, { width: 1194, height: 834 }];
 const SHOTS = process.argv[2] || null;
 const TYPES = { ".html":"text/html", ".js":"application/javascript", ".css":"text/css", ".json":"application/json", ".svg":"image/svg+xml", ".ttf":"font/ttf", ".mp3":"audio/mpeg" };
 const phrases = JSON.parse(fs.readFileSync(path.join(WWW, "phrases.json"), "utf8"));
@@ -805,7 +807,7 @@ const server = http.createServer((req, res) => {
       : fail("read and answer play: " + JSON.stringify(played) + " " + bad.slice(0, 4).join("; "));
     // every story and its answers fit on the screen, sideways and upright
     const fit = [];
-    for (const vp of [{ width: 1280, height: 800 }, { width: 800, height: 1280 }]) {
+    for (const vp of [{ width: 1280, height: 800 }, { width: 800, height: 1280 }].concat(DEVICES)) {
       await page.setViewportSize(vp); await page.evaluate(() => ReadAnswer.start(0));
       const r = await page.evaluate(() => { const out = [];
         ReadAnswer.levels.forEach(L => L.items.forEach(it => { ReadAnswer.render(it);
@@ -815,7 +817,7 @@ const server = http.createServer((req, res) => {
       r.forEach(x => fit.push(vp.width + "x" + vp.height + ": " + x));
     }
     await page.setViewportSize({ width: 1280, height: 800 });
-    fit.length ? fail("read and answer stories that don't fit: " + fit.slice(0, 6).join("; ")) : ok("read and answer: all 274 stories fit on screen sideways and upright");
+    fit.length ? fail("read and answer stories that don't fit: " + fit.slice(0, 6).join("; ")) : ok("read and answer: all 274 stories fit on screen sideways and upright, on the frame and on " + DEVICES.length + " phone and tablet sizes");
     // the next game of a level starts with stories not played lately
     const fresh = await page.evaluate(() => { ReadAnswer.start(0); const a = ReadAnswer.state().items.map(x => x.story); ReadAnswer.start(0); const b = ReadAnswer.state().items.map(x => x.story); return a.filter(s => b.indexOf(s) >= 0).length; });
     fresh === 0 ? ok("read and answer: a new game picks stories not played lately") : fail("read and answer repeated " + fresh + " stories right away");
@@ -1578,8 +1580,7 @@ const server = http.createServer((req, res) => {
       return !!ln && near(+ln.getAttribute("x1") + br.left, L.right) && near(+ln.getAttribute("y1") + br.top, L.top + L.height / 2) && near(+ln.getAttribute("x2") + br.left, R.left) && near(+ln.getAttribute("y2") + br.top, R.top + R.height / 2);
     });
     lineOk ? ok("connect the pairs: the line follows the cards when the frame turns to portrait") : fail("connect the pairs line is in the wrong place after turning the frame");
-    const portraitBad = [];
-    const check = async name => {
+    const check = async (name, bad) => {
       await pp.waitForTimeout(250);
       const r = await pp.evaluate(() => {
         const W = innerWidth, H = innerHeight, out = [];
@@ -1591,19 +1592,27 @@ const server = http.createServer((req, res) => {
         if (document.documentElement.scrollWidth > W) out.push("scrolls sideways");
         return out.slice(0, 3);
       });
-      if (r.length) portraitBad.push(name + ": " + r.join(", "));
+      if (r.length) bad.push(name + ": " + r.join(", "));
     };
-    for (const p of ["index", "words", "math"]) { await pp.goto(base + p + ".html"); await check(p); }
-    for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
-      await pp.goto(base + u); await check(u + " levels");
-      const cnt = await pp.locator("#path button").count();
-      for (const i of [0, cnt - 1]) { await pp.goto(base + u); await pp.waitForTimeout(100); await pp.locator("#path button").nth(i).click(); await check(u + " level " + (i + 1)); }
-    }
-    await pp.goto(base + "class-words.html"); await check("class-words home");
-    for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) { await pp.evaluate(k => ClassWords.start(k), k); await check("class-words " + k); }
+    const sweep = async (tag, bad) => {
+      const chk = name => check(tag + name, bad);
+      for (const p of ["index", "words", "math"]) { await pp.goto(base + p + ".html"); await chk(p); }
+      for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+        await pp.goto(base + u); await chk(u + " levels");
+        const cnt = await pp.locator("#path button").count();
+        for (const i of [0, cnt - 1]) { await pp.goto(base + u); await pp.waitForTimeout(100); await pp.locator("#path button").nth(i).click(); await chk(u + " level " + (i + 1)); }
+      }
+      await pp.goto(base + "class-words.html"); await chk("class-words home");
+      for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) { await pp.evaluate(k => ClassWords.start(k), k); await chk("class-words " + k); }
+    };
+    const frameBad = [], deviceBad = [];
+    await sweep("", frameBad);
     if (SHOTS) await pp.screenshot({ path: path.join(SHOTS, "portrait-class-write.png") });
+    frameBad.length ? fail("portrait: " + frameBad.slice(0, 6).join(" | ")) : ok("portrait (800 x 1280): every picker, level list and game screen fits, nothing under the Back button");
+    for (const vp of DEVICES) { await pp.setViewportSize(vp); await sweep(vp.width + "x" + vp.height + " ", deviceBad); }
     await pp.close();
-    portraitBad.length ? fail("portrait: " + portraitBad.slice(0, 6).join(" | ")) : ok("portrait (800 x 1280): every picker, level list and game screen fits, nothing under the Back button");
+    deviceBad.length ? fail("phones and tablets: " + deviceBad.slice(0, 6).join(" | "))
+      : ok("phones and tablets (" + DEVICES.map(v => v.width + "x" + v.height).join(", ") + "): every screen fits, nothing under the Back button");
   }
 
   // Grown-ups: hold 1.5 s on Pick a mission, then hide Space Words for some hours (the app keeps the time)
@@ -1625,6 +1634,18 @@ const server = http.createServer((req, res) => {
     !quick && held && backCloses && hid.join() === "3"
       ? ok("grown-ups: a quick tap does nothing, holding opens Hide; Back closes it; 3 hours asks the app to hide for 3")
       : fail("grown-ups hide: " + JSON.stringify({ quick, held, backCloses, hid }));
+  }
+
+  // The Android app for other phones and tablets (home/) has AndroidApp without hideFor: no Grown-ups button there
+  {
+    const hp = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await hp.addInitScript(() => { window.AndroidApp = { backToPhotos: () => { window.__left = true; } }; });
+    await hp.goto(base + "index.html"); await hp.waitForTimeout(200);
+    const shown = await hp.evaluate(() => document.getElementById("adultBtn").offsetWidth > 0);
+    await hp.evaluate(() => goBack()); const left = await hp.evaluate(() => !!window.__left);
+    await hp.close();
+    !shown && left ? ok("android app for phones and tablets: no Grown-ups (hide) button, Back on Pick a mission leaves the app")
+      : fail("android app: grown-ups button shown " + shown + ", back leaves " + left);
   }
 
   // Hubs show star totals after playing.
