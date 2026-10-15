@@ -60,9 +60,14 @@ if ($SkipAudio) {
     $py = Get-Command python -ErrorAction SilentlyContinue
     if (-not $py) { $py = Get-Command python3 -ErrorAction SilentlyContinue }
     if (-not $py) { Stop-With "Python isn't installed (or isn't on PATH)." "Install it from python.org (tick 'Add python.exe to PATH'), then run: pip install edge-tts" }
+    # Microsoft changes its voice service now and then and old edge-tts versions get refused (403),
+    # so keep edge-tts up to date (quick when it already is).
+    Write-Host "Checking the voice recorder (edge-tts) is up to date..."
+    & $py.Source -m pip install --upgrade --quiet --disable-pip-version-check edge-tts
+    if ($LASTEXITCODE -ne 0) { Write-Host "  (couldn't update edge-tts; trying with the one installed)" -ForegroundColor Yellow }
     & $py.Source tools\make_audio.py
     if ($LASTEXITCODE -ne 0) {
-        Stop-With "Recording voice clips failed." "If it says 'pip install edge-tts', run that once. If clips failed to download, check the internet and run this again (finished clips are kept). To skip this step: add -SkipAudio"
+        Stop-With "Recording voice clips failed." "Read the lines just above for why. If it says 'pip install edge-tts', run that once. If clips failed to download, check the internet and run this again (finished clips are kept). To build without the new clips: double-click update.bat again after adding -SkipAudio (or run: powershell -ExecutionPolicy Bypass -File tools\update.ps1 -SkipAudio)"
     }
 }
 

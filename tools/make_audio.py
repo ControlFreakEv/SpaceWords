@@ -22,18 +22,36 @@ PHRASES = os.path.join(WWW, "phrases.json")
 OUT = os.path.join(WWW, "audio")
 
 
+# Microsoft refusing every clip (403) means edge-tts is out of date or the PC clock is wrong:
+# stop after a few instead of trying (and printing) hundreds.
+REFUSED = {"n": 0, "ok": 0, "stop": False}
+
+
+def short(e):
+    m = str(e).split(", url=")[0]          # the URL is long and says nothing useful
+    return m if len(m) < 120 else m[:117] + "..."
+
+
 async def record(key, text, voice, rate, force, sem):
     path = os.path.join(OUT, key + ".mp3")
     if os.path.exists(path) and os.path.getsize(path) > 0 and not force:
         return key, True
     async with sem:
         for attempt in range(3):
+            if REFUSED["stop"]:
+                return key, False
             try:
                 await edge_tts.Communicate(text, voice, rate=rate).save(path)
+                REFUSED["ok"] += 1
                 return key, True
             except Exception as e:
+                if "403" in str(e):
+                    REFUSED["n"] += 1
+                    if REFUSED["n"] >= 8 and REFUSED["ok"] == 0:
+                        REFUSED["stop"] = True
+                        return key, False
                 if attempt == 2:
-                    print(f"  failed: {key} ({e})")
+                    print(f"  failed: {key} ({short(e)})")
                 await asyncio.sleep(1.5)
     return key, False
 
@@ -63,6 +81,15 @@ async def main():
     with open(os.path.join(OUT, "index.json"), "w", encoding="utf-8") as f:
         json.dump(done, f)
     print(f"Done: {len(done)} of {len(phrases)} clips are ready.")
+    if REFUSED["stop"]:
+        print()
+        print("Microsoft's voice service refused to record (error 403). Two usual reasons:")
+        print("  1. edge-tts is out of date. Run:  python -m pip install --upgrade edge-tts")
+        print("  2. The PC's clock is wrong. Check the date and time (Settings > Time > Set time automatically).")
+        print("Then run this again; clips already recorded are kept.")
+        sys.exit(1)
+    if len(done) < len(phrases):
+        print(f"{len(phrases) - len(done)} clips failed; run this again later to record them (the rest are kept).")
 
 
 asyncio.run(main())
