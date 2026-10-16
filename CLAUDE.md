@@ -169,6 +169,10 @@ CDP: adb forward tcp:9222 localabstract:webview_devtools_remote_<pid> (Chrome 52
 without awaitPromise). There, canvases over ~256x256 stay blank unless /data/local/tmp/webview-command-line
 has "_ --disable-accelerated-2d-canvas", and rainbow-ink strokes get touchcancel (the shimmer is too
 slow under CPU emulation); both are emulator limits.
+The README's download link points at SpaceWords-Android.apk on the `android-apk` branch: one orphan
+commit holding just the APK and a short README, replaced with a force-push each time (so old
+54 MB copies don't pile up in history). After changes to assets/www or home/, rebuild :home
+(with every clip, see Speech) and replace that commit the same way.
 Every :home build is signed with home/spacewords-home.jks (committed; password spacewords), so
 updates built on the owner's PC or in any cloud session install over each other and keep the
 stars. Never replace that key: a differently signed update can't install without uninstalling.

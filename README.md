@@ -81,10 +81,23 @@ both ways up. Compared with the Skylight version there's no UFO and no "Hide for
 Back on "Pick a mission" closes the app. The voice clips are all in the repo, so no recording
 is needed.
 
-### Easiest: install a ready-made file
-If someone sends you `SpaceWords-Android.apk`, tap it on the device. Android asks once to allow
-installs from that app (Files, Gmail, Drive...); allow it and tap Install. If Play Protect warns
-about an unknown app, tap "More details" > "Install anyway" (it's not from the Play Store).
+### Easiest: download the ready-made app
+
+**[Download SpaceWords-Android.apk](https://github.com/ControlFreakEv/Skylight/raw/android-apk/SpaceWords-Android.apk)**
+(54 MB, the latest build, kept on the `android-apk` branch)
+
+1. On the phone or tablet, open this page in a browser (Chrome) signed in to GitHub, since the
+   repo is private, and tap the link. (In the GitHub app, open the link in the browser instead.)
+2. Open the downloaded file (from the download notification or the Files app). That starts
+   Android's installer.
+3. The first time, Android asks to allow installing apps from the browser ("Install unknown
+   apps"): allow it, go back, and tap **Install**. If Play Protect warns about an unknown app,
+   tap "More details" > "Install anyway"; it just isn't from the Play Store.
+4. "Space Words" appears with the other apps.
+
+On a kids' account managed with Google Family Link, a parent has to allow the install. On an
+Amazon Fire tablet, turn on Settings > Security & Privacy > Apps from Unknown Sources (for
+Silk or Files) first. A newer download installs over the old one and keeps the stars.
 
 ### Build it yourself
 You need Git, the Android SDK, and Java 17 to 21. Installing Android Studio covers both; its
