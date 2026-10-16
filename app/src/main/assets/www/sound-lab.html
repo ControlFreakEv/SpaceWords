@@ -77,7 +77,10 @@ img{display:block}
 .choice.vowel small{font-size:3.4vmin;color:#4F5F80;margin-top:1vmin}
 .choice.wordc{min-width:34vmin;height:20vmin;font-size:10vmin;padding:0 3vmin}
 .choice.n{width:17vmin;height:15vmin;font-family:"WHFun",sans-serif;font-size:9vmin}
-.choice.sl{width:30vmin;height:20vmin;font-size:10vmin}
+.choice.sl{width:30vmin;height:20vmin;font-size:10vmin;line-height:1}
+/* both vowels the same height (the short one gets an invisible bar), so "short" and "long" line up */
+.choice.sl > span{display:inline-block;padding-top:.3vmin;border-top:0.9vmin solid transparent}
+.choice.sl > .long{border-top-color:currentColor}
 .choice.sl small{font-family:"WHFun",sans-serif;font-size:4vmin;color:#4F5F80;margin-top:.6vmin}
 .choice.dim{opacity:.3;pointer-events:none}
 .choice.right{background:#7CFFB2}

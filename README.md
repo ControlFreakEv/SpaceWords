@@ -13,6 +13,43 @@ Both are built from this repo and run the same games (app/src/main/assets/www).
 **Keep this repo and the app files private.** The voice clips were recorded with edge-tts, an
 unofficial client for Microsoft's text-to-speech service, so they can't be shared publicly.
 
+## Screenshots
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/pick-a-mission.jpg" alt="Pick a mission"><br><sub>Pick a mission</sub></td>
+<td width="50%"><img src="docs/screenshots/word-games.jpg" alt="Word games"><br><sub>Word games</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/picture-planet.jpg" alt="Picture Planet: read the word, tap its picture"><br><sub>Picture Planet: read the word, tap its picture</sub></td>
+<td width="50%"><img src="docs/screenshots/sight-word-saucer.jpg" alt="Sight Word Saucer: look, then spell it"><br><sub>Sight Word Saucer: look, then spell it</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/connect-the-pairs.jpg" alt="Connect the Pairs"><br><sub>Connect the Pairs</sub></td>
+<td width="50%"><img src="docs/screenshots/rhyming-pairs.jpg" alt="Rhyming Pairs"><br><sub>Rhyming Pairs</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/sound-lab.jpg" alt="Sound Lab: short or long vowel?"><br><sub>Sound Lab: short or long vowel?</sub></td>
+<td width="50%"><img src="docs/screenshots/compound-words.jpg" alt="Compound Words"><br><sub>Compound Words</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/word-search.jpg" alt="Word Search (slide a finger along the word)"><br><sub>Word Search (slide a finger along the word)</sub></td>
+<td width="50%"><img src="docs/screenshots/read-and-answer.jpg" alt="Read and Answer"><br><sub>Read and Answer</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/class-words.jpg" alt="Class Words"><br><sub>Class Words</sub></td>
+<td width="50%"><img src="docs/screenshots/teach-zib.jpg" alt="Class Words: teach Zib the alien"><br><sub>Class Words: teach Zib the alien</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/rocket-math.jpg" alt="Rocket Math, stacked like on paper"><br><sub>Rocket Math, stacked like on paper</sub></td>
+<td width="50%"><img src="docs/screenshots/alien-patterns.jpg" alt="Alien Patterns: find the rule"><br><sub>Alien Patterns: find the rule</sub></td>
+</tr>
+</table>
+
+On a phone, upright:
+
+<img src="docs/screenshots/phone-menu.jpg" alt="Word games on a phone" width="220"> &nbsp; <img src="docs/screenshots/phone-math.jpg" alt="Rocket Math on a phone" width="220">
+
 ## The games
 
 Tap "Pick a mission":

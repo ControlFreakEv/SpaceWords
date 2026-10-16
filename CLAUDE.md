@@ -153,7 +153,7 @@ uses :app's assets/www and res directly (sourceSets, not copies), plus its own r
 an adaptive icon (drawable-anydpi-v26/ic_launcher: night-sky background, UFO foreground in the 66dp
 safe zone, monochrome layer for Android 13 themed icons; drawable/ic_launcher = the frame's icon for
 Android 5-7) and a dark theme (windowBackground #0B1026, Android 12 splash) so launch doesn't flash.
-targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 2 / 1.1; bump both on each
+targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 3 / 1.2; bump both on each
 release so updates install as newer. Full screen uses WindowInsetsController on Android 11+.
 MainActivity.kt: a plain
 full-screen activity (immersive, both orientations, configChanges so turning doesn't reload,
@@ -188,6 +188,9 @@ commit holding just the APK and a short README, replaced with a force-push each 
 Every :home build is signed with home/spacewords-home.jks (committed; password spacewords), so
 updates built on the owner's PC or in any cloud session install over each other and keep the
 stars. Never replace that key: a differently signed update can't install without uninstalling.
+README screenshots: docs/screenshots/*.jpg (960x600 frame shots, 412-wide phone shots), taken in
+headless Chromium with Playwright from a small static server (as web-test.js does); retake them
+when a screen changes noticeably.
 
 Pickers: index.html (Word games / Math games) -> words.html or math.html -> game. Shared picker
 look: hub.css/hub.js.
