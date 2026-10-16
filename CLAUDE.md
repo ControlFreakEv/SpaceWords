@@ -169,6 +169,12 @@ CDP: adb forward tcp:9222 localabstract:webview_devtools_remote_<pid> (Chrome 52
 without awaitPromise). There, canvases over ~256x256 stay blank unless /data/local/tmp/webview-command-line
 has "_ --disable-accelerated-2d-canvas", and rainbow-ink strokes get touchcancel (the shimmer is too
 slow under CPU emulation); both are emulator limits.
+2026-10-16, both from the APK on the android-apk branch: Android 7 (Chrome 52) tour of every game's
+first/last level and all Class Words activities, turn timer + popup + Back, phone size (`wm size`
+/ `wm density`, then force-stop the app), 3,000-event `monkey` (no crash/ANR/JS error); Android 11
+"system-images;android-30;google_atd;x86" (Chrome 83; boots in ~12 min; screencap and
+Page.captureScreenshot are black/hang there): speech, Back, rotation, saving, 1,200-event monkey
+(use --ignore-timeouts: Play services ANRs under emulation).
 The README's download link points at SpaceWords-Android.apk on the `android-apk` branch: one orphan
 commit holding just the APK and a short README, replaced with a force-push each time (so old
 54 MB copies don't pile up in history). After changes to assets/www or home/, rebuild :home
