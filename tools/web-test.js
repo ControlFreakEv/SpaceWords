@@ -789,19 +789,29 @@ const server = http.createServer((req, res) => {
         const say = await page.evaluate(() => [!!document.querySelector(".hintrow .sayb") || !window.Speech.canTalk(), document.querySelectorAll(".choice").length]);
         if (!say[0]) bad.push("no instructions button");
         if (r === 3) {   // missed: the answer (and the clue) show, no star
+          // The last miss is tapped and checked in one step: the answer shows at once, but the game
+          // moves on to the next story after the voice and a pause, and this page fast-forwards that
+          // pause, so a check made a moment later could already see the next story.
+          const tapAndLook = (sel, look) => page.evaluate(([sel, look]) => {
+            document.querySelector(sel).click();
+            return look === "order" ? [].map.call(document.querySelectorAll(".choice"), b => b.querySelector(".ordnum").textContent + b.getAttribute("data-ord")).sort().join()
+              : [!!document.querySelector(".choice.right"), document.querySelector(".story").className.indexOf("show") >= 0].join();
+          }, [sel, look]);
+          const ans = a => '.choice[data-ans="' + a.replace(/"/g, '\\"') + '"]';
           if (it.kind === "order") {
-            await page.click('.choice[data-ord="2"]'); await page.click('.choice[data-ord="1"]');
-            const o = await page.evaluate(() => [].map.call(document.querySelectorAll(".choice"), b => b.querySelector(".ordnum").textContent + b.getAttribute("data-ord")).sort().join());
+            await page.click('.choice[data-ord="2"]');
+            const o = await tapAndLook('.choice[data-ord="1"]', "order");
             if (o !== "10,21,32") bad.push("2 order misses didn't show the order: " + o);
           } else {
-            await page.click('.choice[data-ans="' + it.wrong[0] + '"]');
-            if (it.kind !== "yes") {
+            let shown;
+            if (it.kind === "yes") shown = await tapAndLook(ans(it.wrong[0]), "answer");
+            else {
+              await page.click(ans(it.wrong[0]));
               const mid = await page.evaluate(() => [document.querySelectorAll(".choice.wrong").length, document.querySelector(".story").className.indexOf("show") >= 0]);
               if (mid.join() !== "1,false") bad.push("after one miss " + mid);
-              await page.click('.choice[data-ans="' + it.wrong[1] + '"]');
+              shown = await tapAndLook(ans(it.wrong[1]), "answer");
             }
-            const shown = await page.evaluate(() => [!!document.querySelector(".choice.right"), document.querySelector(".story").className.indexOf("show") >= 0]);
-            if (shown.join() !== "true,true") bad.push(it.kind + " misses didn't show the answer " + shown);
+            if (shown !== "true,true") bad.push(it.kind + " misses didn't show the answer " + shown);
           }
         } else if (it.kind === "order") {
           for (const k of [0, 1, 2]) await page.click('.choice[data-ord="' + k + '"]');
