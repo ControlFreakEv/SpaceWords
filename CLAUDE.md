@@ -153,7 +153,7 @@ uses :app's assets/www and res directly (sourceSets, not copies), plus its own r
 an adaptive icon (drawable-anydpi-v26/ic_launcher: night-sky background, UFO foreground in the 66dp
 safe zone, monochrome layer for Android 13 themed icons; drawable/ic_launcher = the frame's icon for
 Android 5-7) and a dark theme (windowBackground #0B1026, Android 12 splash) so launch doesn't flash.
-targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 3 / 1.2; bump both on each
+targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 4 / 1.3; bump both on each
 release so updates install as newer. Full screen uses WindowInsetsController on Android 11+.
 MainActivity.kt: a plain
 full-screen activity (immersive, both orientations, configChanges so turning doesn't reload,
@@ -181,10 +181,11 @@ first/last level and all Class Words activities, turn timer + popup + Back, phon
 "system-images;android-30;google_atd;x86" (Chrome 83; boots in ~12 min; screencap and
 Page.captureScreenshot are black/hang there): speech, Back, rotation, saving, 1,200-event monkey
 (use --ignore-timeouts: Play services ANRs under emulation).
-The README's download link points at SpaceWords-Android.apk on the `android-apk` branch: one orphan
-commit holding just the APK and a short README, replaced with a force-push each time (so old
-54 MB copies don't pile up in history). After changes to assets/www or home/, rebuild :home
-(with every clip, see Speech) and replace that commit the same way.
+The README's download link points at download/SpaceWords-Android.apk on master (the owner asked
+for it there instead of a separate branch; each new copy adds ~54 MB to history, so only replace it
+for real changes). After changes to assets/www or home/: bump versionCode/versionName, rebuild
+:home (with every clip, see Speech), copy it there and update the version in the README's link line.
+.gitignore ignores only /SpaceWords-Android.apk (android-app.bat's local copy at the root).
 Every :home build is signed with home/spacewords-home.jks (committed; password spacewords), so
 updates built on the owner's PC or in any cloud session install over each other and keep the
 stars. Never replace that key: a differently signed update can't install without uninstalling.

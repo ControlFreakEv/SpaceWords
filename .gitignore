@@ -17,4 +17,4 @@ tools/back-to-photos-log.txt
 tools/autostart-log.txt
 
 # Space Words for other phones and tablets (android-app.bat builds it)
-SpaceWords-Android.apk
+/SpaceWords-Android.apk

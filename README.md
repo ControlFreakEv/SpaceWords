@@ -120,8 +120,8 @@ is needed.
 
 ### Easiest: download the ready-made app
 
-**[Download SpaceWords-Android.apk](https://github.com/ControlFreakEv/Skylight/raw/android-apk/SpaceWords-Android.apk)**
-(54 MB, the latest build, kept on the `android-apk` branch)
+**[Download SpaceWords-Android.apk](https://github.com/ControlFreakEv/Skylight/raw/master/download/SpaceWords-Android.apk)**
+(54 MB, the latest build, version 1.3; it's in the [download](download) folder)
 
 1. On the phone or tablet, open this page in a browser (Chrome) signed in to GitHub, since the
    repo is private, and tap the link. (In the GitHub app, open the link in the browser instead.)

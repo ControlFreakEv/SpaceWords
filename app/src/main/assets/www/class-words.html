@@ -209,7 +209,7 @@ img{display:block}
 <section class="screen" id="adult">
   <div class="head backroom"><div><h1>For grown-ups</h1><p id="adultMode"></p></div></div>
   <div class="adulttext">
-    Every mission mixes all of her words. <b>Words she misses on the first try come back more often</b>, words she knows come up less, and words she hasn't had for a while get a turn.<br>
+    Every mission mixes all the words. <b>Words missed on the first try come back more often</b>, words already known come up less, and words not played for a while get a turn.<br>
     <span class="legend"><span style="background:#FFD93D">tricky</span> <span style="background:#7CFFB2">learned</span> <span style="background:#D5DBEA">still learning</span></span> Small numbers: right first tries / tries.
   </div>
   <div class="wall" id="adultList"></div>
@@ -348,7 +348,7 @@ function renderHome(){
   /* her tricky words (missed most), so a grown-up can see them; all words still take turns */
   var wc = $("weekChips"), hard = LIST.filter(tricky).sort(function(a, b){ return missRate(b) - missRate(a) || missed(b) - missed(a); });
   wc.innerHTML = hard.length ? hard.map(function(w){ return '<span class="chip rw tw" data-say="' + wk(w) + '">' + w + '</span>'; }).join("")
-    : '<span class="lbl none">None yet! All ' + LIST.length + ' words take turns, and the ones she misses come back more.</span>';
+    : '<span class="lbl none">None yet! Words you miss will show up here, and they\'ll come back more often.</span>';
   fitWeek();
   var n = LIST.filter(learned).length;
   $("reviewInfo").innerHTML = n ? "&#9733; " + n + " of " + LIST.length + " learned" : "";
