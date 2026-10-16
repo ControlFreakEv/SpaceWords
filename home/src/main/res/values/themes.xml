@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sw_sky">#1B2457</color>
+    <color name="sw_bg">#0B1026</color>
+    <!-- The games' dark blue from the first frame, so opening the app doesn't flash white or grey. -->
+    <style name="SpaceWords" parent="@android:style/Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/sw_bg</item>
+        <item name="android:colorBackground">@color/sw_bg</item>
+        <item name="android:statusBarColor">@color/sw_bg</item>
+        <item name="android:navigationBarColor">@color/sw_bg</item>
+    </style>
+</resources>

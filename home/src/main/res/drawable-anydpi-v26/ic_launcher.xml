@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 8+: an adaptive icon, so launchers show the night sky in their own shape (circle,
+     squircle...) instead of shrinking the old round icon onto a white plate. Android 13+ uses the
+     monochrome layer for themed icons. Android 5-7 use drawable/ic_launcher (the frame's icon). -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/sw_sky" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
+</adaptive-icon>

@@ -13,10 +13,10 @@
 
     <application
         android:label="Space Words"
-        android:icon="@drawable/ic_ufo"
-        android:roundIcon="@drawable/ic_ufo"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
         android:allowBackup="false"
-        android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
+        android:theme="@style/SpaceWords">
 
         <!-- Turning the device doesn't restart the page: the games re-lay themselves out. -->
         <activity

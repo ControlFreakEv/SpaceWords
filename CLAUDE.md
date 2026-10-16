@@ -149,7 +149,13 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 
 **Other Android phones and tablets** (owner's request, for a friend's kids; no web hosting): the
 `home/` module is a separate app, applicationId `com.wordhop.home` (never change it either), that
-uses :app's assets/www and res directly (sourceSets, not copies). MainActivity.kt: a plain
+uses :app's assets/www and res directly (sourceSets, not copies), plus its own res in home/src/main/res:
+an adaptive icon (drawable-anydpi-v26/ic_launcher: night-sky background, UFO foreground in the 66dp
+safe zone, monochrome layer for Android 13 themed icons; drawable/ic_launcher = the frame's icon for
+Android 5-7) and a dark theme (windowBackground #0B1026, Android 12 splash) so launch doesn't flash.
+targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 2 / 1.1; bump both on each
+release so updates install as newer. Full screen uses WindowInsetsController on Android 11+.
+MainActivity.kt: a plain
 full-screen activity (immersive, both orientations, configChanges so turning doesn't reload,
 textZoom 100, screen kept on until 5 min without a touch) with the same bridges: AndroidAudio
 (MediaPlayer; level 1-4 = clip volume, 5-6 + LoudnessEnhancer, default 4; device volume untouched;

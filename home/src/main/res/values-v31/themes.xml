@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ always shows a splash screen: make it the games' dark blue with the UFO. -->
+    <style name="SpaceWords" parent="@android:style/Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/sw_bg</item>
+        <item name="android:colorBackground">@color/sw_bg</item>
+        <item name="android:statusBarColor">@color/sw_bg</item>
+        <item name="android:navigationBarColor">@color/sw_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/sw_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

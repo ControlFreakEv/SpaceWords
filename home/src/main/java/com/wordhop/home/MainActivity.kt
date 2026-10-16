@@ -17,6 +17,8 @@ import android.speech.tts.Voice
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -121,9 +123,18 @@ class MainActivity : Activity() {
         ui.postDelayed(idleCheck, 30_000)
     }
 
-    /** No status or navigation bar while playing; a swipe from the edge shows them for a moment. */
+    /** No status or navigation bar while playing; a swipe from the edge shows them for a moment.
+     *  Android 11+ has WindowInsetsController for this; older versions use the system UI flags. */
     @Suppress("DEPRECATION")
     private fun fullScreen() {
+        if (Build.VERSION.SDK_INT >= 30) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.let {
+                it.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+            return
+        }
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
