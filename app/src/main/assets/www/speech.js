@@ -298,7 +298,7 @@ function turtleButton(key){
    top row makes room); when it runs out, a popup on whatever page is open says "Switch turns!".
    The "Pick a mission" page has the start button (#turnbar) with - and + to pick the minutes
    (remembered as speech:turnMin). */
-var TURN_CHOICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30];
+var TURN_CHOICES = [1, 2, 3, 4, 5];   // owner's choice: turns are 5 minutes at most
 function turnMin(){ var m = load("turnMin", 5); return TURN_CHOICES.indexOf(m) >= 0 ? m : 5; }
 function stepTurnMin(dir){
   var i = TURN_CHOICES.indexOf(turnMin()) + dir;
@@ -333,8 +333,9 @@ function drawTurnBar(left){
   turnBarState = state;
   if (state === "idle"){
     var m = turnMin();
-    turnBar.innerHTML = '<span class="turnpick"><button class="turnstep" data-dir="-1" aria-label="Fewer minutes">&#8722;</button>' +
-      '<span class="turnmin">' + m + ' min</span><button class="turnstep" data-dir="1" aria-label="More minutes">+</button></span>' +
+    var lo = m === TURN_CHOICES[0] ? " end" : "", hi = m === TURN_CHOICES[TURN_CHOICES.length - 1] ? " end" : "";   // faded at the ends
+    turnBar.innerHTML = '<span class="turnpick"><button class="turnstep' + lo + '" data-dir="-1" aria-label="Fewer minutes">&#8722;</button>' +
+      '<span class="turnmin">' + m + ' min</span><button class="turnstep' + hi + '" data-dir="1" aria-label="More minutes">+</button></span>' +
       '<button class="turngo"><img src="emoji/23f1.svg" alt="">Start a ' + m + '-minute turn</button>';
     turnBar.querySelector(".turngo").onclick = turnStart;
     var steps = turnBar.querySelectorAll(".turnstep");
@@ -400,6 +401,7 @@ function turnTick(){
     "border:0.5vmin solid #1F2A44;border-radius:6vmin;box-shadow:0.7vmin 0.7vmin 0 #05081A;padding:.8vmin;color:#1F2A44}" +
     ".turnbar .turnstep{width:7vmin;height:7vmin;padding:0;border-radius:50%;background:#FFD93D;font-size:5vmin;line-height:1;box-shadow:none;" +
     "border-width:0.4vmin;-webkit-justify-content:center;justify-content:center}" +
+    ".turnbar .turnstep.end{opacity:.35}" +
     ".turnmin{font-size:4.4vmin;min-width:15vmin;text-align:center}" +
     ".turnrun{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;font-size:5vmin;color:#FFD93D;margin-right:3vmin}" +
     ".turnrun img{width:7vmin;height:7vmin}";

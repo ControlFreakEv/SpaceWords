@@ -1118,7 +1118,9 @@ const server = http.createServer((req, res) => {
 
   // Saucer sentences: each word is tappable; Picture Planet's prompt word costs the gold star.
   await page.goto(base + "saucer.html"); await page.locator("#path button").first().click();
-  for (let t = 0; t < 12; t++) {
+  // the first round is one of 3 kinds at random: 40 tries miss a sentence about once in 10 million (12 missed 1 in 200)
+  for (let t = 0; t < 40; t++) {
+    await page.waitForTimeout(50);
     if (await page.locator(".sentence .tw").count()) break;
     await page.goto(base + "saucer.html"); await page.locator("#path button").first().click(); await page.waitForTimeout(50);
   }
@@ -1423,21 +1425,25 @@ const server = http.createServer((req, res) => {
   await page.evaluate(() => localStorage.removeItem("speech:turnEnd"));
   pillBad.length ? fail("turn timer countdown overlaps: " + pillBad.slice(0, 8).join(" | ")) : ok("turn timer countdown clear of everything on level lists and in every game");
 
-  // Turn length: - and + pick the minutes (remembered); the turn starts with that many
+  // Turn length: - and + pick 1 to 5 minutes (remembered; 5 is the most); the turn starts with that many
   await page.goto(base + "index.html"); await page.waitForTimeout(150);
-  await page.evaluate(() => { localStorage.removeItem("speech:turnEnd"); localStorage.removeItem("speech:turnMin"); }); await page.reload(); await page.waitForTimeout(200);
+  await page.evaluate(() => { localStorage.removeItem("speech:turnEnd"); localStorage.setItem("speech:turnMin", "20"); }); await page.reload(); await page.waitForTimeout(200);
+  const oldLong = await page.evaluate(() => document.querySelector("#turnbar .turnmin").textContent);   // a longer turn saved before shows as 5
   await page.click('#turnbar .turnstep[data-dir="1"]'); await page.click('#turnbar .turnstep[data-dir="1"]');
+  const top = await page.evaluate(() => [document.querySelector("#turnbar .turnmin").textContent, getComputedStyle(document.querySelector('#turnbar .turnstep[data-dir="1"]')).opacity]);
+  await page.click('#turnbar .turnstep[data-dir="-1"]'); await page.click('#turnbar .turnstep[data-dir="-1"]');
   const picked = await page.evaluate(() => [document.querySelector("#turnbar .turnmin").textContent, document.querySelector("#turnbar .turngo").textContent]);
   for (let i = 0; i < 20; i++) await page.click('#turnbar .turnstep[data-dir="-1"]');
-  const lowest = await page.evaluate(() => document.querySelector("#turnbar .turnmin").textContent);
+  const lowest = await page.evaluate(() => [document.querySelector("#turnbar .turnmin").textContent, getComputedStyle(document.querySelector('#turnbar .turnstep[data-dir="-1"]')).opacity]);
   await page.reload(); await page.waitForTimeout(200);
   const keptMin = await page.evaluate(() => document.querySelector("#turnbar .turnmin").textContent);
   await page.click("#turnbar .turngo"); await page.waitForTimeout(300);
   const oneMin = await page.evaluate(() => Turns.left());
   await page.evaluate(() => { Turns.stop(); localStorage.removeItem("speech:turnMin"); });
-  picked[0] === "7 min" && /7-minute/.test(picked[1]) && lowest === "1 min" && keptMin === "1 min" && oneMin > 50000 && oneMin <= 60000
-    ? ok("turn timer: - and + pick the minutes (5 -> 7, down to 1), remembered, and the turn uses them")
-    : fail("turn timer minutes: " + JSON.stringify({ picked, lowest, keptMin, oneMin }));
+  oldLong === "5 min" && top[0] === "5 min" && +top[1] < 0.5 && picked[0] === "3 min" && /3-minute/.test(picked[1]) &&
+    lowest[0] === "1 min" && +lowest[1] < 0.5 && keptMin === "1 min" && oneMin > 50000 && oneMin <= 60000
+    ? ok("turn timer: 1 to 5 minutes (+ stops at 5, an old longer choice shows as 5, - down to 1), ends faded, remembered, and the turn uses them")
+    : fail("turn timer minutes: " + JSON.stringify({ oldLong, top, picked, lowest, keptMin, oneMin }));
 
   // Rhyming Pairs: tapping the partner says that word and then the praise (not the first word again)
   await page.goto(base + "match.html?g=rhyme"); await page.evaluate(() => MatchGame.start(0)); await page.waitForTimeout(150);

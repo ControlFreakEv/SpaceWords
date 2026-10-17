@@ -14,8 +14,8 @@ android {
         applicationId = "com.wordhop.home"
         minSdk = 22
         targetSdk = 34   // the newest compileSdk 34 (AGP 8.5.2) allows; the frame app stays at 33
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
     }
 
     // One signing key for every build (the owner's PC and Claude's cloud sessions), so an update

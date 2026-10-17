@@ -123,8 +123,8 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Instructions button**: every round of every game shows its instruction with a yellow speaker
   button (`.hintrow` + `.sayb`) that says it again; web-test.js checks every round has one. In
   Picture Planet's "read the word, tap the picture" it says only the instruction (the word is the answer).
-- **Turn timer** (the owner's son plays too): on Pick a mission (#turnbar), - / + pick 1-30 minutes
-  (TURN_CHOICES, remembered as speech:turnMin, default 5), then "Start a N-minute turn".
+- **Turn timer** (the owner's son plays too): on Pick a mission (#turnbar), - / + pick 1-5 minutes
+  (TURN_CHOICES; owner's limit is 5; remembered as speech:turnMin, default 5; a longer saved value shows as 5), then "Start a N-minute turn".
   The countdown lives natively in TurnTimer.kt (:ufo process; AndroidApp.turnStart/turnLeft/turnStop,
   left -1 = ran out, popup not dismissed), so it runs across pages and over the photos; when it runs
   out BubbleService opens the game window if it's closed. speech.js (every page) polls it each second:
@@ -153,7 +153,7 @@ uses :app's assets/www and res directly (sourceSets, not copies), plus its own r
 an adaptive icon (drawable-anydpi-v26/ic_launcher: night-sky background, UFO foreground in the 66dp
 safe zone, monochrome layer for Android 13 themed icons; drawable/ic_launcher = the frame's icon for
 Android 5-7) and a dark theme (windowBackground #0B1026, Android 12 splash) so launch doesn't flash.
-targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 4 / 1.3; bump both on each
+targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 5 / 1.4; bump both on each
 release so updates install as newer. Full screen uses WindowInsetsController on Android 11+.
 MainActivity.kt: a plain
 full-screen activity (immersive, both orientations, configChanges so turning doesn't reload,

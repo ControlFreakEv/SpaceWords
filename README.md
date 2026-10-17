@@ -108,7 +108,7 @@ as a hint, like Peek, and costs the round's gold star.
 
 Every screen has the same yellow Back button in the top-left corner; it goes back one step at a
 time, and so does the device's Back key. Stars for each level are saved on the device. On
-"Pick a mission", - and + set a turn length (1 to 30 minutes) and "Start a turn" counts it down,
+"Pick a mission", - and + set a turn length (1 to 5 minutes) and "Start a turn" counts it down,
 then says "Switch turns!", handy when siblings share.
 
 ## Install on a phone or tablet
@@ -121,7 +121,7 @@ is needed.
 ### Easiest: download the ready-made app
 
 **[Download SpaceWords-Android.apk](https://github.com/ControlFreakEv/Skylight/raw/master/download/SpaceWords-Android.apk)**
-(54 MB, the latest build, version 1.3; it's in the [download](download) folder)
+(54 MB, the latest build, version 1.4; it's in the [download](download) folder)
 
 1. On the phone or tablet, open this page in a browser (Chrome) signed in to GitHub, since the
    repo is private, and tap the link. (In the GitHub app, open the link in the browser instead.)
