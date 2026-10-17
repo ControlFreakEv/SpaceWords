@@ -120,7 +120,7 @@ is needed.
 
 ### Easiest: download the ready-made app
 
-**[Download SpaceWords-Android.apk](https://github.com/ControlFreakEv/Skylight/raw/master/download/SpaceWords-Android.apk)**
+**[Download SpaceWords-Android.apk](https://github.com/ControlFreakEv/SpaceWords/raw/master/download/SpaceWords-Android.apk)**
 (54 MB, the latest build, version 1.4; it's in the [download](download) folder)
 
 1. On the phone or tablet, open this page in a browser (Chrome) signed in to GitHub, since the
@@ -141,8 +141,8 @@ You need Git, the Android SDK, and Java 17 to 21. Installing Android Studio cove
 bundled Java works. Java 22+ won't run this project's Gradle 8.7, and please decline Android
 Studio's offer to upgrade the Android Gradle plugin.
 
-    git clone https://github.com/ControlFreakEv/Skylight.git
-    cd Skylight
+    git clone https://github.com/ControlFreakEv/SpaceWords.git
+    cd SpaceWords
     gradlew.bat :home:assembleDebug          (Windows)
     ./gradlew :home:assembleDebug            (macOS / Linux)
 
