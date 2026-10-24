@@ -262,7 +262,7 @@ function renderRound(){
 }
 
 function distractors(word, n){
-  return shuffle(LEVELS[G.level].words.filter(function(x){ return x.w !== word.w && x.img !== word.img; })).slice(0, n);
+  return shuffle(LEVELS[G.level].words.filter(function(x){ return !Speech.soundsSame(x.w, word.w) && x.img !== word.img; })).slice(0, n);
 }
 function speakBtn(word, big){
   var b = el("button", "paper press speak" + (big ? " big" : ""), '<img src="emoji/1f50a.svg" alt="">Hear it');
@@ -420,6 +420,7 @@ function confetti(target){
 document.addEventListener("touchstart", function(){}, true);
 
 renderHome();
+window.PicturePlanet = { levels:LEVELS, start:startLevel, state:function(){ return G; }, distractors:distractors };   // tests
 })();
 </script>
 </body>

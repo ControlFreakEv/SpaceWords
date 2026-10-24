@@ -489,6 +489,46 @@ window.Turns = {
   back: function(){ if (!turnShown) return false; stop(); turnStop(); return true; }
 };
 
+/* Words that sound alike. A "hear it, find it" round must never offer one of these as a wrong
+   choice ("to" said, "too" on a button), nor Zib say one in place of the other. */
+var SAME_SOUND = {};
+(function(){
+  var g = [
+    "to too two", "there their they're", "for four fore", "one won", "no know", "new knew gnu",
+    "right write rite", "eight ate", "by buy bye", "be bee", "see sea", "here hear", "would wood",
+    "which witch", "red read", "blue blew", "i eye aye", "our hour", "its it's", "so sew sow", "not knot",
+    "where wear ware", "whole hole", "made maid", "some sum", "son sun", "night knight", "wait weight",
+    "way weigh", "pair pear pare", "flower flour", "tail tale", "mail male", "sail sale", "meet meat",
+    "week weak", "road rode rowed", "hair hare", "deer dear", "bear bare", "plane plain", "rain reign rein",
+    "toe tow", "nose knows", "rose rows", "peace piece", "ant aunt", "your you're", "were we're",
+    "threw through", "been bean", "in inn", "or oar ore", "hi high", "close clothes", "tea tee",
+    "bored board", "berry bury", "cent scent sent", "cell sell", "fair fare", "flea flee", "heal heel he'll",
+    "hall haul", "horse hoarse", "knit nit", "led lead", "loan lone", "marry merry", "mussel muscle",
+    "pail pale", "pause paws", "pedal peddle", "poll pole", "pour pore", "seam seem", "stair stare",
+    "steal steel", "tied tide", "towed toad", "wail whale", "waist waste", "ware wear", "weather whether",
+    "wring ring", "wrap rap", "wrote rote", "beat beet", "dew do due", "die dye", "fir fur", "flew flu flue",
+    "grate great", "groan grown", "heard herd", "him hymn", "jeans genes", "knead need", "kernel colonel",
+    "main mane", "mist missed", "moose mousse", "oh owe", "pain pane", "past passed", "patience patients",
+    "plum plumb", "prince prints", "real reel", "role roll", "root route", "sole soul", "stake steak",
+    "suite sweet", "tacks tax", "tear tier", "thrown throne", "vain vane vein", "wade weighed", "war wore",
+    "warn worn", "weave we've", "wheel we'll", "whine wine", "yoke yolk", "ad add", "allowed aloud",
+    "bale bail", "band banned", "bawl ball", "cereal serial", "chews choose", "cheap cheep", "cord chord",
+    "creak creek", "crews cruise", "days daze", "doe dough", "feat feet", "find fined", "forth fourth",
+    "foul fowl", "gate gait", "guessed guest", "hay hey", "higher hire", "holy wholly", "idle idol",
+    "key quay", "lessen lesson", "lie lye", "links lynx", "manner manor", "maze maize", "might mite",
+    "mind mined", "moan mown", "morning mourning", "none nun", "oar or", "overdo overdue", "pi pie",
+    "pray prey", "principal principle", "rays raise", "rest wrest", "rung wrung", "sighs size",
+    "sight site cite", "slay sleigh", "soar sore", "tents tense", "their there", "toes tows", "told tolled",
+    "too two", "troop troupe", "use ewes", "we wee", "you ewe yew"
+  ];
+  for (var i = 0; i < g.length; i++){ var ws = g[i].split(" "); for (var j = 0; j < ws.length; j++) SAME_SOUND[ws[j]] = (SAME_SOUND[ws[j]] || "") + " " + g[i] + " "; }
+})();
+/* true when the two words sound the same (or are the same word), ignoring case */
+function soundsSame(a, b){
+  a = String(a).toLowerCase(); b = String(b).toLowerCase();
+  return a === b || (SAME_SOUND[a] || "").indexOf(" " + b + " ") >= 0;
+}
+
 window.Speech = {
   turtleButton: turtleButton,
   slowOn: function(){ return slowOn; },
@@ -507,6 +547,7 @@ window.Speech = {
   voice: function(){ return voice; },
   setVoice: function(id){ for (var i = 0; i < voices.length; i++) if (voices[i].id === id) voice = voices[i]; savedVoice = id; save("voice", id); },
   onChange: function(fn){ listeners.push(fn); },
+  soundsSame: soundsSame,
   key: function(word){ return "w_" + String(word).toLowerCase().replace(/[^a-z0-9]/g, ""); }
 };
 })();

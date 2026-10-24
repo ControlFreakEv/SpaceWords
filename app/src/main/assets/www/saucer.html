@@ -228,7 +228,7 @@ function alike(a, b){
   return s;
 }
 function lookAlikes(word, n){
-  var others = LEVELS[G.level].words.filter(function(x){ return x.w !== word.w; });
+  var others = LEVELS[G.level].words.filter(function(x){ return !Speech.soundsSame(x.w, word.w); });   // never "too" for "to"
   others.sort(function(x, y){ return alike(word.w, y.w) - alike(word.w, x.w); });
   return shuffle(others.slice(0, Math.max(n + 3, 6))).slice(0, n);
 }
@@ -506,6 +506,7 @@ function sparkle(target){
 
 document.addEventListener("touchstart", function(){}, true);
 renderHome();
+window.Saucer = { levels:LEVELS, start:startLevel, state:function(){ return G; }, lookAlikes:lookAlikes };   // tests
 })();
 </script>
 </body>

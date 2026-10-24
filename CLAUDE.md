@@ -144,6 +144,11 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   `<span class="tw" data-say="key">`; one page-wide click handler in speech.js plays any element
   with `data-say`. Words map to w_*, numbers to n_*, + - x / = to m_*. Every tappable word needs a
   clip (web-test.js checks what it sees on screen). Answer choices are never tappable words.
+- **Sound-alikes** (owner spotted "too" offered when "to" was said): speech.js SAME_SOUND / Speech.soundsSame(a, b)
+  (to/too/two, there/their, no/know, right/write, by/buy, eight/ate, ...). Every pick of wrong choices for a
+  word that is *heard* filters them out: Class Words lookAlikes (Find it, Teach Zib's wrong reading), Saucer
+  lookAlikes, Picture Planet distractors. Sentence and reading rounds may still offer them on purpose.
+  web-test.js sweeps every word of those games and Sound Lab's SWAP/MAGIC data. Add new pairs to the list.
 - Don't store objects on DOM elements under names modern Chromium owns (`el.part` is a built-in
   there and silently breaks tests even though Chromium 39 doesn't have it).
 
@@ -153,7 +158,7 @@ uses :app's assets/www and res directly (sourceSets, not copies), plus its own r
 an adaptive icon (drawable-anydpi-v26/ic_launcher: night-sky background, UFO foreground in the 66dp
 safe zone, monochrome layer for Android 13 themed icons; drawable/ic_launcher = the frame's icon for
 Android 5-7) and a dark theme (windowBackground #0B1026, Android 12 splash) so launch doesn't flash.
-targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 5 / 1.4; bump both on each
+targetSdk 34 (the most compileSdk 34 / AGP 8.5.2 allows), versionCode 6 / 1.5; bump both on each
 release so updates install as newer. Full screen uses WindowInsetsController on Android 11+.
 MainActivity.kt: a plain
 full-screen activity (immersive, both orientations, configChanges so turning doesn't reload,

@@ -121,7 +121,7 @@ is needed.
 ### Easiest: download the ready-made app
 
 **[Download SpaceWords-Android.apk](https://github.com/ControlFreakEv/SpaceWords/raw/master/download/SpaceWords-Android.apk)**
-(54 MB, the latest build, version 1.4; it's in the [download](download) folder)
+(54 MB, the latest build, version 1.5; it's in the [download](download) folder)
 
 1. On the phone or tablet, open this page in a browser (Chrome) signed in to GitHub, since the
    repo is private, and tap the link. (In the GitHub app, open the link in the browser instead.)

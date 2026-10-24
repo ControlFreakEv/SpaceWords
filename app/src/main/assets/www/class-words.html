@@ -282,7 +282,7 @@ function alike(a, b){
   return s;
 }
 function lookAlikes(w, n){
-  var others = LIST.filter(function(x){ return x !== w; });
+  var others = LIST.filter(function(x){ return !Speech.soundsSame(x, w); });   // never "too" for "to"
   others.sort(function(x, y){ return alike(w, y) - alike(w, x); });
   return shuffle(others.slice(0, n + 3)).slice(0, n);
 }
@@ -988,7 +988,7 @@ function confetti(target){
 })();
 
 /* hook for automated tests (harmless on the frame) */
-window.ClassWords = { LIST:LIST, SENT:SENT, sentenceOf:sentenceOf, tokens:tokens, plan:function(){ return force; }, state:function(){ return G; },
+window.ClassWords = { LIST:LIST, lookAlikes:lookAlikes, SENT:SENT, sentenceOf:sentenceOf, tokens:tokens, plan:function(){ return force; }, state:function(){ return G; },
   start:start, stats:function(){ return stats; }, weight:weight, wordsFor:wordsFor, tricky:tricky };
 
 document.addEventListener("touchstart", function(){}, true);

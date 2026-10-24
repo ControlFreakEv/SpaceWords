@@ -1671,6 +1671,39 @@ const server = http.createServer((req, res) => {
       : fail("android app: grown-ups button shown " + shown + ", back leaves " + left);
   }
 
+  // Sound-alikes (to / too / two...) are never the wrong choices where a word is heard: Class Words
+  // (Find it, and Teach Zib's wrong reading), Sight Word Saucer, Picture Planet; Sound Lab's vowel swaps
+  // and magic e pairs never make two words that sound the same.
+  {
+    const hp = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await hp.addInitScript(() => { window.__waysRate = 0; });
+    const same = [];
+    await hp.goto(base + "class-words.html"); await hp.waitForTimeout(200);
+    const known = await hp.evaluate(() => [["to","too"],["too","two"],["there","their"],["no","know"],["right","write"],["sun","son"],["to","so"],["the","to"]].map(p => Speech.soundsSame(p[0], p[1])).join());
+    same.push(...await hp.evaluate(() => { const out = [];
+      ClassWords.LIST.forEach(w => { for (let t = 0; t < 40; t++) ClassWords.lookAlikes(w, 3).forEach(x => { if (Speech.soundsSame(x, w)) out.push("class words " + w + "/" + x); }); });
+      return out; }));
+    await hp.goto(base + "saucer.html"); await hp.waitForTimeout(200);
+    same.push(...await hp.evaluate(() => { const out = [];
+      Saucer.levels.forEach((lv, i) => { Saucer.start(i); lv.words.forEach(word => { for (let t = 0; t < 40; t++) Saucer.lookAlikes(word, 3).forEach(x => { if (Speech.soundsSame(x.w, word.w)) out.push("saucer " + word.w + "/" + x.w); }); }); });
+      return out; }));
+    await hp.goto(base + "picture-planet.html"); await hp.waitForTimeout(200);
+    same.push(...await hp.evaluate(() => { const out = [];
+      PicturePlanet.levels.forEach((lv, i) => { PicturePlanet.start(i); lv.words.forEach(word => { for (let t = 0; t < 40; t++) PicturePlanet.distractors(word, 3).forEach(x => { if (Speech.soundsSame(x.w, word.w)) out.push("picture planet " + word.w + "/" + x.w); }); }); });
+      return out; }));
+    await hp.goto(base + "sound-lab.html"); await hp.waitForTimeout(200);
+    same.push(...await hp.evaluate(() => { const out = [], D = SoundLab.data;
+      D.SWAP.forEach(f => { const fr = f.split(":")[0].split("_"), ws = f.split(":")[1].split("").map(v => fr[0] + v + fr[1]);
+        ws.forEach((a, i) => ws.slice(i + 1).forEach(b => { if (Speech.soundsSame(a, b)) out.push("sound lab swap " + a + "/" + b); })); });
+      D.MAGIC.forEach(pair => { const a = SoundLab.plain(pair[0]), b = SoundLab.plain(pair[1]); if (Speech.soundsSame(a, b)) out.push("sound lab magic e " + a + "/" + b); });
+      return out; }));
+    await hp.close();
+    const uniq = [...new Set(same)];
+    known === "true,true,true,true,true,true,false,false" && !uniq.length
+      ? ok("sound-alikes (to/too/two, there/their, right/write...) are never wrong choices for a word you hear (Class Words, Saucer, Picture Planet, Sound Lab)")
+      : fail("sound-alike choices: " + known + " " + uniq.slice(0, 10).join(", "));
+  }
+
   // Hubs show star totals after playing.
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();
