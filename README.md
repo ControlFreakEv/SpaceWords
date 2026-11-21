@@ -136,6 +136,13 @@ opens where she left off, with the next level marked "Play!".
   and down grids, dice that add up (or multiply), 3 by 3 number grids (add across, double,
   times), shapes with more sides, circles with more parts colored, rows times columns of dots.
 
+After an answer, the games explain it where they can: Star Count and Rocket Math show and say a
+"Why:" line ("Make a ten: 8 + 2 = 10, then 2 more makes 12", "64 is bigger than 46. Look at the
+tens first", "3 groups of 4: 4 + 4 + 4 = 12") and number the pictures as they're counted; Alien
+Patterns shows the rule; Sound Lab gives the sound rule (magic e, vowel teams, bossy R...);
+Rhyming Pairs lights up the ending the two words share; Read and Answer lights up the clue; the
+Puzzle games say why the answer fits.
+
 Every screen has the same yellow Back button in the top-left corner; it goes back one step at a
 time, and so does the device's Back key. Stars for each level are saved on the device. On
 "Pick a mission", - and + set a turn length (1 to 5 minutes) and "Start a turn" counts it down,

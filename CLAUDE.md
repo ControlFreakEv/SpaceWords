@@ -24,6 +24,17 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   parts (carryRound): "Add the ones" (choices; the ones digit is written and a pink carried 1 pops
   up over the tens), then "Add the tens: 1 + ..." ; a dashed band marks the column being added.
   R.step / R.busy; web-test.js plays steps rounds part by part. Subtraction borrowing isn't shown yet.
+  **Explanations** (owner: "give explanations of answers where possible"): every Star Count and
+  Rocket Math round carries `why` {text, say, count} (why(), addWhy, columnWhy, compareWhy,
+  timesWhy): after a right or revealed answer a "Why:" line (.whyline) appears under the question
+  and is said (e_* clips plus n_/m_), e.g. "Make a ten: 8 + 2 = 10, then 2 more makes 12",
+  "4 tens and 7 ones make 47", "3 groups of 4: 4 + 4 + 4 = 12"; count says which pictures get
+  numbered (prompt / left / answer / all). web-test.js fails a count/ops round without one.
+  Sound Lab: correct(target, keys, [e_sl_* key, text]) shows the sound rule (ruleFor(spec): short,
+  magic e, long, vowel team, bossy R; syllables), [[letters]] in the text are bold, not tappable.
+  Rhyming Pairs: a match colors the shared ending (tag) on both cards and a 2.6 s toast
+  (.rhymewhy, fixed, pointer-events none) says why. Puzzle games name the pictures, colors and
+  patterns in their why lines.
 
 - **Puzzle games** (owner's request: she got into TAG and the NGAT score could be better;
   puzzles.html, third card on Pick a mission -> puzzle.html?g=shape|picture|number): NGAT-style

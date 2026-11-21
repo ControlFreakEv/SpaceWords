@@ -249,6 +249,7 @@ function values(p){
   return [];
 }
 var PART_NAME = { s:"shape", c:"color", f:"inside", z:"size" };
+var COLOR_NAME = ["red","orange","yellow","green","blue","purple"], FILL_NAME = ["solid","empty","dot"];
 function shapeRound(R){ R.render = specSvg; R.key = specKey; return R; }
 
 /* 2 x 2: each row keeps one thing the same, each column another */
@@ -301,6 +302,12 @@ function rChange(changes){
   var extra = clone(D), q2 = pick(free); if (q2 === "s") extra.s = other(turn ? TURNERS : SH, D.s); else extra[q2] = other(values(q2), D[q2]);
   wrong = shuffle(wrong.slice(1)).concat([extra, B, A]);
   wrong.unshift(C);
+  var said = changes.map(function(p){
+    if (p === "c") return COLOR_NAME[A.c] + " changes to " + COLOR_NAME[B.c] + ".";
+    if (p === "s") return "The " + A.s + " changes to a " + B.s + ".";
+    if (p === "f") return "The inside changes: " + FILL_NAME[A.f] + " to " + FILL_NAME[B.f] + ".";
+    return null;
+  });
   var sayWhy = changes.map(function(p){
     if (p === "r") return turnBy === 90 ? "pz_chg_turn90" : "pz_chg_turn180";
     if (p === "z") return B.z > A.z ? "pz_chg_big" : "pz_chg_small";
@@ -309,7 +316,7 @@ function rChange(changes){
   });
   return shapeRound({ kind:"grid", hint:"See how the first one changes? Pick the one that changes the same way.", say:["pz_i_change"], rows:2, cols:2,
     cells:[A, B, C, D], hole:3, options:choices(D, wrong, specSvg, specKey),
-    why:{ text:sayWhy.map(function(k){ return WHY_TEXT[k]; }).join(" "), say:sayWhy }, test:{ type:"change" } });
+    why:{ text:sayWhy.map(function(k, i){ var t = said[i] || WHY_TEXT[k]; return t.charAt(0).toUpperCase() + t.slice(1); }).join(" "), say:sayWhy }, test:{ type:"change" } });
 }
 var WHY_TEXT = { pz_chg_turn90:"It turns a quarter turn.", pz_chg_turn180:"It turns halfway around.", pz_chg_big:"It gets bigger.", pz_chg_small:"It gets smaller.",
   pz_chg_more:"There is one more.", pz_chg_shape:"The shape changes.", pz_chg_color:"The color changes.", pz_chg_fill:"The inside changes." };
@@ -492,8 +499,16 @@ function boardSvg(f, r0, c0, fillPiece){
   else out += '<rect x="' + (c0*100 + 3) + '" y="' + (r0*100 + 3) + '" width="194" height="194" rx="12" fill="none" stroke="#2FA86E" stroke-width="7"/>';
   return out + '</svg>';
 }
+/* what each pattern does, in the same order as PATTERNS */
+var PATTERN_TEXT = {
+  easy:["The colors take turns, like a checkerboard.", "Each row is one color, and the colors take turns.", "Each column is one shape, and the shapes take turns.", "The shapes take turns, like a checkerboard."],
+  mid:["The colors go in slanted stripes.", "The colors go in slanted stripes the other way.", "The shapes take turns like a checkerboard, and the rows take turns with colors.", "Three shapes take turns across, and two colors take turns down."],
+  hard:["Two shapes take turns down, and the colors go in slanted stripes.", "Three shapes go in slanted stripes, and two colors take turns across.", "The colors go in steep slanted stripes.",
+    "The shapes come in 2 by 2 blocks, and the colors take turns like a checkerboard.", "The shapes slant one way and the colors slant the other way.", "Each row is one shape and each column is one color.",
+    "The shapes go in steep stripes, and two colors take turns down.", "Two shapes take turns every two columns, and the colors move down one each time."]
+};
 function rHole(level){
-  var P = shuffle([0,1,2,3,4,5]).slice(0, 3), Q = shuffle(SH).slice(0, 3), f = pick(PATTERNS[level])(P, Q);
+  var P = shuffle([0,1,2,3,4,5]).slice(0, 3), Q = shuffle(SH).slice(0, 3), pi = ri(0, PATTERNS[level].length - 1), f = PATTERNS[level][pi](P, Q);
   var r0 = ri(0, BOARD - 2), c0 = ri(0, BOARD - 2);
   function piece(r, c){ return [[f(r, c), f(r, c + 1)], [f(r + 1, c), f(r + 1, c + 1)]]; }
   var ans = piece(r0, c0), offs = [], flips = shuffle([[[ans[0][1], ans[0][0]], [ans[1][1], ans[1][0]]], [ans[1], ans[0]]]), tweaks = [];
@@ -507,7 +522,7 @@ function rHole(level){
   var wrong = shuffle([offs[0], offs[1], flips[0], tweaks[0]]).concat(offs.slice(2), flips.slice(1), tweaks.slice(1));
   return { kind:"board", hint:"Which piece fills the hole?", say:["pz_i_hole"], board:function(fill){ return boardSvg(f, r0, c0, fill); },
     render:pieceSvg, key:pieceKey, options:choices(ans, wrong, pieceSvg, pieceKey),
-    why:{ text:"The pattern keeps going.", say:["pz_why_board"] }, test:{ type:"hole", f:f, r0:r0, c0:c0 } };
+    why:{ text:"The pattern keeps going. " + PATTERN_TEXT[level][pi], say:["pz_why_board"] }, test:{ type:"hole", f:f, r0:r0, c0:c0 } };
 }
 
 /* ====================================================================
@@ -607,6 +622,10 @@ function spread(list, k, not){
 }
 function groupOf(x){ for (var i = 0; i < PLAIN.length; i++) if (inCat(x, PLAIN[i])) return PLAIN[i]; return x; }
 function picHtml(name){ return img(PIC[name], "pic"); }
+var SAY_NAME = { thumbsup:"thumbs up", thumbsdown:"thumbs down", ufo:"flying saucer", videogame:"video game", firetruck:"fire truck", hotdog:"hot dog" };
+/* names in a why line: each one taps to say itself */
+function nm(x, first){ var t = SAY_NAME[x] || x; return '<span class="tw" data-say="w_' + x + '">' + (first ? t.charAt(0).toUpperCase() + t.slice(1) : t) + '</span>'; }
+function names(list){ return list.length < 2 ? nm(list[0], true) : list.slice(0, -1).map(function(x, i){ return nm(x, !i); }).join(", ") + " and " + nm(list[list.length - 1]); }
 function picKey(name){ return name; }
 function picRound(R){ R.render = picHtml; R.key = picKey; R.tapPics = true; return R; }
 
@@ -617,7 +636,7 @@ function rTogether(mode){
   var wrong = mode === "near" ? spread(pool(cat, true), 2, []).concat(spread(pool(cat, false), 4, [])) : spread(pool(cat, false), 4, []);
   if (mode === "cross") wrong = spread(pool(cat), 4, []);
   return picRound({ kind:"grid", hint:"These go together. Which one belongs with them?", say:["pz_i_together"], rows:2, cols:2,
-    cells:four, hole:3, options:choices(ans, wrong, picHtml, picKey), why:{ text:CAT_SAY[cat], say:["pz_c_" + cat] }, test:{ type:"together", cat:cat } });
+    cells:four, hole:3, options:choices(ans, wrong, picHtml, picKey), why:{ text:names(four) + ": " + Speech.tapText(CAT_SAY[cat].replace(/^They/, "they")), say:["pz_c_" + cat] }, test:{ type:"together", cat:cat } });
 }
 /* 2 x 2: the top pair is two of a kind; the bottom pair must be two of another kind */
 function rKind(near){
@@ -628,7 +647,7 @@ function rKind(near){
   var rest = spread(pool(Y, near).filter(function(x){ return !inCat(x, X); }), 3, []);
   return picRound({ kind:"grid", hint:"Look at the top pair. Which one makes a pair like it?", say:["pz_i_kind"], rows:2, cols:2,
     cells:[ab[0], ab[1], cd[0], cd[1]], hole:3, options:choices(cd[1], traps.concat(rest, spread(pool(Y, false), 4, [])), picHtml, picKey),
-    why:{ text:"Each pair is two of the same kind: " + CATS[X].label + ", then " + CATS[Y].label + ".", say:["pz_why_kind"] }, test:{ type:"kind", cat:Y, X:X } });
+    why:{ text:names([ab[0], ab[1]]) + Speech.tapText(" are both " + CATS[X].label + ". ") + names(cd) + Speech.tapText(" are both " + CATS[Y].label + "."), say:["pz_why_kind"] }, test:{ type:"kind", cat:Y, X:X } });
 }
 /* 3 x 3: each row is a group */
 function rRows(near){
@@ -644,7 +663,8 @@ function rRows(near){
   var cells = xs.slice(0, 3).concat(ys.slice(0, 3), zs.slice(0, 3)), ans = zs[2];
   var wrong = [xs[3] || xs[0], ys[3] || ys[0]].concat(spread(pool(Z, near).filter(function(x){ return !inCat(x, X) && !inCat(x, Y); }), 2, []), spread(pool(Z, false), 4, []));
   return picRound({ kind:"grid", hint:"Each row is a group. Which one finishes the last row?", say:["pz_i_groups"], rows:3, cols:3,
-    cells:cells, hole:8, options:choices(ans, wrong, picHtml, picKey), why:{ text:"Each row is a group. " + CAT_SAY[Z], say:["pz_why_rows", "pz_c_" + Z] }, test:{ type:"rows", cat:Z } });
+    cells:cells, hole:8, options:choices(ans, wrong, picHtml, picKey),
+    why:{ text:Speech.tapText("Each row is a group: " + CATS[X].label + ", " + CATS[Y].label + " and " + CATS[Z].label + "."), say:["pz_why_rows", "pz_c_" + Z] }, test:{ type:"rows", cat:Z } });
 }
 /* 2 x 2 picture pairs: A goes with B the way C goes with ? */
 var FAMS = {
@@ -780,7 +800,7 @@ function rSame(toNumber, top){
   var cells = [{ t:"cnt", v:k1, code:codes[0] }, right(k1), { t:"cnt", v:k2, code:toNumber ? codes[2] : codes[0] }, right(k2)];
   var wrong = near(k2, [k1], 1).filter(function(v){ return v <= 9; }).map(right);
   return numRound({ kind:"grid", hint:"Look at how many. Which one fits?", say:["pz_i_count"], rows:2, cols:2, cells:cells, hole:3,
-    options:choices(cells[3], wrong, qRender(OPT), qKey), why:{ text:"Each row has the same number.", say:["pz_why_same"] }, test:{ type:"same" } });
+    options:choices(cells[3], wrong, qRender(OPT), qKey), why:{ text:"Each row has the same number: " + k1 + " and " + k1 + ", " + k2 + " and " + k2 + ".", say:["pz_why_same"] }, test:{ type:"same" } });
 }
 /* 3 x 3 number grids: which family of rules made the rows? only one may fit */
 var FAMILY = {
@@ -1127,7 +1147,7 @@ function fillHole(how){
 }
 function showWhy(){
   var w = document.querySelector("#stage .why"); if (!w) return [];
-  w.innerHTML = G.R.why.text.indexOf("<") >= 0 ? G.R.why.text : Speech.tapText(G.R.why.text);
+  w.innerHTML = "<b>Why:</b> " + (G.R.why.text.indexOf("<") >= 0 ? G.R.why.text : Speech.tapText(G.R.why.text));
   addClass(w, "on");
   return G.R.why.say;
 }

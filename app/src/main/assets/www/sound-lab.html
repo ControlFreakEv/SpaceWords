@@ -91,6 +91,9 @@ img{display:block}
 @-webkit-keyframes shake{20%{-webkit-transform:translateX(-1.4vmin)}40%{-webkit-transform:translateX(1.4vmin)}60%{-webkit-transform:translateX(-.8vmin)}80%{-webkit-transform:translateX(.8vmin)}}
 @keyframes shake{20%{transform:translateX(-1.4vmin)}40%{transform:translateX(1.4vmin)}60%{transform:translateX(-.8vmin)}80%{transform:translateX(.8vmin)}}
 .tip{font-size:3.2vmin;color:#B9C3F2;text-align:center;min-height:4vmin}
+.whytip{color:#F3F6FF;background:#131A3D;border:0.5vmin solid #7CFFB2;border-radius:2.4vmin;padding:.8vmin 2.4vmin;margin:1vmin 0;max-width:92%}
+.whytip b{color:#7CFFB2;font-weight:600}
+.whytip b.lt{color:#FFD93D}
 
 /* end */
 .endbox{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;text-align:center}
@@ -286,6 +289,16 @@ var SYLL = [
   "g[o]-r[i]l-l[a]|guh rill luh","v[a]-n[i]l-l[a]|vuh nill luh","[e]l-[e]-v{a}-t^or^|ell uh vay ter"
 ];
 
+/* why a word sounds the way it does: [clip key, text] from its marks */
+function ruleFor(spec){
+  var parts = parse(spec), k = function(kind){ return parts.filter(function(p){ return p.kind === kind; })[0]; };
+  if (k("r")) return ["e_sl_r", "Bossy R: in [[" + k("r").text + "]] the r changes the sound of the vowel."];
+  if (k("team")) return ["e_sl_team", "The letters [[" + k("team").text + "]] team up to make one sound."];
+  if (k("long") && k("silent")) return ["e_sl_magic", "The silent e at the end makes the [[" + vowelOf(k("long")) + "]] say its name."];
+  if (k("long")) return ["e_sl_long", "The [[" + vowelOf(k("long")) + "]] says its name."];
+  return ["e_sl_short", "One vowel between consonants says its short sound."];
+}
+
 /* ---------- round makers: each returns { hint, say, build(stage) } ---------- */
 function rSwap(){
   var f = pick(SWAP).split(":"), frame = f[0].split("_"), ok = f[1].split(""), target = pick(ok);
@@ -303,7 +316,7 @@ function rSwap(){
         if (G.locked) return;
         var made = frame[0] + v + frame[1], slot = $("slot");
         slot.innerHTML = '<span class="v-' + v + '">' + v + '</span>';
-        if (v === target){ tip.innerHTML = ""; correct(b, [wkey(made)]); }
+        if (v === target){ tip.innerHTML = ""; correct(b, [wkey(made)], ["e_sl_short", made + ": one vowel between consonants says its short sound."]); }
         else {
           G.mistakes++;
           tip.innerHTML = Speech.tapText("That makes " + made + ". Listen again!");
@@ -327,7 +340,7 @@ function rHearVowel(){
       if (x === v) b.setAttribute("data-ok", "1");
       b.onclick = function(){
         if (G.locked) return;
-        if (x === v){ w.className = "paper word"; w.innerHTML = wordHtml(spec); correct(b, [wkey(word), "v_" + v + "_short"]); }
+        if (x === v){ w.className = "paper word"; w.innerHTML = wordHtml(spec); correct(b, [wkey(word), "v_" + v + "_short"], ruleFor(spec)); }
         else wrong(b);
       };
       row.appendChild(b);
@@ -344,7 +357,8 @@ function rWhichWord(){
       if (spec === target) b.setAttribute("data-ok", "1");
       b.onclick = function(){
         if (G.locked) return;
-        if (spec === target) correct(b, [wkey(word)].concat(spec.indexOf("<e>") >= 0 ? ["x_silent_e"] : []));
+        if (spec === target) correct(b, [wkey(word)].concat(spec.indexOf("<e>") >= 0 ? ["x_silent_e"] : []),
+          spec.indexOf("<e>") >= 0 ? ruleFor(spec) : ["e_sl_noe", "No e at the end, so the vowel is short."]);
         else wrong(b);
       };
       row.appendChild(b);
@@ -366,7 +380,7 @@ function rShortLong(pool){
       if ((o[0] === "long") === isLong) b.setAttribute("data-ok", "1");
       b.onclick = function(){
         if (G.locked) return;
-        if ((o[0] === "long") === isLong){ w.innerHTML = wordHtml(spec); correct(b, [wkey(word), "v_" + v + (isLong ? "_long" : "_short")]); }
+        if ((o[0] === "long") === isLong){ w.innerHTML = wordHtml(spec); correct(b, [wkey(word), "v_" + v + (isLong ? "_long" : "_short")], ruleFor(spec)); }
         else wrong(b);
       };
       row.appendChild(b);
@@ -392,7 +406,7 @@ function rFindTeam(pool, hint){
           if (p === target){
             tiles.forEach(function(x){ if (x.letterOf === target) addClass(x, "found"); });
             w.innerHTML = wordHtml(spec);
-            correct(t, [wkey(word), teamKey]);
+            correct(t, [wkey(word), teamKey], ruleFor(spec));
           } else wrong(t);
         };
         row.appendChild(t);
@@ -415,7 +429,7 @@ function rSyllables(){
         if (G.locked) return;
         if (k === count){
           w.innerHTML = wordHtml(spec, sylls);
-          correct(b, sylls.map(sylKey).concat([wkey(word)]));
+          correct(b, sylls.map(sylKey).concat([wkey(word)]), ["e_sl_syll", count + (count === 1 ? " part" : " parts") + ". Each part has one vowel sound."]);
         } else wrong(b);
       };
       row.appendChild(b);
@@ -435,7 +449,7 @@ function rWhichR(){
       if (o[0] === ans) b.setAttribute("data-ok", "1");
       b.onclick = function(){
         if (G.locked) return;
-        if (o[0] === ans){ w.className = "paper word"; w.innerHTML = wordHtml(spec); correct(b, [wkey(word), ans]); }
+        if (o[0] === ans){ w.className = "paper word"; w.innerHTML = wordHtml(spec); correct(b, [wkey(word), ans], ruleFor(spec)); }
         else wrong(b);
       };
       row.appendChild(b);
@@ -518,9 +532,18 @@ function renderRound(){
   R.build(stage);
   setTimeout(function(){ if (G && G.R === R) say(R.say); }, 400);
 }
-function correct(target, sayKeys){
+function correct(target, sayKeys, why){
   if (G.locked) return;
   G.locked = true;
+  /* why: [clip key, text]: the sound rule, shown and said after the word */
+  if (why){
+    var old = document.querySelector("#stage .tip"); if (old && !old.textContent) old.parentNode.removeChild(old);
+    /* [[letters]] are shown bold, not as words to tap */
+    var wl = el("div", "tip whytip", "<b>Why:</b> " + why[1].split(/\[\[|\]\]/).map(function(t, i){ return i % 2 ? '<b class="lt">' + t + '</b>' : Speech.tapText(t); }).join(""));
+    var row = document.querySelector("#stage .choices, #stage .tiles");
+    if (row) row.parentNode.insertBefore(wl, row); else $("stage").appendChild(wl);
+    sayKeys = sayKeys.concat([why[0]]);
+  }
   var clean = G.mistakes === 0;
   if (clean) G.stars++;
   G.results[G.round] = clean ? "gold" : "ok";

@@ -6,6 +6,11 @@
 <meta name="parent" content="words.html">
 <title>Match games</title>
 <style>
+.rhymewhy{position:fixed;left:50%;bottom:3vmin;z-index:20;-webkit-transform:translateX(-50%);transform:translateX(-50%);pointer-events:none;width:-webkit-max-content;width:max-content;max-width:92vw;text-align:center;
+  padding:1.2vmin 3vmin;border-radius:3vmin;background:#131A3D;border:0.5vmin solid #7CFFB2;color:#F3F6FF;font-size:3.6vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A}
+.rhymewhy b{color:#7CFFB2;font-weight:600}
+.rime{color:#E5487A}
+.rhymewhy .rime{color:#FF9ED8}
 @font-face{font-family:"WHRead";src:url("fonts/andika.ttf") format("truetype");font-weight:400}
 @font-face{font-family:"WHRead";src:url("fonts/andika-bold.ttf") format("truetype");font-weight:700}
 @font-face{font-family:"WHFun";src:url("fonts/fredoka.ttf") format("truetype");font-weight:600}
@@ -318,9 +323,18 @@ function match(x, y, w){
   drawLine(l, r);
   G.matched++;
   var p = x.pair;
-  if (RHYME) say(w.concat(["p_rhyme_" + Math.floor(Math.random()*3)]));
+  if (RHYME){ say(w.concat(["p_rhyme_" + Math.floor(Math.random()*3)])); rhymeWhy(l, r, p); }
   else say([key(p.a), "p_praise_" + Math.floor(Math.random()*6)]);
   if (G.matched === G.pairs.length) boardDone();
+}
+/* why they rhyme: the ending that sounds the same lights up on both cards, and a line says so */
+function rhymeWhy(l, r, p){
+  var same = [l, r].every(function(c){ var t = c.textContent; return t.length > p.tag.length && t.slice(-p.tag.length) === p.tag; });
+  if (same) [l, r].forEach(function(c){ var t = c.textContent; c.innerHTML = t.slice(0, -p.tag.length) + '<span class="rime">' + t.slice(-p.tag.length) + '</span>'; });
+  var old = document.querySelector(".rhymewhy"); if (old) old.parentNode.removeChild(old);
+  var box = el("div", "rhymewhy", "<b>Why:</b> " + p.a + " and " + p.b + (same ? " both end in <span class=\"rime\">-" + p.tag + "</span>." : " end with the same sound, with different letters."));
+  document.body.appendChild(box);
+  setTimeout(function(){ if (box.parentNode) box.parentNode.removeChild(box); }, 2600);
 }
 function miss(x, y, w){
   G.mistakes++;

@@ -67,7 +67,8 @@ const server = http.createServer((req, res) => {
         for (let t = 0; t < 150; t++) {
           const R = mk();
           const where = "L" + (li + 1) + " round " + ri + ": " + R.hint;
-          (R.say || []).concat(R.answerSay || []).forEach(k => out.keys[k] = 1);
+          (R.say || []).concat(R.answerSay || [], R.why ? R.why.say : []).forEach(k => out.keys[k] = 1);
+          if (g !== "pattern" && !R.why) out.bad.push(where + " no Why explanation");
           if (typeof R.answer === "number" && !(Number.isInteger(R.answer) && R.answer >= 0 && R.answer <= top)) out.bad.push(where + " answer " + R.answer);
           if (R.kind === "pad" && R.prompt.indexOf('id="entry"') < 0) out.bad.push(where + " keypad round without an answer box");
           const checkOpts = (opts, ans, w) => {
@@ -1307,7 +1308,7 @@ const server = http.createServer((req, res) => {
     const kinds = await page.evaluate(() => PuzzleGame.kinds().map(k => [k.id, k.from, k.to]));
     for (const k of kinds) for (const lv of [k[1], k[2]]) for (let t = 0; t < 3; t++) {
       await page.evaluate(([id, lv]) => { const K = PuzzleGame.kinds().filter(x => x.id === id)[0]; PuzzleGame.start(lv - 1, PuzzleGame.maker(K, lv));
-        const R = PuzzleGame.state().R; document.querySelector("#stage .why").innerHTML = R.why.text.indexOf("<") >= 0 ? "" : Speech.tapText(R.why.text); }, [k[0], lv]);
+        const R = PuzzleGame.state().R; document.querySelector("#stage .why").innerHTML = R.why.text.indexOf("<") >= 0 ? R.why.text : Speech.tapText(R.why.text); }, [k[0], lv]);
       await collect();
     }
   }

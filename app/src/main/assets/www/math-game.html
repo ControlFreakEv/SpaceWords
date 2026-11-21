@@ -132,6 +132,10 @@ img{display:block}
 .rule .b2{color:#8FD3FF}
 .rule img{width:6.4vmin;height:6.4vmin;margin:0 .5vmin}
 .rule .brk{color:#7CFFB2;font-size:6vmin;margin:0 .6vmin}
+.whyline{max-width:96%;text-align:center;line-height:1.2}
+.whyline.long{font-size:3.4vmin}
+.cn{position:absolute;right:-.2vmin;bottom:-.6vmin;min-width:3vmin;height:3vmin;padding:0 .4vmin;border-radius:1.5vmin;background:#FFD93D;color:#1F2A44;font-size:2.2vmin;line-height:3vmin;text-align:center}
+.sm .cn{min-width:2.4vmin;height:2.4vmin;font-size:1.8vmin;line-height:2.4vmin}
 
 /* answers */
 .choices{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap;width:100%}
@@ -268,6 +272,23 @@ function numOpts(ans, lo, hi, extras, count){
   return shuffle(set).map(function(v){ return { html:String(v), val:v, cls:"n" }; });
 }
 
+/* ---------- why: a short explanation shown and said after the answer ----------
+   text may hold the signs below; say is a list of clip keys (numbers and m_* words mostly) */
+function why(text, say, count){ return { text:text, say:say || [], count:count || "" }; }
+function eqSay(a, op, b, c){ return numSay(a).concat([op], numSay(b), ["m_equals"], numSay(c)); }
+/* "4 + 4 + 4 = 12" for k groups of m */
+function repeatAdd(k, m){ var t = [], s = []; for (var i = 0; i < k; i++){ t.push(m); if (i) s.push("m_plus"); s = s.concat(numSay(m)); } return { text:t.join(" + ") + " = " + k*m, say:s.concat(["m_equals"], numSay(k*m)) }; }
+function tensOnes(v){ return [Math.floor(v / 10), v % 10]; }
+/* adding or taking away without carrying: the ones, then the tens */
+function columnWhy(a, b, ans, minus){
+  var A = tensOnes(a), B = tensOnes(b), sign = minus ? " \u2212 " : " + ";
+  if (minus && A[1] < B[1])
+    return why("Not enough ones, so trade a ten for 10 ones: " + (A[1] + 10) + sign + B[1] + " = " + (A[1] + 10 - B[1]) + ". Tens: " + (A[0] - 1) + sign + B[0] + " = " + (A[0] - 1 - B[0]) + ". So " + ans + ".",
+      ["e_trade_ten", "e_check"].concat(eqSay(ans, "m_plus", b, a)));
+  return why("Ones: " + A[1] + sign + B[1] + " = " + (minus ? A[1] - B[1] : A[1] + B[1]) + ". Tens: " + A[0] + sign + B[0] + " = " + (minus ? A[0] - B[0] : A[0] + B[0]) + ". So " + ans + ".",
+    ["e_ones_then_tens"]);
+}
+
 /* ---------- round makers ----------
    Each returns { hint, say, prompt, kind:"choice"|"pad", options, answer, answerSay }.
    For keypad rounds the prompt contains <span class="q" id="entry">?</span>. */
@@ -276,14 +297,14 @@ var Q = '<span class="q" id="entry">?</span>';
 function rCount(lo, hi){
   var k = ri(lo, hi), t = pick(THINGS);
   return { hint:"How many " + t[1] + "?", say:["m_how_many"], prompt:frames(k, t[0]),
-    kind:"choice", options:numOpts(k, 0, hi + 2), answer:k, answerSay:[n(k)] };
+    kind:"choice", options:numOpts(k, 0, hi + 2), answer:k, answerSay:[n(k)], why:why("Count each one: there are " + k + ".", ["e_count_each"], "prompt") };
 }
 function rFindGroup(lo, hi){
   var k = ri(lo, hi), t = pick(THINGS), set = [k], guard = 0;
   while (set.length < 3 && guard++ < 100){ var o = k + pick([-3,-2,-1,1,2,3]); if (o >= 1 && o <= hi && set.indexOf(o) < 0) set.push(o); }
   return { hint:"Tap the group with " + k + ".", say:["m_find_group", n(k)], prompt:'<div class="bignum tw" data-say="n_' + k + '">' + k + '</div>',
     kind:"choice", options:shuffle(set).map(function(v){ return { html:'<div class="sm">' + frames(v, t[0]) + '</div>', val:v, cls:"g" }; }),
-    answer:k, answerSay:[n(k)] };
+    answer:k, answerSay:[n(k)], why:why("Count each one: this group has " + k + ".", ["e_count_each"], "answer") };
 }
 function rCompareGroups(lo, hi){
   var a = ri(lo, hi), b, guard = 0;
@@ -292,7 +313,7 @@ function rCompareGroups(lo, hi){
   var more = Math.random() < 0.6, t = pick(THINGS), ans = more ? Math.max(a, b) : Math.min(a, b);
   return { hint:"Which group has " + (more ? "more" : "fewer") + " " + t[1] + "?", say:[more ? "m_more" : "m_fewer"], prompt:"",
     kind:"choice", options:[a, b].map(function(v){ return { html:'<div class="sm">' + frames(v, t[0]) + '</div>', val:v, cls:"g" }; }),
-    answer:ans, answerSay:[n(ans)] };
+    answer:ans, answerSay:[n(ans)], why:why(ans + " is " + (more ? "more" : "fewer") + " than " + (ans === a ? b : a) + ".", [n(ans), more ? "e_more_than" : "e_fewer_than", n(ans === a ? b : a)], "all") };
 }
 function rCompareNums(lo, hi){
   var a = ri(lo, hi), b;
@@ -302,7 +323,16 @@ function rCompareNums(lo, hi){
   if (b === a) b = a + 1;
   var big = Math.random() < 0.6, ans = big ? Math.max(a, b) : Math.min(a, b);
   return { hint:"Which number is " + (big ? "bigger" : "smaller") + "?", say:[big ? "m_bigger" : "m_smaller"], prompt:"",
-    kind:"choice", options:[a, b].map(function(v){ return { html:String(v), val:v, cls:"n" }; }), answer:ans, answerSay:[n(ans)] };
+    kind:"choice", options:[a, b].map(function(v){ return { html:String(v), val:v, cls:"n" }; }), answer:ans, answerSay:[n(ans)], why:compareWhy(ans, ans === a ? b : a, big) };
+}
+/* 64 is bigger than 46: look at the tens first, then the ones */
+function compareWhy(x, y, big){
+  var X = tensOnes(x), Y = tensOnes(y), how = big ? "bigger" : "smaller", reason = "";
+  if (x >= 10 || y >= 10){
+    if (X[0] !== Y[0]) reason = " Look at the tens first: " + X[0] + (X[0] === 1 ? " ten" : " tens") + " is " + (big ? "more" : "less") + " than " + Y[0] + (Y[0] === 1 ? " ten" : " tens") + ".";
+    else reason = " The tens are the same, so look at the ones: " + X[1] + " is " + (big ? "more" : "less") + " than " + Y[1] + ".";
+  }
+  return why(x + " is " + how + " than " + y + "." + reason, numSay(x).concat([big ? "e_bigger_than" : "e_smaller_than"], numSay(y), X[0] !== Y[0] && (x >= 10 || y >= 10) ? ["e_tens_first"] : []));
 }
 /* a long row of numbers gets smaller so it stays on one line: about 104vmin of room beside the keypad ("p"),
    150vmin at full width ("c"). The sizes are in the CSS (.seq.p80 ...). */
@@ -330,8 +360,11 @@ function rNeighbor(lo, hi, pad){
   else if (type === "before"){ k = ri(lo + 1, hi); vals = [k - 1, k]; hide = 0; hint = "What comes before " + k + "?"; say = ["m_before", n(k)]; }
   else { k = ri(lo + 1, hi - 1); vals = [k - 1, k, k + 1]; hide = 1; hint = "What number is between " + (k-1) + " and " + (k+1) + "?"; say = ["m_between", n(k-1), "m_and", n(k+1)]; }
   var ans = vals[hide];
+  var w = type === "after" ? why(k + " + 1 = " + (k + 1) + ": one more.", eqSay(k, "m_plus", 1, k + 1)) :
+          type === "before" ? why(k + " \u2212 1 = " + (k - 1) + ": one less.", eqSay(k, "m_minus", 1, k - 1)) :
+          why((k - 1) + ", " + k + ", " + (k + 1) + ": count up by one.", numSay(k - 1).concat(numSay(k), numSay(k + 1)));
   return { hint:hint, say:say, prompt:bubbles(vals, hide), kind:pad ? "pad" : "choice",
-    options:pad ? null : numOpts(ans, 0, 100), answer:ans, answerSay:[n(ans)] };
+    options:pad ? null : numOpts(ans, 0, 100), answer:ans, answerSay:[n(ans)], why:w };
 }
 function placeValue(k){
   var tens = Math.floor(k / 10), ones = k % 10, out = '<div class="pv">';
@@ -342,13 +375,17 @@ function placeValue(k){
 function rPlaceValue(pad){
   var k = ri(11, 99), tens = Math.floor(k / 10), ones = k % 10;
   return { hint:"What number is this?", say:["m_what_number"], prompt:'<div class="prompt col">' + placeValue(k) + (pad ? '<div class="eq small">' + Q + '</div>' : '') + '</div>',
-    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(k, 10, 99, ones > 0 ? [ones*10 + tens] : []), answer:k, answerSay:[n(k)] };
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(k, 10, 99, ones > 0 ? [ones*10 + tens] : []), answer:k, answerSay:[n(k)],
+    why:why(tens + (tens === 1 ? " ten" : " tens") + " and " + ones + (ones === 1 ? " one" : " ones") + " make " + k + ".",
+      [n(tens), tens === 1 ? "e_ten_and" : "e_tens_and", n(ones), ones === 1 ? "e_one_makes" : "e_ones_make", n(k)]) };
 }
 function rTenMoreLess(pad){
   var more = Math.random() < 0.5, k = more ? ri(10, 89) : ri(20, 99), ans = more ? k + 10 : k - 10;
   return { hint:"What is 10 " + (more ? "more" : "less") + " than " + k + "?", say:[more ? "m_ten_more" : "m_ten_less", n(k)],
     prompt:'<div class="eq small"><span>' + Speech.tapText("10 " + (more ? "more" : "less") + " than " + k + " is") + '</span>' + Q + '</div>',
-    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(ans, 0, 100, [k + 1, k - 1, more ? k - 10 : k + 10]), answer:ans, answerSay:[n(ans)] };
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(ans, 0, 100, [k + 1, k - 1, more ? k - 10 : k + 10]), answer:ans, answerSay:[n(ans)],
+    why:why(k + (more ? " + " : " \u2212 ") + "10 = " + ans + ": the tens go " + (more ? "up" : "down") + " by one, the ones stay " + (k % 10) + ".",
+      eqSay(k, more ? "m_plus" : "m_minus", 10, ans).concat(["e_tens_change"])) };
 }
 
 /* numbers and signs in a question read themselves when tapped */
@@ -395,6 +432,7 @@ function carryRound(a, b){
   parts.forEach(function(v, i){ if (i) tensSay.push("m_plus"); tensSay.push(n(v)); });
   return { kind:"steps", hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)],
     prompt:colHtml(a, "+", b, s, true), answer:s, answerSay:[n(a), "m_plus", n(b), "m_equals", n(s)],
+    why:why("Ones: " + oa + " + " + ob + " = " + ones + ", write " + (ones % 10) + " and carry the 1. Tens: " + parts.join(" + ") + " = " + tens + ". So " + s + "."),
     steps:[
       { place:0, hint:"Add the ones: " + oa + " + " + ob, say:["m_add_ones", n(oa), "m_plus", n(ob)],
         options:numOpts(ones, 0, 19, [ones % 10, ones + 1]), answer:ones,
@@ -411,13 +449,22 @@ function rAdd(maxSum, pics, pad){
   if (!pics && needsCarry(a, b)) return carryRound(a, b);
   var p = pics ? '<div class="prompt">' + frames(a, t[0]) + '<span class="op">+</span>' + frames(b, t[0]) + '</div>' + eqHtml(a, "+", b) : sumHtml(a, "+", b, s);
   return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:'<div class="prompt col">' + p + '</div>',
-    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(s, 0, maxSum + 3, [a, b]), answer:s, answerSay:[n(s)] };
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(s, 0, maxSum + 3, [a, b]), answer:s, answerSay:[n(s)], why:addWhy(a, b, pics) };
+}
+/* small sums: count on from the first number (big numbers first), or make a ten; bigger: ones then tens */
+function addWhy(a, b, pics){
+  var s = a + b, big = Math.max(a, b), small = Math.min(a, b), steps = [];
+  if (a >= 10 || b >= 10) return columnWhy(a, b, s, false);
+  if (big < 10 && s > 10 && !pics) return why("Make a ten: " + big + " + " + (10 - big) + " = 10, then " + (s - 10) + " more makes " + s + ".", ["e_make_ten"]);
+  for (var i = big + 1; i <= s; i++) steps.push(i);
+  return why("Start at " + big + " and count on " + small + ": " + steps.join(", ") + ".", ["e_start_at", n(big), "e_count_on", n(small)], pics ? "prompt" : "");
 }
 function rSub(max, pics, pad){
   var a = ri(2, max), b = ri(1, a), d = a - b, t = pick(THINGS);
   var p = pics ? '<div class="prompt">' + frames(a, t[0], b) + '</div>' + eqHtml(a, MINUS, b) : sumHtml(a, MINUS, b, d);
   return { hint:"What is " + a + " " + "−" + " " + b + "?", say:["m_what_is", n(a), "m_minus", n(b)], prompt:'<div class="prompt col">' + p + '</div>',
-    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(d, 0, max, [a + b <= max + 5 ? a + b : a]), answer:d, answerSay:[n(d)] };
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(d, 0, max, [a + b <= max + 5 ? a + b : a]), answer:d, answerSay:[n(d)],
+    why:a >= 10 && b >= 10 ? columnWhy(a, b, d, true) : why(a + " take away " + b + " leaves " + d + ". Check: " + d + " + " + b + " = " + a + ".", ["e_check"].concat(eqSay(d, "m_plus", b, a)), pics ? "left" : "") };
 }
 function rMissing(max, pad){
   var a = ri(1, max - 1), b = ri(1, max - a), s = a + b, first = Math.random() < 0.5;
@@ -425,7 +472,8 @@ function rMissing(max, pad){
   var html = '<div class="eq">' + (first ? q + opSpan("+") + num(b) : num(a) + opSpan("+") + q) + EQUALS + num(s) + '</div>';
   var ans = first ? a : b;
   return { hint:"What number is missing?", say:["m_missing"], prompt:html, kind:pad ? "pad" : "choice",
-    options:pad ? null : numOpts(ans, 0, max, [s, first ? b : a]), answer:ans, answerSay:[n(ans)] };
+    options:pad ? null : numOpts(ans, 0, max, [s, first ? b : a]), answer:ans, answerSay:[n(ans)],
+    why:why("Take the part you know away from " + s + ": " + s + " \u2212 " + (first ? b : a) + " = " + ans + ".", eqSay(s, "m_minus", first ? b : a, ans)) };
 }
 function rAdd2(pad){
   var type = pick(["tens","easy","carry"]), a, b;
@@ -435,7 +483,7 @@ function rAdd2(pad){
   var s = a + b;
   if (needsCarry(a, b)) return carryRound(a, b);
   return { hint:"What is " + a + " + " + b + "?", say:["m_what_is", n(a), "m_plus", n(b)], prompt:sumHtml(a, "+", b, s), kind:pad ? "pad" : "choice",
-    options:pad ? null : numOpts(s, 0, 100, [s - 10, s + 10]), answer:s, answerSay:[n(s)] };
+    options:pad ? null : numOpts(s, 0, 100, [s - 10, s + 10]), answer:s, answerSay:[n(s)], why:columnWhy(a, b, s, false) };
 }
 function rSub2(pad){
   var type = pick(["tens","easy","borrow"]), a, b;
@@ -444,7 +492,7 @@ function rSub2(pad){
   else { var ta2 = ri(3, 9), oa2 = ri(0, 7); a = ta2*10 + oa2; b = ri(1, ta2 - 2)*10 + ri(oa2 + 1, 9); }
   var d = a - b;
   return { hint:"What is " + a + " − " + b + "?", say:["m_what_is", n(a), "m_minus", n(b)], prompt:sumHtml(a, MINUS, b, d), kind:pad ? "pad" : "choice",
-    options:pad ? null : numOpts(d, 0, 100, [d + 10, d - 10]), answer:d, answerSay:[n(d)] };
+    options:pad ? null : numOpts(d, 0, 100, [d + 10, d - 10]), answer:d, answerSay:[n(d)], why:columnWhy(a, b, d, true) };
 }
 function rGroups(pad){
   var g = ri(2, 5), each = ri(2, 5), t = pick(THINGS), out = '<div class="groups">';
@@ -453,18 +501,29 @@ function rGroups(pad){
   var s = g*each;
   return { hint:g + " groups of " + each + ". How many in all?", say:[n(g), "m_groups_of", n(each), "m_in_all"],
     prompt:'<div class="prompt col">' + out + eqHtml(g, TIMES, each).replace('class="eq"', 'class="eq small"') + '</div>',
-    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(s, 0, 30, [g + each, s + each, s - each]), answer:s, answerSay:[n(s)] };
+    kind:pad ? "pad" : "choice", options:pad ? null : numOpts(s, 0, 30, [g + each, s + each, s - each]), answer:s, answerSay:[n(s)],
+    why:(function(){ var r = repeatAdd(g, each); return why(g + " groups of " + each + ": " + r.text + ".", r.say); })() };
 }
 function rTimes(pad){
   var a = pick([2,3,4,5,10,2,5,10,6,7,8,9]), b = ri(1, a > 5 && a < 10 ? 6 : 10), p = a*b;
   if (Math.random() < 0.5){ var tmp = a; a = b; b = tmp; }
   return { hint:"What is " + a + " × " + b + "?", say:["m_what_is", n(a), "m_times", n(b)], prompt:eqHtml(a, TIMES, b), kind:pad ? "pad" : "choice",
-    options:pad ? null : numOpts(p, 0, 100, [a + b, p + a, p - b]), answer:p, answerSay:[n(p)] };
+    options:pad ? null : numOpts(p, 0, 100, [a + b, p + a, p - b]), answer:p, answerSay:[n(p)], why:timesWhy(a, b) };
+}
+/* 3 x 4 = 3 groups of 4 = 4 + 4 + 4; times 10 = that many tens */
+function timesWhy(a, b){
+  var p = a*b, k = Math.min(a, b), m = Math.max(a, b);
+  if (m === 10 && k > 1) return why(k + " \u00d7 10 = " + k + " tens = " + p + ".", numSay(k).concat(["m_times"], numSay(10), ["m_equals"], numSay(k), ["e_tens_word", "m_equals"], numSay(p)));
+  if (k === 1) return why("1 group of " + m + " is just " + m + ".", eqSay(a, "m_times", b, p));
+  if (k > 5) return why(a + " \u00d7 " + b + " = " + p + ". Check: " + p + " \u00f7 " + b + " = " + a + ".", eqSay(a, "m_times", b, p));
+  var r = repeatAdd(k, m);
+  return why(k + " groups of " + m + ": " + r.text + ".", r.say);
 }
 function rDivide(pad){
   var b = pick([2,3,4,5,10]), q = ri(1, 10), a = b*q;
   return { hint:"What is " + a + " ÷ " + b + "?", say:["m_what_is", n(a), "m_div", n(b)], prompt:eqHtml(a, DIVIDE, b), kind:pad ? "pad" : "choice",
-    options:pad ? null : numOpts(q, 0, 20, [q + 1, q - 1, b]), answer:q, answerSay:[n(q)] };
+    options:pad ? null : numOpts(q, 0, 20, [q + 1, q - 1, b]), answer:q, answerSay:[n(q)],
+    why:why(a + " \u00f7 " + b + " = " + q + ", because " + b + " \u00d7 " + q + " = " + a + ".", ["e_because"].concat(eqSay(b, "m_times", q, a))) };
 }
 
 /* sequences. Each one carries its rule: steps between the numbers, a line of text, and what to say.
@@ -835,6 +894,31 @@ function showRule(){
   seq.parentNode.insertBefore(line, seq.nextSibling);
   return R.rule.say;
 }
+/* everything else: a "Why:" line under the question, and the pictures counted one by one */
+function showWhy(){
+  var R = G.R, w = R.why;
+  if (!w || R.rule) return [];
+  var line = el("div", "rule whyline", "<b>Why:</b><span>" + Speech.tapText(w.text) + "</span>");
+  if (line.textContent.length > 46) addClass(line, "long");
+  var host = document.querySelector("#stage .padleft") || document.querySelector("#stage .prompt");
+  if (host && hasClass(host, "padleft")) host.appendChild(line);
+  else if (host) host.parentNode.insertBefore(line, host.nextSibling);
+  else { var ch = document.querySelector("#stage .choices"); if (ch) ch.parentNode.insertBefore(line, ch); }
+  /* count the pictures: in the question ("prompt"), only the ones left ("left"), in the right group ("answer") or in every group ("all") */
+  var scope = w.count === "prompt" || w.count === "left" ? document.querySelector("#stage .prompt") :
+              w.count === "answer" ? document.querySelector("#stage .choice.right") : w.count === "all" ? $("stage") : null;
+  if (scope){
+    var groups = w.count === "all" ? scope.querySelectorAll(".choice") : [scope];
+    Array.prototype.forEach.call(groups, function(g){
+      var k = 0;
+      Array.prototype.forEach.call(g.querySelectorAll(".cell"), function(c){
+        if (!c.querySelector("img") || (w.count === "left" && hasClass(c, "x"))) return;
+        c.appendChild(el("span", "cn", String(++k)));
+      });
+    });
+  }
+  return w.say;
+}
 /* say it all, then move on once the voice is done (a long timer is only a safety net) */
 function sayThenNext(keys){
   var R = G.R, moved = false;
@@ -847,7 +931,7 @@ function revealAnswer(){
   var e = entry(); setEntry(e, String(G.R.answer)); addClass(e, "reveal");
   G.results[G.round] = "ok";
   renderDots();
-  var rule = showRule();
+  var rule = showRule().concat(showWhy());
   sayThenNext(["m_answer_is"].concat(G.R.answerSay, rule));
 }
 
@@ -861,7 +945,7 @@ function correct(target){
   var e = entry(); if (e && (G.R.kind === "choice" || G.R.kind === "steps")){ if (G.R.answerHtml) e.innerHTML = G.R.answerHtml; else setEntry(e, String(G.R.answer)); }
   renderDots();
   confetti(target);
-  var rule = showRule();
+  var rule = showRule().concat(showWhy());
   sayThenNext(G.R.answerSay.concat(rule, ["m_praise_" + Math.floor(Math.random()*6)]));
 }
 function wrong(target){
