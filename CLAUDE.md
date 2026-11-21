@@ -25,6 +25,18 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   up over the tens), then "Add the tens: 1 + ..." ; a dashed band marks the column being added.
   R.step / R.busy; web-test.js plays steps rounds part by part. Subtraction borrowing isn't shown yet.
 
+- **Puzzle games** (owner's request: she got into TAG and the NGAT score could be better;
+  puzzles.html, third card on Pick a mission -> puzzle.html?g=shape|picture|number): NGAT-style
+  (Naglieri General Ability Tests: Nonverbal, Verbal, Quantitative). A matrix of boxes (2x2, 3x3,
+  3x2, 1x4) or a 5x5 pattern with a 2x2 hole, one box empty, always 5 answer choices (near misses,
+  like the test). 5 levels x 10 rounds; star = right first try; 2 misses show the answer. After
+  each answer a "why" line is shown and said (pz_* keys). Shapes are inline SVG (specSvg: shape,
+  color, inside, size, turn, count; linesSvg; boardSvg), Picture Puzzles use Twemoji from PIC
+  (CATS groups with `avoid` lists of too-close-to-call things, cross groups flies/wheels/light
+  with `safe` groups, FAMS picture pairs with their sentences pz_p_<a>_<b>); number rules are
+  checked so only one rule fits what's shown (onlyRule, gridOnly). Every round carries `test`
+  data; web-test.js rebuilds each puzzle's rule from the boxes and checks that the answer fits
+  and no wrong choice does (250 rounds per kind). Stars: localStorage puzzle:<g>:best.
 - **Match games** (match.html?g=connect|rhyme): Connect the Pairs (word to picture, Picture
   Planet's word levels) and Rhyming Pairs (42/80/84/85/81 pairs per level, tagged by sound; a
   board never has two pairs with the same sound). 5 levels x 5 boards of 3-5 pairs; lines drawn with inline SVG. Stars:
@@ -198,7 +210,7 @@ README screenshots: docs/screenshots/*.jpg (960x600 frame shots, 412-wide phone 
 headless Chromium with Playwright from a small static server (as web-test.js does); retake them
 when a screen changes noticeably.
 
-Pickers: index.html (Word games / Math games) -> words.html or math.html -> game. Shared picker
+Pickers: index.html (Word games / Math games / Puzzle games) -> words.html, math.html or puzzles.html -> game. Shared picker
 look: hub.css/hub.js.
 
 **One Back button everywhere** (the owner asked for this; keep it): a yellow "<- Back" pill, fixed
@@ -310,7 +322,7 @@ The repo must stay **private**: the clips come from an unofficial Microsoft TTS 
 
 ## Build and check
 - `node tools/check-es5.js`: ES5 and Chromium 39 checks for all web code.
-- `node tools/web-test.js [shot-dir]`: plays every math, match, Sound Lab, Compound Words, Word Search, Read and Answer and Class Words level in headless Chromium at 1280x800,
+- `node tools/web-test.js [shot-dir]`: plays every math, puzzle, match, Sound Lab, Compound Words, Word Search, Read and Answer and Class Words level in headless Chromium at 1280x800,
   checks generated questions and speech keys, optional screenshots. Modern Chromium, so run
   check-es5 too. `python3 tools/sync_phrases.py --check`: speech.js matches phrases.json.
 - PowerShell scripts can be syntax-checked with a portable pwsh (GitHub release tarball).

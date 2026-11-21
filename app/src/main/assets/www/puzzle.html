@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="parent" content="puzzles.html">
+<title>Puzzle games</title>
+<style>
+@font-face{font-family:"WHFun";src:url("fonts/fredoka.ttf") format("truetype");font-weight:600}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:#0B1026;background-image:radial-gradient(circle at 25% 15%, #2A1E5C 0%, #131A3D 45%, #0B1026 80%);color:#F3F6FF;font-family:"WHFun","Trebuchet MS",sans-serif;font-weight:600;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0);overflow:hidden;
+}
+button{font-family:inherit;font-weight:inherit;color:inherit;border:0;background:none;padding:0;margin:0;cursor:pointer;outline:none}
+img{display:block}
+svg{display:block;width:100%;height:100%}
+.screen{display:none;position:absolute;left:0;top:0;right:0;bottom:0;padding:3vmin 4vmin;overflow:hidden;z-index:1}
+.screen.on{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.paper{background:#F7F9FF;color:#1F2A44;border:0.5vmin solid #1F2A44;border-radius:2.8vmin;box-shadow:0.8vmin 0.8vmin 0 #05081A}
+.press{-webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s}
+.press:active{-webkit-transform:translate(0.5vmin,0.5vmin);transform:translate(0.5vmin,0.5vmin);box-shadow:0.3vmin 0.3vmin 0 #05081A}
+.flex{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+
+/* level list */
+.hero{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:2vmin 0 4vmin}
+.hero img{width:12vmin;height:12vmin;-webkit-flex:none;flex:none;margin-right:3vmin;-webkit-animation:hop 1.6s ease-out 1;animation:hop 1.6s ease-out 1}
+@-webkit-keyframes hop{0%{-webkit-transform:translateY(5vmin) scale(.6);opacity:0}35%{-webkit-transform:translateY(-5vmin) scale(1.05);opacity:1}55%{-webkit-transform:translateY(0) scaleY(.88)}70%{-webkit-transform:translateY(-1.5vmin)}100%{-webkit-transform:none}}
+@keyframes hop{0%{transform:translateY(5vmin) scale(.6);opacity:0}35%{transform:translateY(-5vmin) scale(1.05);opacity:1}55%{transform:translateY(0) scaleY(.88)}70%{transform:translateY(-1.5vmin)}100%{transform:none}}
+.hero h1{margin:0;font-size:9vmin;line-height:1;font-weight:600;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.hero p{margin:1vmin 0 0;font-size:3.6vmin;color:#B9C3F2}
+.path{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin:0 -1.2vmin}
+.stone{width:18%;margin:1.2vmin 1%;padding:2.2vmin 2.4vmin;text-align:left;min-height:26vmin;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.num{width:7vmin;height:7vmin;border-radius:50%;border:0.5vmin solid #1F2A44;font-size:3.6vmin;line-height:6vmin;text-align:center;color:#1F2A44}
+.sname{font-size:3.4vmin;margin-top:1.4vmin}
+.ex{font-size:3vmin;color:#4F5F80;margin-top:.6vmin}
+.grade{font-size:2.4vmin;color:#7F8AC0;margin-top:.4vmin}
+.best{margin-top:auto;padding-top:1vmin;font-size:2.6vmin;color:#4F5F80}
+.best b{color:#1F2A44}
+.foot{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-align-items:center;align-items:center;margin-top:auto;padding-top:2vmin}
+.foot > *{margin:0 2vmin 1.4vmin 0}
+.note{font-size:2.4vmin;color:#B9C3F2}
+.credit{font-size:1.8vmin;color:#7F8AC0;width:100%}
+
+/* game */
+.bar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:1.4vmin}
+.dots{-webkit-flex:1;flex:1;text-align:center;font-size:0}
+.dot{display:inline-block;width:3.2vmin;height:3.2vmin;border-radius:50%;border:0.45vmin solid #5CE1E6;background:#131A3D;margin:0 .6vmin}
+.dot.now{background:#5CE1E6}.dot.gold{background:#FFD93D;border-color:#FFD93D}.dot.ok{background:#7CFFB2;border-color:#7CFFB2}
+.stars{font-size:4vmin;min-width:13vmin;text-align:right;color:#FFD93D}
+.stage{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;min-height:0}
+/* room on the right for the turn timer's countdown (under the stars) */
+.hintrow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;max-width:100%;padding:0 17vmin;margin-bottom:1vmin}
+.hint{margin:0;font-size:4vmin;color:#B9C3F2;text-align:center}
+.sayb{width:8vmin;height:8vmin;border-radius:50%;background:#FFD93D;margin-left:2vmin;-webkit-flex:none;flex:none}
+.sayb img{width:5vmin;height:5vmin}
+.pzrow{-webkit-flex:1;flex:1;width:100%;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-around;justify-content:space-around;min-height:0}
+.side{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;width:62vmin}
+
+/* the puzzle: a grid of boxes, one of them empty */
+.mx{padding:1.2vmin;border-radius:3vmin;background:#131A3D;border:0.5vmin solid #5CE1E6}
+.mrow{display:-webkit-flex;display:flex}
+.pc{margin:.8vmin;padding:.6vmin;position:relative;overflow:hidden;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;
+  border-radius:2vmin;box-shadow:none;border-width:0.4vmin}
+.pc.q{border:0.4vmin dashed #1F2A44;background:#FFD93D;font-size:9vmin;color:#1F2A44}
+.pc.q.got{background:#7CFFB2}
+.pc.q.shown{background:#FF9E5C}
+.pc .pic,.pzopt .pic{width:70%;height:70%}
+.cnt{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center;-webkit-align-content:center;align-content:center;width:100%;height:100%}
+.nv{line-height:1;color:#1F2A44}
+.board{width:60vmin;height:60vmin;border-radius:2.4vmin;overflow:hidden;border:0.5vmin solid #1F2A44;background:#F7F9FF;box-shadow:0.8vmin 0.8vmin 0 #05081A}
+
+/* answer choices: 5, like the real test */
+.opts{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center}
+.pzopt{width:17vmin;height:17vmin;margin:1.2vmin;padding:.8vmin;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;overflow:hidden}
+.pzopt.dim{opacity:.35;pointer-events:none}
+.pzopt.right{background:#7CFFB2}
+.pzopt.shown{background:#FF9E5C}
+.why{margin-top:1.4vmin;min-height:9vmin;width:100%;padding:1.2vmin 2.4vmin;border-radius:2.4vmin;background:#131A3D;border:0.5vmin solid #7CFFB2;font-size:3.4vmin;line-height:1.25;color:#F3F6FF;text-align:center;visibility:hidden}
+.why.on{visibility:visible}
+.why b{color:#7CFFB2;font-weight:600}
+.nope{-webkit-animation:shake .4s;animation:shake .4s}
+@-webkit-keyframes shake{20%{-webkit-transform:translateX(-1.4vmin)}40%{-webkit-transform:translateX(1.4vmin)}60%{-webkit-transform:translateX(-.8vmin)}80%{-webkit-transform:translateX(.8vmin)}}
+@keyframes shake{20%{transform:translateX(-1.4vmin)}40%{transform:translateX(1.4vmin)}60%{transform:translateX(-.8vmin)}80%{transform:translateX(.8vmin)}}
+
+/* end */
+.endbox{-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;text-align:center}
+.endbox img{width:18vmin;height:18vmin}
+.endbox h2{margin:2vmin 0 1vmin;font-size:10vmin;font-weight:600;line-height:1;color:#FFD93D;text-shadow:0.6vmin 0.6vmin 0 #05081A}
+.score{font-size:4.4vmin;color:#B9C3F2}
+.score b{color:#FFD93D}
+.endbtns{margin-top:4vmin;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center}
+.bigbtn{padding:2.4vmin 4vmin;font-size:3.8vmin;border-radius:2.6vmin;margin:1vmin 1.4vmin}
+.bigbtn.go{background:#7CFFB2;color:#14193A}
+
+.bit{position:fixed;width:1.8vmin;height:1.8vmin;border-radius:.4vmin;pointer-events:none;z-index:9;
+  -webkit-transition:-webkit-transform .9s ease-out,opacity .9s ease-out;transition:transform .9s ease-out,opacity .9s ease-out}
+#sky{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:0}
+.star{position:absolute;border-radius:50%;background:#fff;-webkit-animation:twinkle 3s ease-in-out infinite;animation:twinkle 3s ease-in-out infinite}
+@-webkit-keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@media (orientation: portrait){
+  .stone{width:48%}
+  .hero h1{font-size:10vmin}
+  .pzrow{-webkit-flex-direction:column;flex-direction:column;-webkit-justify-content:space-around;justify-content:space-around}
+  .side{width:92vmin}
+  .why{max-width:80vmin}
+}
+</style>
+<link rel="stylesheet" href="back.css">
+</head>
+<body>
+<div id="sky"></div>
+<button class="backbtn" id="backBtn" aria-label="Back"><b>&#8592;</b>Back</button>
+
+<section class="screen on" id="home">
+  <div class="hero backroom">
+    <img id="heroImg" src="emoji/1f9e9.svg" alt="">
+    <div><h1 id="heroTitle"></h1><p id="heroSub"></p></div>
+  </div>
+  <div class="path" id="path"></div>
+  <div class="foot">
+    <span class="note" id="speechNote" style="display:none">Talking isn't set up on this device yet. Questions are still written on screen.</span>
+    <span class="credit">Pictures: Twemoji by Twitter and contributors, CC-BY 4.0</span>
+  </div>
+</section>
+
+<section class="screen" id="game">
+  <div class="bar">
+    <span class="barspace"></span>
+    <div class="dots" id="dots"></div>
+    <div class="stars" id="stars"></div>
+  </div>
+  <div class="stage" id="stage"></div>
+</section>
+
+<section class="screen" id="end">
+  <div class="endbox">
+    <img src="emoji/1f9e0.svg" alt="">
+    <h2 id="endTitle"></h2>
+    <div class="score" id="endScore"></div>
+    <div class="endbtns" id="endBtns"></div>
+  </div>
+</section>
+
+<script src="speech.js"></script>
+<script>
+/* Puzzle games: thinking puzzles in the style of the NGAT (Naglieri General Ability Tests), which
+   gifted programs use: a box of pictures with one empty, five answers to pick from, no reading needed.
+   ?g=shape  (Nonverbal: shapes, colors, turns, lines)
+   ?g=picture (Verbal: what goes together, picture pairs)
+   ?g=number (Quantitative: how many, number rules, sides and parts)
+   Plain ES5 for the frame's Chromium 39. */
+(function(){
+"use strict";
+
+/* ---------- helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, html){ var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+function shuffle(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function ri(lo, hi){ return lo + Math.floor(Math.random()*(hi - lo + 1)); }
+function hasClass(e, c){ return (" " + e.className + " ").indexOf(" " + c + " ") >= 0; }
+function addClass(e, c){ if (!hasClass(e, c)) e.className += " " + c; }
+function removeClass(e, c){ e.className = (" " + e.className + " ").replace(" " + c + " ", " ").replace(/^\s+|\s+$/g, ""); }
+function show(id){ ["home","game","end"].forEach(function(s){ $(s).className = "screen" + (s === id ? " on" : ""); }); document.body.setAttribute("data-screen", id); }
+function clone(o){ var c = {}, k; for (k in o) if (o.hasOwnProperty(k)) c[k] = o[k]; return c; }
+function mod(x, k){ return ((x % k) + k) % k; }
+function f1(v){ return String(Math.round(v*10)/10); }
+function n(k){ return "n_" + k; }
+function img(code, cls){ return '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="emoji/' + code + '.svg" alt="">'; }
+function other(list, v){ var o = list.filter(function(x){ return x !== v; }); return pick(o); }
+function bits(m){ var c = 0; while (m){ c += m & 1; m >>= 1; } return c; }
+
+/* five answer choices: the right one plus 4 different wrong ones (first ones in the list come first).
+   key() says when two look the same; a wrong one that looks like the answer is never used. */
+function choices(ans, wrongs, render, key){
+  var seen = {}, out = [{ html:render(ans), key:key(ans), v:ans }];
+  seen[out[0].key] = 1;
+  for (var i = 0; i < wrongs.length && out.length < 5; i++){
+    var w = wrongs[i]; if (w === null || w === undefined) continue;
+    var k = key(w); if (seen[k]) continue;
+    seen[k] = 1; out.push({ html:render(w), key:k, v:w });
+  }
+  return out;
+}
+
+/* ====================================================================
+   SHAPES (nonverbal)
+   A shape spec: s shape, c color (0-5), f inside (0 solid, 1 outline, 2 ring), z size (0 small, 1 middle,
+   2 big), r turn in degrees (only arrow, pac and ell turn), n how many (1-5).
+   ==================================================================== */
+var COL = ["#E5484D","#FF8A3D","#F2B400","#2FA86E","#3B82F6","#9B5DE5"];
+var SH = ["circle","square","triangle","diamond","star","hexagon"];
+var TURNERS = ["arrow","pac","ell"];
+var SIZES = [0.52, 0.76, 1];
+var POS = { 1:[[50,50]], 2:[[28,50],[72,50]], 3:[[50,28],[27,72],[73,72]], 4:[[28,28],[72,28],[28,72],[72,72]], 5:[[25,25],[75,25],[50,50],[25,75],[75,75]] };
+function pts(a){ return a.map(function(p){ return f1(p[0]) + "," + f1(p[1]); }).join(" "); }
+function ngon(k, R){ var a = []; for (var i = 0; i < k; i++){ var t = 2*Math.PI*i/k; a.push([R*Math.sin(t), -R*Math.cos(t)]); } return a; }
+function scaleP(a, R){ return a.map(function(p){ return [p[0]*R, p[1]*R]; }); }
+/* a shape around (0,0), about 2R wide */
+function shapeEl(s, R, at){
+  var P, i;
+  if (s === "circle") return '<circle cx="0" cy="0" r="' + f1(R*0.92) + '"' + at + '/>';
+  if (s === "square") return '<rect x="' + f1(-R*0.8) + '" y="' + f1(-R*0.8) + '" width="' + f1(R*1.6) + '" height="' + f1(R*1.6) + '"' + at + '/>';
+  if (s === "pac"){
+    var a = 35*Math.PI/180, x = R*Math.sin(a), y = -R*Math.cos(a);
+    return '<path d="M0,' + f1(R*0.15) + ' L' + f1(x) + ',' + f1(y) + ' A' + f1(R) + ',' + f1(R) + ' 0 1,1 ' + f1(-x) + ',' + f1(y) + ' Z"' + at + '/>';
+  }
+  if (s === "triangle") P = ngon(3, R*1.08).map(function(p){ return [p[0], p[1] + R*0.2]; });
+  else if (s === "diamond") P = [[0,-R],[R*0.72,0],[0,R],[-R*0.72,0]];
+  else if (s === "hexagon") P = ngon(6, R*0.95);
+  else if (s === "star"){ P = []; for (i = 0; i < 10; i++){ var rr = i % 2 ? R*0.45 : R*1.05, t = i*Math.PI/5; P.push([rr*Math.sin(t), -rr*Math.cos(t) + R*0.08]); } }
+  else if (s === "arrow") P = scaleP([[0,-1],[0.8,-0.12],[0.3,-0.12],[0.3,0.95],[-0.3,0.95],[-0.3,-0.12],[-0.8,-0.12]], R);
+  else if (s === "ell") P = scaleP([[-0.7,-0.95],[-0.18,-0.95],[-0.18,0.42],[0.72,0.42],[0.72,0.92],[-0.7,0.92]], R);
+  else P = ngon(parseInt(s.slice(1), 10), R);   // "p5" = a 5-sided shape
+  return '<polygon points="' + pts(P) + '"' + at + '/>';
+}
+function paint(s, col, f, R){
+  R = R || 38;
+  if (f === 1) return shapeEl(s, R, ' fill="#FFFFFF" stroke="' + col + '" stroke-width="' + f1(R/4.6) + '" stroke-linejoin="round"');
+  if (f === 2) return shapeEl(s, R, ' fill="#FFFFFF" stroke="' + col + '" stroke-width="' + f1(R/5.4) + '" stroke-linejoin="round"') + shapeEl(s, R*0.42, ' fill="' + col + '"');
+  return shapeEl(s, R, ' fill="' + col + '" stroke="#1F2A44" stroke-width="' + f1(R/12) + '" stroke-linejoin="round"');
+}
+function norm(r){ return mod(r || 0, 360); }
+function specKey(sp){ return [sp.s, sp.c, sp.f, sp.z, norm(sp.r), sp.n].join("|"); }
+function specSvg(sp){
+  var pos = POS[sp.n], k = (sp.n > 1 ? (sp.n > 3 ? 0.42 : 0.5) : 1)*SIZES[sp.z], out = '<svg viewBox="0 0 100 100">';
+  pos.forEach(function(p){ out += '<g transform="translate(' + p[0] + ' ' + p[1] + ') rotate(' + norm(sp.r) + ') scale(' + f1(k*100)/100 + ')">' + paint(sp.s, COL[sp.c], sp.f) + '</g>'; });
+  return out + '</svg>';
+}
+function randSpec(turner){ return { s:pick(turner ? TURNERS : SH), c:ri(0, 5), f:0, z:2, r:turner ? 90*ri(0, 3) : 0, n:1 }; }
+/* values each part can take (the first two are the usual ones, a third for wrong answers) */
+function values(p){
+  if (p === "s") return shuffle(SH);
+  if (p === "c") return shuffle([0,1,2,3,4,5]);
+  if (p === "f") return shuffle([0,1,2]);
+  if (p === "z") return shuffle([0,2]).concat([1]);
+  return [];
+}
+var PART_NAME = { s:"shape", c:"color", f:"inside", z:"size" };
+function shapeRound(R){ R.render = specSvg; R.key = specKey; return R; }
+
+/* 2 x 2: each row keeps one thing the same, each column another */
+function rMatch(pool){
+  var ab = shuffle(pool).slice(0, 2), A = ab[0], B = ab[1], base = randSpec(false);
+  if (Math.random() < 0.3 && A !== "f" && B !== "f") base.f = pick([1, 2]);
+  var av = values(A), bv = values(B);
+  function mk(a, b){ var s = clone(base); s[A] = a; s[B] = b; return s; }
+  var ans = mk(av[1], bv[1]), rest = ["s","c","f"].filter(function(p){ return p !== A && p !== B; });
+  var odd = clone(ans), q = pick(rest); odd[q] = other(values(q), ans[q]);
+  return shapeRound({ kind:"grid", hint:"Which one goes in the empty box?", say:["pz_i_box"], rows:2, cols:2,
+    cells:[mk(av[0], bv[0]), mk(av[0], bv[1]), mk(av[1], bv[0]), ans], hole:3,
+    options:choices(ans, shuffle([mk(av[1], bv[0]), mk(av[0], bv[1]), mk(av[1], bv[2]), mk(av[2], bv[1])]).concat([odd, mk(av[0], bv[0])]), specSvg, specKey),
+    why:{ text:"Across, the " + PART_NAME[A] + " stays the same. Down, the " + PART_NAME[B] + " stays the same.", say:["pz_row_" + A, "pz_col_" + B] },
+    test:{ type:"match", A:A, B:B } });
+}
+
+/* 2 x 2 "changes": the top shape turns into the next one; the bottom one changes the same way.
+   changes: any of "c" color, "s" shape, "z" size, "f" inside, "r" turn, "n" one more */
+function rChange(changes){
+  var turn = changes.indexOf("r") >= 0, A = randSpec(turn), i;
+  if (changes.indexOf("n") >= 0) A.n = ri(1, 3);
+  if (changes.indexOf("z") >= 0) A.z = pick([0, 2]);
+  if (Math.random() < 0.35 && changes.indexOf("f") < 0) A.f = pick([1, 2]);
+  var B = clone(A), turnBy = pick([90, 90, 180]);
+  changes.forEach(function(p){
+    if (p === "r") B.r = A.r + turnBy;
+    else if (p === "n") B.n = A.n + 1;
+    else if (p === "z") B.z = 2 - A.z;
+    else if (p === "s") B.s = other(SH, A.s);
+    else B[p] = other(values(p), A[p]);
+  });
+  /* the bottom one starts out different (not in what changes) */
+  var C = clone(A), free = ["s","c","f"].filter(function(p){ return changes.indexOf(p) < 0; }), q = pick(free);
+  if (q === "s") C.s = other(turn ? TURNERS : SH, A.s); else C[q] = other(values(q), A[q]);
+  if (turn) C.r = A.r + 90*ri(1, 3);
+  var D = clone(C);
+  changes.forEach(function(p){ D[p] = p === "r" ? C.r + turnBy : B[p]; });
+  /* wrong answers: no change, only some of the changes, the wrong change, one change too many */
+  var wrong = [C];
+  changes.forEach(function(p){
+    var half = clone(D); half[p] = C[p]; wrong.push(half);
+    var w = clone(D);
+    if (p === "r") w.r = C.r + (turnBy === 90 ? 270 : 90);
+    else if (p === "n") w.n = C.n + 2;
+    else if (p === "z") w.z = 1;
+    else w[p] = other(values(p).filter(function(v){ return v !== C[p]; }), D[p]);
+    wrong.push(w);
+  });
+  var extra = clone(D), q2 = pick(free); if (q2 === "s") extra.s = other(turn ? TURNERS : SH, D.s); else extra[q2] = other(values(q2), D[q2]);
+  wrong = shuffle(wrong.slice(1)).concat([extra, B, A]);
+  wrong.unshift(C);
+  var sayWhy = changes.map(function(p){
+    if (p === "r") return turnBy === 90 ? "pz_chg_turn90" : "pz_chg_turn180";
+    if (p === "z") return B.z > A.z ? "pz_chg_big" : "pz_chg_small";
+    if (p === "n") return "pz_chg_more";
+    return "pz_chg_" + (p === "s" ? "shape" : p === "c" ? "color" : "fill");
+  });
+  return shapeRound({ kind:"grid", hint:"See how the first one changes? Pick the one that changes the same way.", say:["pz_i_change"], rows:2, cols:2,
+    cells:[A, B, C, D], hole:3, options:choices(D, wrong, specSvg, specKey),
+    why:{ text:sayWhy.map(function(k){ return WHY_TEXT[k]; }).join(" "), say:sayWhy }, test:{ type:"change" } });
+}
+var WHY_TEXT = { pz_chg_turn90:"It turns a quarter turn.", pz_chg_turn180:"It turns halfway around.", pz_chg_big:"It gets bigger.", pz_chg_small:"It gets smaller.",
+  pz_chg_more:"There is one more.", pz_chg_shape:"The shape changes.", pz_chg_color:"The color changes.", pz_chg_fill:"The inside changes." };
+
+/* 3 x 3: every row and every column has one of each (shape and color, and at the top level the inside too) */
+function rOneEach(three, anyHole){
+  var S = shuffle(SH).slice(0, 3), C = shuffle([0,1,2,3,4,5]).slice(0, 3), F = shuffle([0,1,2]), f0 = pick([0, 0, 1, 2]), swap = Math.random() < 0.5;
+  function at(r, c){
+    var a = (r + c) % 3, b = (r + 2*c) % 3;
+    return { s:S[swap ? a : b], c:C[swap ? b : a], f:three ? F[(2*r + c) % 3] : f0, z:2, r:0, n:1 };
+  }
+  var cells = [], r, c;
+  for (r = 0; r < 3; r++) for (c = 0; c < 3; c++) cells.push(at(r, c));
+  var hole = anyHole ? ri(0, 8) : 8, ans = cells[hole], wrong = [], near = [], i, j, k;
+  for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) for (k = 0; k < (three ? 3 : 1); k++){
+    var w = { s:S[i], c:C[j], f:three ? F[k] : f0, z:2, r:0, n:1 };
+    if (specKey(w) === specKey(ans)) continue;
+    var diff = (w.s !== ans.s) + (w.c !== ans.c) + (w.f !== ans.f);
+    (diff === 1 ? near : wrong).push(w);
+  }
+  return shapeRound({ kind:"grid", hint:"Look across and down. Which one fits in the empty box?", say:["pz_i_grid"], rows:3, cols:3,
+    cells:cells, hole:hole, options:choices(ans, shuffle(near).concat(shuffle(wrong)), specSvg, specKey),
+    why:{ text:three ? "Every row and every column has one of each shape, color and inside." : "Every row and every column has one of each shape and one of each color.",
+      say:[three ? "pz_why_each3" : "pz_why_each"] }, test:{ type:"oneeach", three:three } });
+}
+
+/* 3 x 3: across each row it grows ("n" one more, "z" bigger or smaller, "r" turns) */
+function rGrow(kind, step45){
+  var S = shuffle(kind === "r" ? TURNERS : SH).slice(0, 3), C = shuffle([0,1,2,3,4,5]).slice(0, 3), dir = Math.random() < 0.5 ? 1 : -1;
+  var step = step45 ? 45 : 90, fill = pick([0, 0, 1, 2]), cells = [], st = [], r, c;
+  for (r = 0; r < 3; r++){
+    st.push(kind === "n" ? ri(1, 2) : kind === "r" ? 90*ri(0, 3) : 0);
+    for (c = 0; c < 3; c++){
+      var sp = { s:S[r], c:C[r], f:fill, z:2, r:0, n:1 };
+      if (kind === "n") sp.n = st[r] + c;
+      else if (kind === "z") sp.z = dir > 0 ? c : 2 - c;
+      else sp.r = st[r] + dir*step*c;
+      cells.push(sp);
+    }
+  }
+  var ans = cells[8], wrong = [], w;
+  if (kind === "n"){ [ans.n - 1, ans.n + 1].forEach(function(v){ if (v >= 1 && v <= 5){ w = clone(ans); w.n = v; wrong.push(w); } }); }
+  else if (kind === "z"){ [0,1,2].forEach(function(v){ if (v !== ans.z){ w = clone(ans); w.z = v; wrong.push(w); } }); }
+  else { [step, -step, 180].forEach(function(d){ w = clone(ans); w.r = ans.r + d; wrong.push(w); }); }
+  w = clone(ans); w.s = S[0]; wrong.push(w);
+  w = clone(ans); w.c = C[1]; wrong.push(w);
+  w = clone(cells[7]); wrong.push(w);
+  w = clone(ans); w.f = other([0,1,2], ans.f); wrong.push(w);
+  var key = kind === "n" ? "pz_why_more" : kind === "z" ? (dir > 0 ? "pz_why_grow" : "pz_why_shrink") : "pz_why_turns";
+  var text = { pz_why_more:"Across, there is one more each time.", pz_why_grow:"Across, it gets bigger each time.", pz_why_shrink:"Across, it gets smaller each time.", pz_why_turns:"Across, it turns the same amount each time." }[key];
+  return shapeRound({ kind:"grid", hint:"Look across and down. Which one fits in the empty box?", say:["pz_i_grid"], rows:3, cols:3,
+    cells:cells, hole:8, options:choices(ans, wrong, specSvg, specKey), why:{ text:text, say:[key] }, test:{ type:"grow", kind:kind, step:step*dir } });
+}
+
+/* 3 x 3 lines: the third box is the first two put together (xor: lines that are in both go away) */
+var LINES = ['<line x1="14" y1="50" x2="86" y2="50"/>', '<line x1="50" y1="14" x2="50" y2="86"/>', '<line x1="14" y1="14" x2="86" y2="86"/>',
+  '<line x1="86" y1="14" x2="14" y2="86"/>', '<circle cx="50" cy="50" r="20" fill="none"/>', '<rect x="30" y="30" width="40" height="40" fill="none"/>'];
+function linesSvg(m){
+  var out = '<svg viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="6" fill="none" stroke="#C9D0EA" stroke-width="3"/><g stroke="#1F2A44" stroke-width="6" stroke-linecap="round">';
+  for (var i = 0; i < LINES.length; i++) if (m & (1 << i)) out += LINES[i];
+  return out + '</g></svg>';
+}
+function linesKey(m){ return "L" + m; }
+function rLines(xor){
+  function some(){ var m = 0, k = ri(1, 2); while (bits(m) < k) m |= 1 << ri(0, 5); return m; }
+  var cells = [], rows = [], r, guard;
+  for (r = 0; r < 3; r++){
+    var a, b;
+    guard = 0;
+    do { a = some(); b = some(); guard++; }
+    while (guard < 500 && (a === b || (xor ? !(a & b) || !(a ^ b) || (a ^ b) === a || (a ^ b) === b : (a & b) !== 0)));
+    rows.push([a, b, xor ? a ^ b : a | b]);
+    cells.push(a, b, xor ? a ^ b : a | b);
+  }
+  var a2 = rows[2][0], b2 = rows[2][1], ans = rows[2][2], wrong = [];
+  if (xor) wrong.push(a2 | b2);
+  for (var i = 0; i < 6; i++){ var w = ans ^ (1 << i); if (w) wrong.push(w); }
+  wrong = [wrong[0]].concat(shuffle(wrong.slice(1)));
+  if (!xor) wrong = shuffle(wrong);
+  wrong.splice(2, 0, a2, b2);
+  return { kind:"grid", hint:"Look across and down. Which one fits in the empty box?", say:["pz_i_grid"], rows:3, cols:3, cells:cells, hole:8,
+    render:linesSvg, key:linesKey, options:choices(ans, wrong, linesSvg, linesKey),
+    why:xor ? { text:"Put the first two together. Lines that are in both of them go away.", say:["pz_why_xor"] }
+            : { text:"Put the first two together to make the third.", say:["pz_why_lines"] }, test:{ type:"lines", xor:xor } };
+}
+
+/* a big pattern with a hole in it: which piece fills the hole? Tiles are [shape, color]. */
+var PATTERNS = {
+  easy:[
+    function(P, Q){ return function(r, c){ return [Q[0], P[mod(r + c, 2)]]; }; },              // checkerboard colors
+    function(P, Q){ return function(r, c){ return [Q[0], P[mod(r, 2)]]; }; },                  // stripes across
+    function(P, Q){ return function(r, c){ return [Q[mod(c, 2)], P[0]]; }; },                  // shapes in columns
+    function(P, Q){ return function(r, c){ return [Q[mod(r + c, 2)], P[0]]; }; }               // checkerboard shapes
+  ],
+  mid:[
+    function(P, Q){ return function(r, c){ return [Q[0], P[mod(r + c, 3)]]; }; },              // diagonal stripes
+    function(P, Q){ return function(r, c){ return [Q[0], P[mod(r - c, 3)]]; }; },              // the other diagonal
+    function(P, Q){ return function(r, c){ return [Q[mod(r + c, 2)], P[mod(r, 2)]]; }; },      // shapes checkerboard, colors in rows
+    function(P, Q){ return function(r, c){ return [Q[mod(c, 3)], P[mod(r, 2)]]; }; }
+  ],
+  hard:[
+    function(P, Q){ return function(r, c){ return [Q[mod(r, 2)], P[mod(r + c, 3)]]; }; },
+    function(P, Q){ return function(r, c){ return [Q[mod(r + c, 3)], P[mod(c, 2)]]; }; },
+    function(P, Q){ return function(r, c){ return [Q[0], P[mod(r + 2*c, 3)]]; }; },
+    function(P, Q){ return function(r, c){ return [Q[mod(Math.floor(r/2) + Math.floor(c/2), 2)], P[mod(r + c, 2)]]; }; },
+    function(P, Q){ return function(r, c){ return [Q[mod(r - c, 3)], P[mod(r + c, 3)]]; }; }
+  ]
+};
+var BOARD = 5;
+function tile(t, x, y, w){ return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + w + '" fill="#FFFFFF" stroke="#D5DBF0" stroke-width="2"/>' +
+  '<g transform="translate(' + (x + w/2) + ' ' + (y + w/2) + ') scale(' + f1(w/100*0.62*100)/100 + ')">' + paint(t[0], COL[t[1]], 0) + '</g>'; }
+function pieceSvg(p){ return '<svg viewBox="0 0 200 200">' + tile(p[0][0], 0, 0, 100) + tile(p[0][1], 100, 0, 100) + tile(p[1][0], 0, 100, 100) + tile(p[1][1], 100, 100, 100) + '</svg>'; }
+function pieceKey(p){ return JSON.stringify(p); }
+function boardSvg(f, r0, c0, fillPiece){
+  var out = '<svg viewBox="0 0 500 500">', r, c;
+  for (r = 0; r < BOARD; r++) for (c = 0; c < BOARD; c++){
+    var inHole = r >= r0 && r < r0 + 2 && c >= c0 && c < c0 + 2;
+    if (!inHole) out += tile(f(r, c), c*100, r*100, 100);
+    else if (fillPiece) out += tile(fillPiece[r - r0][c - c0], c*100, r*100, 100);
+  }
+  if (!fillPiece) out += '<rect x="' + (c0*100 + 4) + '" y="' + (r0*100 + 4) + '" width="192" height="192" rx="14" fill="#FFD93D" stroke="#1F2A44" stroke-width="6" stroke-dasharray="18 10"/>' +
+    '<text x="' + (c0*100 + 100) + '" y="' + (r0*100 + 128) + '" text-anchor="middle" font-size="90" fill="#1F2A44" font-family="WHFun, Trebuchet MS, sans-serif">?</text>';
+  else out += '<rect x="' + (c0*100 + 3) + '" y="' + (r0*100 + 3) + '" width="194" height="194" rx="12" fill="none" stroke="#2FA86E" stroke-width="7"/>';
+  return out + '</svg>';
+}
+function rHole(level){
+  var P = shuffle([0,1,2,3,4,5]).slice(0, 3), Q = shuffle(SH).slice(0, 3), f = pick(PATTERNS[level])(P, Q);
+  var r0 = ri(0, BOARD - 2), c0 = ri(0, BOARD - 2);
+  function piece(r, c){ return [[f(r, c), f(r, c + 1)], [f(r + 1, c), f(r + 1, c + 1)]]; }
+  var ans = piece(r0, c0), offs = [], flips = shuffle([[[ans[0][1], ans[0][0]], [ans[1][1], ans[1][0]]], [ans[1], ans[0]]]), tweaks = [];
+  shuffle([[0,1],[1,0],[1,1],[0,-1],[-1,0],[1,-1],[-1,1],[0,2],[2,0]]).forEach(function(d){ offs.push(piece(r0 + d[0], c0 + d[1])); });
+  for (var t = 0; t < 24; t++){
+    var w = JSON.parse(JSON.stringify(ans)), i = ri(0, 1), j = ri(0, 1);
+    if (Math.random() < 0.5) w[i][j][1] = other(t < 12 ? P : [0,1,2,3,4,5], w[i][j][1]); else w[i][j][0] = other(Q, w[i][j][0]);
+    tweaks.push(w);
+  }
+  /* pieces of the same pattern from somewhere else, a flipped piece, one with a tile changed */
+  var wrong = shuffle([offs[0], offs[1], flips[0], tweaks[0]]).concat(offs.slice(2), flips.slice(1), tweaks.slice(1));
+  return { kind:"board", hint:"Which piece fills the hole?", say:["pz_i_hole"], board:function(fill){ return boardSvg(f, r0, c0, fill); },
+    render:pieceSvg, key:pieceKey, options:choices(ans, wrong, pieceSvg, pieceKey),
+    why:{ text:"The pattern keeps going.", say:["pz_why_board"] }, test:{ type:"hole", f:f, r0:r0, c0:c0 } };
+}
+
+/* ====================================================================
+   PICTURES (verbal): what goes together, and picture pairs
+   ==================================================================== */
+var PIC = {};
+("rabbit:1f430 carrot:1f955 monkey:1f412 banana:1f34c mouse:1f401 cheese:1f9c0 dog:1f436 bone:1f9b4 cow:1f404 milk:1f95b hen:1f414 egg:1f95a " +
+ "bee:1f41d honey:1f36f chick:1f424 caterpillar:1f41b butterfly:1f98b rain:1f327 umbrella:2602 sun:2600 sunglasses:1f576 snowflake:2744 scarf:1f9e3 " +
+ "train:1f686 track:1f6e4 car:1f697 road:1f6e3 boat:26f5 wave:1f30a skate:26f8 ice:1f9ca leaf:1f341 tree:1f333 wheel:1f6de wing:1fabd eagle:1f985 " +
+ "tooth:1f9b7 mouth:1f444 key:1f511 lock:1f512 toothbrush:1faa5 pencil:270f notebook:1f4d3 sunrise:1f305 sunset:1f307 thumbsup:1f44d thumbsdown:1f44e moon:1f319 " +
+ "apple:1f34e cherry:1f352 grapes:1f347 peach:1f351 lemon:1f34b orange:1f34a kiwi:1f95d strawberry:1f353 pineapple:1f34d watermelon:1f349 blueberry:1fad0 " +
+ "potato:1f954 broccoli:1f966 cucumber:1f952 pepper:1fad1 cake:1f382 cookie:1f36a candy:1f36c donut:1f369 cupcake:1f9c1 lollipop:1f36d " +
+ "pig:1f437 sheep:1f411 goat:1f410 donkey:1facf ox:1f402 fish:1f41f crab:1f980 shrimp:1f990 squid:1f991 shark:1f988 whale:1f433 octopus:1f419 " +
+ "jellyfish:1fabc dolphin:1f42c lobster:1f99e duck:1f986 owl:1f989 parrot:1f99c penguin:1f427 flamingo:1f9a9 peacock:1f99a ant:1f41c spider:1f577 " +
+ "ladybug:1f41e beetle:1fab2 lion:1f981 tiger:1f42f zebra:1f993 giraffe:1f992 hippo:1f99b elephant:1f418 gorilla:1f98d crocodile:1f40a kangaroo:1f998 " +
+ "koala:1f428 panda:1f43c camel:1f42b bus:1f68c van:1f690 truck:1f69a taxi:1f695 tractor:1f69c firetruck:1f692 ambulance:1f691 motorcycle:1f3cd " +
+ "ship:1f6a2 rowboat:1f6a3 speedboat:1f6a4 hat:1f3a9 sock:1f9e6 dress:1f457 shorts:1fa73 shirt:1f455 jeans:1f456 coat:1f9e5 tie:1f454 sneaker:1f45f " +
+ "drum:1f941 guitar:1f3b8 trumpet:1f3ba flute:1fa88 violin:1f3bb piano:1f3b9 saxophone:1f3b7 hammer:1f528 wrench:1f527 screwdriver:1fa9b toolbox:1f9f0 " +
+ "baseball:26be football:1f3c8 basketball:1f3c0 volleyball:1f3d0 softball:1f94e leg:1f9b5 hand:270b nose:1f443 ear:1f442 star:2b50 comet:2604 planet:1fa90 " +
+ "storm:1f329 lightning:26a1 rainbow:1f308 ruler:1f4cf backpack:1f392 books:1f4da phone:1f4f1 laptop:1f4bb computer:1f5a5 television:1f4fa radio:1f4fb " +
+ "camera:1f4f7 telephone:260e cactus:1f335 sunflower:1f33b tulip:1f337 rose:1f339 plant:1fab4 bat:1f987 plane:2708 helicopter:1f681 rocket:1f680 " +
+ "kite:1fa81 balloon:1f388 bike:1f6b2 scooter:1f6f4 skateboard:1f6f9 candle:1f56f flashlight:1f526 fireworks:1f386").split(" ").forEach(function(p){
+  var kv = p.split(":"); PIC[kv[0]] = kv[1];
+});
+function words(s){ return s.split(" "); }
+/* groups of things. top: the big group; avoid: things too close to call (never offered as a wrong answer) */
+var CATS = {
+  fruit:{ top:"food", label:"fruits", m:words("apple banana cherry grapes peach lemon orange kiwi strawberry pineapple watermelon blueberry") },
+  veg:{ top:"food", label:"vegetables", m:words("carrot potato broccoli cucumber pepper") },
+  sweets:{ top:"food", label:"treats", m:words("cake cookie candy donut cupcake lollipop"), avoid:words("apple banana cherry grapes peach lemon orange kiwi strawberry pineapple watermelon blueberry honey") },
+  farm:{ top:"animal", label:"farm animals", m:words("cow pig sheep goat donkey ox"), avoid:words("duck hen chick rabbit dog") },
+  ocean:{ top:"animal", label:"ocean animals", m:words("fish crab shrimp squid shark whale octopus jellyfish dolphin lobster"), avoid:words("penguin duck crocodile hippo flamingo") },
+  birds:{ top:"animal", label:"birds", m:words("duck owl eagle parrot penguin flamingo peacock") },
+  bugs:{ top:"animal", label:"bugs", m:words("ant bee spider ladybug beetle butterfly caterpillar") },
+  wild:{ top:"animal", label:"wild animals", m:words("lion tiger zebra giraffe hippo elephant monkey gorilla crocodile kangaroo koala panda camel"),
+    avoid:words("duck owl eagle parrot penguin flamingo peacock ant bee spider ladybug beetle butterfly caterpillar fish crab shrimp squid shark whale octopus jellyfish dolphin lobster") },
+  cars:{ top:"vehicle", label:"things that drive", m:words("car bus van truck taxi tractor firetruck ambulance motorcycle") },
+  boats:{ top:"vehicle", label:"boats", m:words("boat ship rowboat speedboat") },
+  clothes:{ top:"clothes", label:"clothes", m:words("hat sock dress scarf shorts shirt jeans coat tie sneaker") },
+  music:{ top:"music", label:"music makers", m:words("drum guitar trumpet flute violin piano saxophone"), avoid:words("radio television phone computer laptop") },
+  tools:{ top:"tools", label:"tools", m:words("hammer wrench screwdriver toolbox"), avoid:words("ruler") },
+  balls:{ top:"sports", label:"balls", m:words("baseball football basketball volleyball softball") },
+  body:{ top:"body", label:"body parts", m:words("leg hand nose ear mouth tooth") },
+  space:{ top:"sky", label:"things in space", m:words("moon star comet planet") },
+  weather:{ top:"sky", label:"weather", m:words("rain storm snowflake lightning rainbow") },
+  school:{ top:"school", label:"school things", m:words("pencil ruler notebook backpack books"), avoid:words("laptop computer") },
+  tech:{ top:"tech", label:"things that use electricity", m:words("phone laptop computer television radio camera telephone"), avoid:words("piano guitar") },
+  plants:{ top:"plant", label:"plants", m:words("tree cactus sunflower tulip rose plant"),
+    avoid:words("carrot potato broccoli cucumber pepper apple banana cherry grapes peach lemon orange kiwi strawberry pineapple watermelon blueberry") },
+  /* across the groups: wrong answers only come from the groups in safe */
+  flies:{ label:"things that fly", m:words("bee butterfly eagle owl parrot duck bat plane helicopter rocket kite balloon ladybug"),
+    safe:words("fruit veg sweets farm ocean wild clothes music tools balls school plants") },
+  wheels:{ label:"things with wheels", m:words("bike bus car truck van taxi tractor scooter skateboard motorcycle ambulance firetruck train"),
+    safe:words("fruit veg sweets farm ocean birds wild clothes music balls body plants") },
+  light:{ label:"things that give light", m:words("sun star candle flashlight lightning fireworks"),
+    safe:words("fruit veg sweets farm ocean wild clothes music tools balls plants body") }
+};
+var CAT_SAY = { fruit:"They are all fruits.", veg:"They are all vegetables.", sweets:"They are all treats.", farm:"They are all farm animals.",
+  ocean:"They all live in the ocean.", birds:"They are all birds.", bugs:"They are all bugs.", wild:"They are all wild animals.",
+  cars:"They all drive on land.", boats:"They are all boats.", clothes:"They are all clothes.", music:"They all make music.", tools:"They are all tools.",
+  balls:"They are all balls.", body:"They are all parts of the body.", space:"They are all in space.", weather:"They are all weather.",
+  school:"They are all school things.", tech:"They all use electricity.", plants:"They are all plants.", flies:"They can all fly.",
+  wheels:"They all have wheels.", light:"They all give light." };
+var PLAIN = words("fruit veg sweets farm ocean birds bugs wild cars boats clothes music tools balls body space weather school tech plants");
+function inCat(name, cat){ return CATS[cat].m.indexOf(name) >= 0; }
+function avoided(name, cat){ return !!CATS[cat].avoid && CATS[cat].avoid.indexOf(name) >= 0; }
+/* wrong answers for a group: "far" = other big groups, "near" = the same big group (the hard ones) */
+function pool(cat, near){
+  var c = CATS[cat], from = c.safe ? c.safe : PLAIN.filter(function(o){ return o !== cat && (near ? CATS[o].top === c.top : CATS[o].top !== c.top); }), out = [];
+  from.forEach(function(o){ CATS[o].m.forEach(function(x){ if (!inCat(x, cat) && !avoided(x, cat) && out.indexOf(x) < 0) out.push(x); }); });
+  return out;
+}
+function hasNear(cat){ return PLAIN.some(function(o){ return o !== cat && CATS[o].top === CATS[cat].top; }); }
+/* wrong ones from different groups where possible */
+function spread(list, k, not){
+  var out = [], used = {};
+  shuffle(list).forEach(function(x){
+    if (out.length >= k || not.indexOf(x) >= 0 || out.indexOf(x) >= 0) return;
+    var g = groupOf(x); if (used[g] && list.length > k*3) return;
+    used[g] = 1; out.push(x);
+  });
+  shuffle(list).forEach(function(x){ if (out.length < k && not.indexOf(x) < 0 && out.indexOf(x) < 0) out.push(x); });
+  return out;
+}
+function groupOf(x){ for (var i = 0; i < PLAIN.length; i++) if (inCat(x, PLAIN[i])) return PLAIN[i]; return x; }
+function picHtml(name){ return img(PIC[name], "pic"); }
+function picKey(name){ return name; }
+function picRound(R){ R.render = picHtml; R.key = picKey; R.tapPics = true; return R; }
+
+/* 2 x 2: three things that go together; which one belongs with them? */
+function rTogether(mode){
+  var cats = mode === "cross" ? ["flies", "wheels", "light"] : PLAIN.filter(function(c){ return CATS[c].m.length >= 4 && (mode !== "near" || hasNear(c)); });
+  var cat = pick(cats), four = shuffle(CATS[cat].m).slice(0, 4), ans = four[3];
+  var wrong = mode === "near" ? spread(pool(cat, true), 2, []).concat(spread(pool(cat, false), 4, [])) : spread(pool(cat, false), 4, []);
+  if (mode === "cross") wrong = spread(pool(cat), 4, []);
+  return picRound({ kind:"grid", hint:"These go together. Which one belongs with them?", say:["pz_i_together"], rows:2, cols:2,
+    cells:four, hole:3, options:choices(ans, wrong, picHtml, picKey), why:{ text:CAT_SAY[cat], say:["pz_c_" + cat] }, test:{ type:"together", cat:cat } });
+}
+/* 2 x 2: the top pair is two of a kind; the bottom pair must be two of another kind */
+function rKind(near){
+  var Y = pick(PLAIN.filter(function(c){ return CATS[c].m.length >= 3 && (!near || hasNear(c)); })), X;
+  do { X = pick(PLAIN); } while (X === Y || (!near && CATS[X].top === CATS[Y].top) || (near && CATS[X].top !== CATS[Y].top && Math.random() < 0.6));
+  var ab = shuffle(CATS[X].m.filter(function(x){ return !inCat(x, Y); })).slice(0, 3), cd = shuffle(CATS[Y].m.filter(function(x){ return !inCat(x, X); })).slice(0, 2);
+  var traps = ab.slice(2).concat(shuffle(CATS[X].m).filter(function(x){ return ab.indexOf(x) < 0 && !inCat(x, Y); }).slice(0, 1));
+  var rest = spread(pool(Y, near).filter(function(x){ return !inCat(x, X); }), 3, []);
+  return picRound({ kind:"grid", hint:"Look at the top pair. Which one makes a pair like it?", say:["pz_i_kind"], rows:2, cols:2,
+    cells:[ab[0], ab[1], cd[0], cd[1]], hole:3, options:choices(cd[1], traps.concat(rest, spread(pool(Y, false), 4, [])), picHtml, picKey),
+    why:{ text:"Each pair is two of the same kind: " + CATS[X].label + ", then " + CATS[Y].label + ".", say:["pz_why_kind"] }, test:{ type:"kind", cat:Y, X:X } });
+}
+/* 3 x 3: each row is a group */
+function rRows(near){
+  var guard = 0, X, Y, Z, ok;
+  do {
+    var c3 = shuffle(PLAIN.filter(function(c){ return CATS[c].m.length >= 4; })).slice(0, 3); X = c3[0]; Y = c3[1]; Z = c3[2];
+    ok = near ? (CATS[Z].top === CATS[X].top || CATS[Z].top === CATS[Y].top || guard > 40) : (CATS[X].top !== CATS[Y].top && CATS[Y].top !== CATS[Z].top && CATS[X].top !== CATS[Z].top);
+    /* a row's things are offered as wrong answers for the last row: none may be too close to call */
+    ok = ok && !CATS[X].m.concat(CATS[Y].m).some(function(x){ return avoided(x, Z); });
+  } while (!ok && guard++ < 400);
+  function only(cat, a, b){ return shuffle(CATS[cat].m.filter(function(x){ return !inCat(x, a) && !inCat(x, b); })); }
+  var xs = only(X, Y, Z), ys = only(Y, X, Z), zs = only(Z, X, Y);
+  var cells = xs.slice(0, 3).concat(ys.slice(0, 3), zs.slice(0, 3)), ans = zs[2];
+  var wrong = [xs[3] || xs[0], ys[3] || ys[0]].concat(spread(pool(Z, near).filter(function(x){ return !inCat(x, X) && !inCat(x, Y); }), 2, []), spread(pool(Z, false), 4, []));
+  return picRound({ kind:"grid", hint:"Each row is a group. Which one finishes the last row?", say:["pz_i_groups"], rows:3, cols:3,
+    cells:cells, hole:8, options:choices(ans, wrong, picHtml, picKey), why:{ text:"Each row is a group. " + CAT_SAY[Z], say:["pz_why_rows", "pz_c_" + Z] }, test:{ type:"rows", cat:Z } });
+}
+/* 2 x 2 picture pairs: A goes with B the way C goes with ? */
+var FAMS = {
+  eats:{ from:words("clothes music tools balls cars school"), p:[["rabbit","carrot","Rabbits eat carrots."],["monkey","banana","Monkeys eat bananas."],["mouse","cheese","Mice eat cheese."],["dog","bone","Dogs chew bones."]] },
+  gives:{ from:words("clothes music tools balls cars school"), p:[["cow","milk","Cows give us milk."],["hen","egg","Hens lay eggs."],["bee","honey","Bees make honey."]] },
+  grows:{ from:words("fruit clothes cars tools music"), p:[["egg","chick","An egg hatches into a chick."],["caterpillar","butterfly","A caterpillar turns into a butterfly."],["chick","hen","A chick grows into a hen."]] },
+  weather:{ from:words("fruit farm wild cars music"), p:[["rain","umbrella","Use an umbrella in the rain."],["sun","sunglasses","Wear sunglasses in the sun."],["snowflake","scarf","Wear a scarf in the snow."]] },
+  moves:{ from:words("fruit farm clothes music sweets"), p:[["train","track","Trains go on tracks."],["car","road","Cars go on roads."],["boat","wave","Boats go on water."],["skate","ice","Skates go on ice."]] },
+  part:{ from:words("fruit clothes music balls sweets"), p:[["leaf","tree","A leaf is part of a tree."],["wheel","car","A wheel is part of a car."],["wing","eagle","A wing is part of a bird."],["tooth","mouth","A tooth is part of a mouth."]] },
+  tool:{ from:words("fruit farm wild music sweets"), p:[["key","lock","A key opens a lock."],["toothbrush","tooth","A toothbrush cleans teeth."],["pencil","notebook","A pencil writes in a notebook."]] },
+  opp:{ from:words("fruit farm clothes tools music"), p:[["sunrise","sunset","Sunrise and sunset are opposites."],["thumbsup","thumbsdown","Thumbs up and thumbs down are opposites."],["sun","moon","The sun is out in the day, the moon at night."]] }
+};
+function pairKeyName(p){ return "pz_p_" + p[0] + "_" + p[1]; }
+function rPair(fams){
+  var fam = FAMS[pick(fams)], two = shuffle(fam.p).slice(0, 2), A = two[0], C = two[1], D = C[1];
+  var names = []; fam.p.forEach(function(p){ names.push(p[0], p[1]); });
+  var firsts = fam.p.map(function(p){ return p[0]; }).filter(function(x){ return x !== C[0] && x !== D; });
+  var rand = [], i;
+  fam.from.forEach(function(c){ CATS[c].m.forEach(function(x){ if (names.indexOf(x) < 0 && rand.indexOf(x) < 0) rand.push(x); }); });
+  var wrong = [A[0]].concat(shuffle(firsts).slice(0, 1), spread(rand, 4, []));
+  return picRound({ kind:"grid", hint:"The top two go together. Which one goes with the bottom picture the same way?", say:["pz_i_pair"], rows:2, cols:2,
+    cells:[A[0], A[1], C[0], D], hole:3, options:choices(D, wrong, picHtml, picKey),
+    why:{ text:A[2] + " " + C[2], say:[pairKeyName(A), pairKeyName(C)] }, test:{ type:"pair", A:A, C:C } });
+}
+
+/* ====================================================================
+   NUMBERS (quantitative)
+   ==================================================================== */
+var THINGS = ["2b50","1f319","1f34e","1f680","1f47d","1fa90","1f36a","1f41e","1f388","1f41f"];
+var CELL = { 2:25, 3:19, 4:17 }, OPT = 15.5;
+/* k pictures in a box `box` vmin wide */
+function countHtml(k, code, box){
+  var per = k <= 1 ? 1 : k <= 4 ? 2 : k <= 9 ? 3 : 4, sz = f1(Math.min(box*0.6, box*0.86/per - 0.6)), out = '<div class="cnt">';
+  for (var i = 0; i < k; i++) out += '<img src="emoji/' + code + '.svg" alt="" style="width:' + sz + 'vmin;height:' + sz + 'vmin;margin:.3vmin">';
+  return out + '</div>';
+}
+function numHtml(v, box){ return '<span class="nv" style="font-size:' + f1(box*(String(v).length > 2 ? 0.36 : 0.5)) + 'vmin">' + v + '</span>'; }
+function pieSvg(P, k, col){
+  var out = '<svg viewBox="0 0 100 100">', R = 40;
+  for (var i = 0; i < P; i++){
+    var a0 = 2*Math.PI*i/P, a1 = 2*Math.PI*(i + 1)/P;
+    out += '<path d="M50,50 L' + f1(50 + R*Math.sin(a0)) + ',' + f1(50 - R*Math.cos(a0)) + ' A' + R + ',' + R + ' 0 0,1 ' + f1(50 + R*Math.sin(a1)) + ',' + f1(50 - R*Math.cos(a1)) +
+      ' Z" fill="' + (i < k ? col : "#FFFFFF") + '" stroke="#1F2A44" stroke-width="2.5" stroke-linejoin="round"/>';
+  }
+  return out + '</svg>';
+}
+function polySvg(sides, col){ return '<svg viewBox="0 0 100 100"><g transform="translate(50 52)">' + shapeEl("p" + sides, 40, ' fill="' + col + '" stroke="#1F2A44" stroke-width="3" stroke-linejoin="round"') + '</g></svg>'; }
+function dotsSvg(rows, cols){
+  var out = '<svg viewBox="0 0 100 100">', gap = 84/Math.max(rows, cols), r = gap*0.32;
+  var x0 = 50 - gap*(cols - 1)/2, y0 = 50 - gap*(rows - 1)/2;
+  for (var i = 0; i < rows; i++) for (var j = 0; j < cols; j++) out += '<circle cx="' + f1(x0 + j*gap) + '" cy="' + f1(y0 + i*gap) + '" r="' + f1(r) + '" fill="#3B82F6"/>';
+  return out + '</svg>';
+}
+/* a number answer: v is { t:"num", v } or { t:"cnt", v, code } etc. */
+function qRender(box){
+  return function(o){
+    if (o.t === "num") return numHtml(o.v, box);
+    if (o.t === "cnt") return countHtml(o.v, o.code, box);
+    if (o.t === "pie") return pieSvg(o.P, o.v, o.col);
+    if (o.t === "poly") return polySvg(o.v, o.col);
+    if (o.t === "dots") return dotsSvg(o.r, o.c);
+    return "";
+  };
+}
+function qKey(o){ return [o.t, o.v, o.code || "", o.P || "", o.r || "", o.c || ""].join("|"); }
+function numRound(R){ R.render = qRender(OPT); R.cellRender = qRender(CELL[Math.max(R.rows, R.cols)]); R.key = qKey; return R; }
+function nums(vals){ return vals.map(function(v){ return { t:"num", v:v }; }); }
+/* wrong numbers near the answer (never below lo) */
+function near(ans, extra, lo){
+  var c = shuffle((extra || []).concat([ans + 1, ans - 1, ans + 2, ans - 2])).concat(shuffle([ans + 3, ans - 3, ans + 10, ans - 10]), [ans + 4, ans - 4, ans + 5, ans + 6, ans + 7]), out = [];
+  c.forEach(function(v){ if (v >= (lo || 0) && v <= 999 && v !== ans && out.indexOf(v) < 0) out.push(v); });
+  return out;
+}
+/* rules for number pairs: is the rule shown the only one that fits what's on screen? */
+var RULES = (function(){ var a = [], k; for (k = 1; k <= 20; k++) a.push(["+", k], ["-", k]); for (k = 2; k <= 5; k++) a.push(["x", k], ["/", k]); return a; })();
+function applyRule(rule, a){
+  var t = rule[0], k = rule[1], v = t === "+" ? a + k : t === "-" ? a - k : t === "x" ? a*k : (a % k === 0 ? a / k : null);
+  return v === null || v < 0 ? null : v;
+}
+function onlyRule(pairs, a){
+  var preds = {};
+  RULES.forEach(function(rule){
+    for (var i = 0; i < pairs.length; i++) if (applyRule(rule, pairs[i][0]) !== pairs[i][1]) return;
+    var p = applyRule(rule, a); if (p !== null) preds[p] = 1;
+  });
+  return Object.keys(preds).length === 1;
+}
+var OP_SHOW = { "+":"+", "-":"&#8722;", "x":"&#215;", "/":"&#247;" }, OP_SAY = { "+":"m_plus", "-":"m_minus", "x":"m_times", "/":"m_div" };
+function ruleWhy(rule, across){ return { text:(across ? "Across each row: " : "") + "<b>Rule:</b> " + OP_SHOW[rule[0]] + rule[1], say:(across ? ["pz_why_across"] : []).concat(["m_rule", OP_SAY[rule[0]], n(rule[1])]) }; }
+/* rows x 2: the left box turns into the right box by a rule; pictures = how many, or plain numbers */
+function rRule(rules, opt){
+  var guard = 0, rule, rows, a, pairs, b, lo = opt.pics ? 1 : 0;
+  for (;;){
+    guard++;
+    rule = guard > 300 ? ["+", 1] : pick(rules); rows = guard > 30 ? 3 : (opt.rows || 2);
+    var as = shuffle((function(){ var l = []; for (var v = opt.min || 1; v <= opt.max; v++) l.push(v); return l; })()).slice(0, rows);
+    pairs = as.map(function(v){ return [v, applyRule(rule, v)]; });
+    if (pairs.some(function(p){ return p[1] === null || p[1] < lo || p[1] > (opt.top || 100); })) continue;
+    a = pairs[rows - 1][0]; b = pairs[rows - 1][1];
+    if (onlyRule(pairs.slice(0, rows - 1), a) || guard > 600) break;
+  }
+  var codes = shuffle(THINGS), cells = [];
+  pairs.forEach(function(p, i){
+    if (opt.pics){ cells.push({ t:"cnt", v:p[0], code:codes[i] }, { t:"cnt", v:p[1], code:codes[i] }); }
+    else cells.push({ t:"num", v:p[0] }, { t:"num", v:p[1] });
+  });
+  var ans = cells[cells.length - 1], alt = [a + 1, a - 1, a*2, a + rule[1], Math.abs(a - rule[1])];
+  var wrong = near(b, alt, lo).filter(function(v){ return !opt.pics || v <= 12; }).map(function(v){ return opt.pics ? { t:"cnt", v:v, code:ans.code } : { t:"num", v:v }; });
+  return numRound({ kind:"grid", hint:"Find the rule. Which one fits?", say:["pz_i_rule"], rows:rows, cols:2, cells:cells, hole:cells.length - 1,
+    options:choices(ans, wrong, qRender(OPT), qKey), why:ruleWhy(rule), test:{ type:"rule", rule:rule, pairs:pairs } });
+}
+/* 2 x 2: same number across (pictures to pictures, or pictures to a number) */
+function rSame(toNumber){
+  var k1 = ri(1, 6), k2, codes = shuffle(THINGS);
+  do { k2 = ri(1, 6); } while (k2 === k1);
+  var right = function(k){ return toNumber ? { t:"num", v:k } : { t:"cnt", v:k, code:codes[1] }; };
+  var cells = [{ t:"cnt", v:k1, code:codes[0] }, right(k1), { t:"cnt", v:k2, code:toNumber ? codes[2] : codes[0] }, right(k2)];
+  var wrong = near(k2, [k1], 1).filter(function(v){ return v <= 9; }).map(right);
+  return numRound({ kind:"grid", hint:"Look at how many. Which one fits?", say:["pz_i_count"], rows:2, cols:2, cells:cells, hole:3,
+    options:choices(cells[3], wrong, qRender(OPT), qKey), why:{ text:"Each row has the same number.", say:["pz_why_same"] }, test:{ type:"same" } });
+}
+/* 3 x 3 number grids: which family of rules made the rows? only one may fit */
+var FAMILY = {
+  step:{ fit:function(r){ return r[1] !== r[0] && r[1] - r[0] === r[2] - r[1]; }, pred:function(a, b){ return 2*b - a; } },
+  sum:{ fit:function(r){ return r[0] + r[1] === r[2]; }, pred:function(a, b){ return a + b; } },
+  diff:{ fit:function(r){ return r[0] - r[1] === r[2]; }, pred:function(a, b){ return a - b; } },
+  geo:{ fit:function(r){ return r[0] > 0 && r[1] % r[0] === 0 && r[1] / r[0] > 1 && r[1]*(r[1] / r[0]) === r[2]; }, pred:function(a, b){ return a > 0 && b % a === 0 ? b*(b / a) : null; } },
+  prod:{ fit:function(r){ return r[0]*r[1] === r[2]; }, pred:function(a, b){ return a*b; } }
+};
+function gridOnly(rows){
+  var preds = {}, last = rows[2];
+  Object.keys(FAMILY).forEach(function(k){
+    var F = FAMILY[k];
+    if (!F.fit(rows[0]) || !F.fit(rows[1])) return;
+    var p = F.pred(last[0], last[1]); if (p !== null && p >= 0) preds[p] = 1;
+  });
+  return Object.keys(preds).length === 1 && preds[last[2]] === 1;
+}
+function rGrid(fams){
+  var fam, rows, k = 0, guard = 0, i;
+  do {
+    fam = pick(fams); rows = [];
+    if (fam === "step"){ k = ri(2, 12); for (i = 0; i < 3; i++){ var s0 = ri(1, 100 - 2*k); rows.push([s0, s0 + k, s0 + 2*k]); } }
+    else if (fam === "sum") for (i = 0; i < 3; i++){ var x = ri(1, 25), y = ri(1, 25); rows.push([x, y, x + y]); }
+    else if (fam === "diff") for (i = 0; i < 3; i++){ var a1 = ri(8, 40), b1 = ri(1, a1 - 1); rows.push([a1, b1, a1 - b1]); }
+    else if (fam === "geo2") for (i = 0; i < 3; i++){ var g = ri(1, 12); rows.push([g, 2*g, 4*g]); }
+    else if (fam === "geo3") for (i = 0; i < 3; i++){ var h = ri(1, 7); rows.push([h, 3*h, 9*h]); }
+    else for (i = 0; i < 3; i++){ var p = ri(2, 9), q = ri(2, 9); rows.push([p, q, p*q]); }
+  } while ((!gridOnly(rows) || rows[0].join() === rows[1].join() || rows[1].join() === rows[2].join()) && guard++ < 500);
+  var cells = nums(rows[0].concat(rows[1], rows[2])), ans = rows[2][2], a = rows[2][0], b = rows[2][1];
+  var wrong = near(ans, [a + b, a*b, Math.abs(a - b), 2*b - a, b + 1].filter(function(v){ return v !== ans; }), 0);
+  var why = fam === "step" ? ruleWhy(["+", k], true) :
+    { sum:{ text:"The first two numbers add up to the third.", say:["pz_why_sum"] }, diff:{ text:"The first number take away the second makes the third.", say:["pz_why_diff"] },
+      geo2:{ text:"Each number doubles.", say:["pz_why_double"] }, geo3:{ text:"Across each row: <b>Rule:</b> &#215;3", say:["pz_why_across", "m_rule", "m_times", n(3)] },
+      prod:{ text:"The first number times the second makes the third.", say:["pz_why_product"] } }[fam];
+  return numRound({ kind:"grid", hint:"Look across and down. Which one fits in the empty box?", say:["pz_i_grid"], rows:3, cols:3, cells:cells, hole:8,
+    options:choices({ t:"num", v:ans }, nums(wrong), qRender(OPT), qKey), why:why, test:{ type:"numgrid", rows:rows } });
+}
+/* shapes with more sides, circles with more parts colored (in a row of 4, or 3 x 3) */
+function rSides(big){
+  var col = COL[ri(0, 5)], cells = [], rows = big ? 3 : 1, cols = big ? 3 : 4, step = big ? 1 : pick([1, 1, 2]), st = big ? 3 : ri(3, step > 1 ? 3 : 4), r, c;
+  for (r = 0; r < rows; r++) for (c = 0; c < cols; c++) cells.push({ t:"poly", v:st + r + c*step, col:big ? COL[r] : col });
+  var ans = cells[cells.length - 1], wrong = near(ans.v, [ans.v - step, ans.v + step], 3).filter(function(v){ return v <= 10; }).map(function(v){ return { t:"poly", v:v, col:ans.col }; });
+  return numRound({ kind:"grid", hint:big ? "Look across and down. Which one fits in the empty box?" : "Which one comes next?", say:[big ? "pz_i_grid" : "pz_i_next"], rows:rows, cols:cols,
+    cells:cells, hole:cells.length - 1, options:choices(ans, wrong, qRender(OPT), qKey),
+    why:{ text:"Count the sides. <b>Rule:</b> +" + step, say:["pz_why_sides", "m_rule", "m_plus", n(step)] }, test:{ type:"sides", step:step } });
+}
+function rParts(big){
+  var col = COL[pick([0, 3, 4, 5])], P = pick(big ? [4, 6, 8] : [4, 6, 8]), step = P === 8 ? 2 : 1, rows = big ? 3 : 1, cols = big ? 3 : 4, cells = [], r, c;
+  var st = big ? 0 : ri(0, P - 3*step);
+  for (r = 0; r < rows; r++) for (c = 0; c < cols; c++) cells.push({ t:"pie", P:P, v:st + (r + c)*step, col:col });
+  var ans = cells[cells.length - 1], wrong = [];
+  [ans.v - 1, ans.v + 1, ans.v - step, ans.v + step, ans.v - 2, ans.v + 2, 0, P].forEach(function(v){ if (v >= 0 && v <= P) wrong.push({ t:"pie", P:P, v:v, col:col }); });
+  wrong = shuffle(wrong); wrong.splice(2, 0, { t:"pie", P:P === 4 ? 8 : 4, v:ans.v <= 4 ? ans.v : 4, col:col });
+  return numRound({ kind:"grid", hint:big ? "Look across and down. Which one fits in the empty box?" : "Which one comes next?", say:[big ? "pz_i_grid" : "pz_i_next"], rows:rows, cols:cols,
+    cells:cells, hole:cells.length - 1, options:choices(ans, wrong, qRender(OPT), qKey),
+    why:{ text:"Count the colored parts. <b>Rule:</b> +" + step, say:["pz_why_parts", "m_rule", "m_plus", n(step)] }, test:{ type:"parts", step:step } });
+}
+/* rows x columns of dots -> how many in all */
+function rDots(){
+  var cells = [], sizes = [], guard = 0, i;
+  var made = [];
+  while (sizes.length < 3 && guard++ < 200){ var rr = ri(2, 5), cc = ri(2, 6); if (made.indexOf(rr*cc) < 0){ made.push(rr*cc); sizes.push(rr + "x" + cc); } }
+  sizes.forEach(function(s){ var p = s.split("x"), rr = +p[0], cc = +p[1]; cells.push({ t:"dots", v:rr*cc, r:rr, c:cc }, { t:"num", v:rr*cc }); });
+  var last = cells[4], ans = last.v;
+  return numRound({ kind:"grid", hint:"Find the rule. Which one fits?", say:["pz_i_rule"], rows:3, cols:2, cells:cells, hole:5,
+    options:choices({ t:"num", v:ans }, nums(near(ans, [last.r + last.c, ans + last.c, ans - last.c, ans + last.r], 1)), qRender(OPT), qKey),
+    why:{ text:"Count the dots: rows times columns.", say:["pz_why_dots"] }, test:{ type:"dots" } });
+}
+
+/* ---------- games and levels: each level lists 10 round makers, shuffled per play ---------- */
+function x(fn, times){ var a = []; for (var i = 0; i < times; i++) a.push(fn); return a; }
+var GAMES = {
+  shape:{ title:"Shape Puzzles", icon:"1f9e9", sub:"Shapes, colors, and turns. Pick a level!", levels:[
+    { name:"Match up", ex:"Same shape, same color", grade:"Starter", rounds:x(function(){ return rMatch(["s","c"]); }, 4).concat(x(function(){ return rMatch(["s","c","z","f"]); }, 3), x(function(){ return rHole("easy"); }, 3)) },
+    { name:"One change", ex:"Big turns small", grade:"Kindergarten", rounds:x(function(){ return rChange([pick(["c","s","z","f"])]); }, 7).concat(x(function(){ return rHole("easy"); }, 1), x(function(){ return rHole("mid"); }, 2)) },
+    { name:"Turns and twos", ex:"Turn it, change two things", grade:"1st grade", rounds:x(function(){ return rChange(["r"]); }, 3).concat(x(function(){ return rChange(shuffle(["c","s","z","f","n"]).slice(0, 2)); }, 4), x(function(){ return rHole("mid"); }, 3)) },
+    { name:"3 by 3", ex:"One of each, grow and turn", grade:"2nd grade", rounds:x(function(){ return rOneEach(false, false); }, 4).concat(x(function(){ return rGrow(pick(["n","z"]), false); }, 2), x(function(){ return rGrow("r", false); }, 2), x(function(){ return rHole("hard"); }, 2)) },
+    { name:"Brain busters", ex:"Stack the lines", grade:"3rd grade and up", rounds:x(function(){ return rLines(false); }, 3).concat(x(function(){ return rLines(true); }, 2), x(function(){ return rOneEach(true, true); }, 2), [function(){ return rGrow("r", true); }, function(){ return rChange(["r", pick(["c","z","f"])]); }, function(){ return rHole("hard"); }]) }
+  ]},
+  picture:{ title:"Picture Puzzles", icon:"1f50d", sub:"What goes together? Pick a level!", levels:[
+    { name:"Go together", ex:"Fruit with fruit", grade:"Starter", rounds:x(function(){ return rTogether("far"); }, 6).concat(x(function(){ return rKind(false); }, 4)) },
+    { name:"Picture pairs", ex:"Rabbit and carrot", grade:"Kindergarten", rounds:x(function(){ return rPair(["eats","gives","grows","weather","moves"]); }, 7).concat(x(function(){ return rTogether("far"); }, 3)) },
+    { name:"Close calls", ex:"Birds, not bugs", grade:"1st grade", rounds:x(function(){ return rTogether("near"); }, 6).concat(x(function(){ return rKind(true); }, 4)) },
+    { name:"Tricky pairs", ex:"Part of, used for, opposites", grade:"2nd grade", rounds:x(function(){ return rPair(["part","tool","opp"]); }, 6).concat(x(function(){ return rRows(false); }, 4)) },
+    { name:"Big thinkers", ex:"Things that fly", grade:"3rd grade and up", rounds:x(function(){ return rTogether("cross"); }, 4).concat(x(function(){ return rRows(true); }, 3), x(function(){ return rPair(["part","tool","opp","grows","moves"]); }, 3)) }
+  ]},
+  number:{ title:"Number Puzzles", icon:"1f9e0", sub:"How many? What's the rule? Pick a level!", levels:[
+    { name:"Count and match", ex:"Same number", grade:"Starter", rounds:x(function(){ return rSame(false); }, 5).concat(x(function(){ return rSame(true); }, 5)) },
+    { name:"More and less", ex:"One more, two less", grade:"Kindergarten", rounds:x(function(){ return rRule([["+",1],["-",1],["+",2],["-",2]], { pics:true, max:8, top:10 }); }, 7).concat(x(function(){ return rRule([["+",1],["-",1],["+",2],["-",2],["+",3]], { max:10, top:13 }); }, 3)) },
+    { name:"Number pairs", ex:"4 → 8, 5 → ?", grade:"1st grade", rounds:x(function(){ return rRule([["+",ri(3,10)],["-",ri(3,9)],["x",2],["/",2],["+",10]], { min:2, max:20, rows:3, top:60 }); }, 6).concat(x(function(){ return rRule([["x",2],["+",3],["-",2]], { pics:true, max:7, rows:3, top:10 }); }, 2), x(function(){ return rSides(false); }, 2)) },
+    { name:"Number grids", ex:"Across and down", grade:"2nd grade", rounds:x(function(){ return rGrid(["step","sum","diff","geo2"]); }, 8).concat(x(function(){ return rParts(false); }, 2)) },
+    { name:"Shape math", ex:"Sides, parts, dots", grade:"3rd grade and up", rounds:x(function(){ return rGrid(["step","sum","diff","geo2","geo3","prod"]); }, 4).concat(x(rDots, 2), x(function(){ return rParts(true); }, 2), x(function(){ return rSides(true); }, 2)) }
+  ]}
+};
+var COLORS = ["#FFC93C","#FF8A3D","#E5487A","#3FB37F","#4BA3D9"];
+
+var gameId = (location.search.match(/[?&]g=([a-z]+)/) || [])[1];
+if (!GAMES[gameId]) gameId = "shape";
+var GAME = GAMES[gameId];
+var ROUNDS = 10;
+document.title = GAME.title;
+
+/* ---------- storage and speech ---------- */
+function load(k, d){ try { var v = localStorage.getItem("puzzle:" + gameId + ":" + k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } }
+function save(k, v){ try { localStorage.setItem("puzzle:" + gameId + ":" + k, JSON.stringify(v)); } catch(e){} }
+var best = load("best", {});
+function say(keys, done){ Speech.say(keys, done); }
+Speech.onChange(function(){ if (hasClass($("home"), "on")) renderHome(); });
+
+/* ---------- level list ---------- */
+function renderHome(){
+  $("heroImg").src = "emoji/" + GAME.icon + ".svg";
+  $("heroTitle").textContent = GAME.title;
+  $("heroSub").textContent = GAME.sub;
+  var path = $("path"); path.innerHTML = "";
+  GAME.levels.forEach(function(lv, i){
+    var b = el("button", "paper press stone"), got = best[i];
+    b.innerHTML = '<span class="num" style="background:' + COLORS[i] + '">' + (i + 1) + '</span>' +
+      '<span class="sname">' + lv.name + '</span><span class="ex">' + lv.ex + '</span><span class="grade">' + lv.grade + '</span>' +
+      '<span class="best">' + (got === undefined ? "Not played yet" : 'Best: <b>&#9733; ' + got + '</b> of ' + ROUNDS) + '</span>';
+    b.onclick = function(){ startLevel(i); };
+    path.appendChild(b);
+  });
+  $("speechNote").style.display = Speech.mode() === "none" ? "" : "none";
+}
+/* Back: from a game or the end screen to the level list; from the level list to the picker */
+function goBack(){ Speech.stop(); if (hasClass($("home"), "on")) location.href = "puzzles.html"; else { renderHome(); show("home"); } }
+$("backBtn").onclick = goBack;
+window.goBack = goBack;
+
+/* ---------- playing ---------- */
+var G = null;
+function startLevel(i, maker){
+  G = { level:i, makers:maker ? x(maker, ROUNDS) : shuffle(GAME.levels[i].rounds).slice(0, ROUNDS), round:0, stars:0, results:[] };
+  show("game");
+  renderRound();
+}
+function renderDots(){
+  var d = $("dots"); d.innerHTML = "";
+  for (var i = 0; i < ROUNDS; i++){
+    var r = G.results[i];
+    d.appendChild(el("span", "dot" + (r === "gold" ? " gold" : r === "ok" ? " ok" : i === G.round ? " now" : "")));
+  }
+  $("stars").innerHTML = "&#9733; " + G.stars;
+}
+/* what's in a box of the puzzle; pictures say their name when tapped */
+function cellHtml(R, v){
+  if (R.cellRender) return R.cellRender(v);
+  if (R.tapPics) return '<img class="pic tw" data-say="w_' + v + '" src="emoji/' + PIC[v] + '.svg" alt="">';
+  return R.render(v);
+}
+function numSay(v){ return v.t === "num" && v.v <= 100 ? "n_" + v.v : ""; }
+function renderRound(){
+  var R = G.makers[G.round]();
+  G.R = R; G.mistakes = 0; G.locked = false;
+  renderDots();
+  var stage = $("stage"); stage.innerHTML = "";
+  var hr = el("div", "hintrow");
+  hr.appendChild(el("p", "hint", Speech.tapText(R.hint)));
+  if (Speech.canTalk()){
+    var sb = el("button", "paper press sayb flex", img("1f50a"));
+    sb.onclick = function(){ say(R.say); };
+    hr.appendChild(sb);
+  }
+  stage.appendChild(hr);
+  var row = el("div", "pzrow"), mx;
+  if (R.kind === "board"){ mx = el("div", "board", R.board(null)); }
+  else {
+    var sz = CELL[Math.max(R.rows, R.cols)];
+    mx = el("div", "mx");
+    for (var r = 0; r < R.rows; r++){
+      var mr = el("div", "mrow");
+      for (var c = 0; c < R.cols; c++){
+        var i = r*R.cols + c, cell = el("div", "pc" + (i === R.hole ? " q" : " paper"));
+        cell.style.width = cell.style.height = sz + "vmin";
+        if (i === R.hole){ cell.id = "hole"; cell.innerHTML = "?"; }
+        else {
+          cell.innerHTML = cellHtml(R, R.cells[i]);
+          var ns = numSay(R.cells[i]); if (ns) cell.innerHTML = '<span class="tw" data-say="' + ns + '">' + cell.innerHTML + '</span>';
+        }
+        mr.appendChild(cell);
+      }
+      mx.appendChild(mr);
+    }
+  }
+  row.appendChild(mx);
+  var side = el("div", "side"), opts = el("div", "opts");
+  R.ansKey = R.options[0].key;   // choices() puts the right one first
+  R.options = shuffle(R.options);
+  R.options.forEach(function(o, k){
+    if (o.key === R.ansKey) R.answer = k;
+    var b = el("button", "paper press pzopt", o.html);
+    b.onclick = function(){ if (G.locked) return; if (o.key === R.ansKey) correct(b); else wrong(b); };
+    opts.appendChild(b);
+  });
+  side.appendChild(opts);
+  side.appendChild(el("div", "why", ""));
+  row.appendChild(side);
+  stage.appendChild(row);
+  setTimeout(function(){ if (G && G.R === R) say(R.say); }, 400);
+}
+/* the answer goes into the empty box */
+function fillHole(how){
+  var R = G.R, ans = R.options[R.answer];
+  if (R.kind === "board"){ document.querySelector("#stage .board").innerHTML = R.board(ans.v); return; }
+  var h = $("hole"); if (!h) return;
+  h.innerHTML = cellHtml(R, ans.v); addClass(h, how);
+}
+function showWhy(){
+  var w = document.querySelector("#stage .why"); if (!w) return [];
+  w.innerHTML = G.R.why.text.indexOf("<") >= 0 ? G.R.why.text : Speech.tapText(G.R.why.text);
+  addClass(w, "on");
+  return G.R.why.say;
+}
+function sayThenNext(keys){
+  var R = G.R, moved = false;
+  function moveOn(){ if (moved) return; moved = true; if (G && G.R === R && hasClass($("game"), "on")) nextRound(); }
+  say(keys, function(){ setTimeout(moveOn, 1600); });
+  setTimeout(moveOn, 5000 + 1800*keys.length);
+}
+function correct(btn){
+  if (G.locked) return;
+  G.locked = true;
+  var clean = G.mistakes === 0;
+  if (clean) G.stars++;
+  G.results[G.round] = clean ? "gold" : "ok";
+  addClass(btn, "right");
+  dimOthers(btn);
+  fillHole("got");
+  renderDots();
+  confetti(btn);
+  sayThenNext(["pz_praise_" + Math.floor(Math.random()*5)].concat(showWhy()));
+}
+function dimOthers(keep){ Array.prototype.forEach.call(document.querySelectorAll("#stage .pzopt"), function(b){ if (b !== keep) addClass(b, "dim"); }); }
+/* two wrong taps show the answer */
+function wrong(btn){
+  G.mistakes++;
+  removeClass(btn, "nope"); void btn.offsetWidth; addClass(btn, "nope");
+  setTimeout(function(){ addClass(btn, "dim"); }, 400);
+  if (G.mistakes < 2){ say(["p_try"]); return; }
+  G.locked = true;
+  var b = document.querySelectorAll("#stage .pzopt")[G.R.answer];
+  addClass(b, "shown"); dimOthers(b);
+  fillHole("shown");
+  G.results[G.round] = "ok";
+  renderDots();
+  sayThenNext(["pz_answer"].concat(showWhy()));
+}
+function nextRound(){
+  G.round++;
+  if (G.round >= ROUNDS) showEnd(); else renderRound();
+}
+function showEnd(){
+  var i = G.level, s = G.stars;
+  if (best[i] === undefined || s > best[i]){ best[i] = s; save("best", best); }
+  $("endTitle").textContent = s === ROUNDS ? "Perfect!" : s >= 7 ? "Super thinking!" : "Level done!";
+  $("endScore").innerHTML = "You earned <b>&#9733; " + s + "</b> of " + ROUNDS + " stars.";
+  var btns = $("endBtns"); btns.innerHTML = "";
+  var again = el("button", "paper press bigbtn", "Play again"); again.onclick = function(){ startLevel(i); }; btns.appendChild(again);
+  if (i < GAME.levels.length - 1){
+    var nx = el("button", "paper press bigbtn go", "Next: " + GAME.levels[i + 1].name); nx.onclick = function(){ startLevel(i + 1); }; btns.appendChild(nx);
+  }
+  var all = el("button", "paper press bigbtn", "All levels"); all.onclick = function(){ renderHome(); show("home"); }; btns.appendChild(all);
+  show("end");
+  G.R = null;
+  say([s === ROUNDS ? "pz_perfect" : "p_stars_" + s]);
+}
+function confetti(target){
+  if (!target) return;
+  var r = target.getBoundingClientRect();
+  for (var i = 0; i < 16; i++){
+    (function(i){
+      var b = el("span", "bit");
+      b.style.left = (r.left + r.width/2) + "px";
+      b.style.top = (r.top + r.height/2) + "px";
+      b.style.background = COLORS[i % COLORS.length];
+      document.body.appendChild(b);
+      var dx = Math.random()*360 - 180, dy = -(Math.random()*260 + 40), rot = Math.random()*540;
+      setTimeout(function(){
+        var t = "translate(" + dx + "px," + dy + "px) rotate(" + rot + "deg)";
+        b.style.webkitTransform = t; b.style.transform = t; b.style.opacity = "0";
+      }, 20);
+      setTimeout(function(){ if (b.parentNode) b.parentNode.removeChild(b); }, 1000);
+    })(i);
+  }
+}
+(function(){
+  var sky = $("sky");
+  for (var i = 0; i < 70; i++){
+    var st = el("span", "star"), size = Math.random() < 0.15 ? 0.6 : 0.3;
+    st.style.left = (Math.random()*100) + "%"; st.style.top = (Math.random()*100) + "%";
+    st.style.width = st.style.height = size + "vmin";
+    st.style.webkitAnimationDelay = st.style.animationDelay = (Math.random()*3) + "s";
+    sky.appendChild(st);
+  }
+})();
+
+/* hook for automated tests (harmless on the frame) */
+window.PuzzleGame = { game:function(){ return GAME; }, state:function(){ return G; }, start:startLevel, PIC:PIC, CATS:CATS, FAMS:FAMS, FAMILY:FAMILY, RULES:RULES, applyRule:applyRule };
+
+document.addEventListener("touchstart", function(){}, true);
+renderHome();
+})();
+</script>
+</body>
+</html>

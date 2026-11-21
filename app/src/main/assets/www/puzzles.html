@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="parent" content="index.html">
+<title>Puzzle games</title>
+<link rel="stylesheet" href="hub.css">
+<link rel="stylesheet" href="back.css">
+<style>
+.shapes{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:auto}
+.shapes svg{width:10vmin;height:10vmin;margin-right:1.4vmin}
+.pics{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:auto}
+.game .pics img{width:13vmin;height:13vmin;margin:0 1.2vmin 0 0}
+.pics b{font-size:9vmin;color:#FFD93D;margin-right:1.2vmin;font-weight:600}
+@media (orientation: portrait){
+  .shapes svg{width:9vmin;height:9vmin}
+  .game .pics img{width:11vmin;height:11vmin}
+}
+</style>
+</head>
+<body>
+<button class="backbtn" id="backBtn" aria-label="Back"><b>&#8592;</b>Back</button>
+<div class="top backroom"><h1>Puzzle games</h1></div>
+<div class="games three">
+  <button class="game c3" data-go="puzzle.html?g=shape" data-stars="puzzle:shape:best">
+    <span class="shapes">
+      <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#E5484D" stroke="#05081A" stroke-width="4"/></svg>
+      <svg viewBox="0 0 100 100"><polygon points="50,8 94,88 6,88" fill="#3B82F6" stroke="#05081A" stroke-width="4" stroke-linejoin="round"/></svg>
+      <svg viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="4" fill="#FFFFFF" stroke="#F2B400" stroke-width="12"/></svg>
+    </span>
+    <span class="t">Shape Puzzles</span>
+    <span class="d">Shapes, colors, and turns</span>
+    <span class="got"></span>
+  </button>
+  <button class="game c1 alt" data-go="puzzle.html?g=picture" data-stars="puzzle:picture:best">
+    <span class="pics"><img src="emoji/1f430.svg" alt=""><b>+</b><img src="emoji/1f955.svg" alt=""></span>
+    <span class="t">Picture Puzzles</span>
+    <span class="d">What goes together?</span>
+    <span class="got"></span>
+  </button>
+  <button class="game c2" data-go="puzzle.html?g=number" data-stars="puzzle:number:best">
+    <span class="art"><span class="nums" style="margin-left:0"><b class="k1">2</b><b class="k2">4</b><b class="k3">6</b><b class="op">?</b></span></span>
+    <span class="t">Number Puzzles</span>
+    <span class="d">How many? Find the rule</span>
+    <span class="got"></span>
+  </button>
+</div>
+<script src="speech.js"></script>
+<script src="hub.js"></script>
+</body>
+</html>

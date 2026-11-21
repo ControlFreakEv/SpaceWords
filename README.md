@@ -44,6 +44,14 @@ unofficial client for Microsoft's text-to-speech service, so they can't be share
 <td width="50%"><img src="docs/screenshots/rocket-math.jpg" alt="Rocket Math, stacked like on paper"><br><sub>Rocket Math, stacked like on paper</sub></td>
 <td width="50%"><img src="docs/screenshots/alien-patterns.jpg" alt="Alien Patterns: find the rule"><br><sub>Alien Patterns: find the rule</sub></td>
 </tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/shape-puzzles.jpg" alt="Shape Puzzles: one of each in every row and column"><br><sub>Shape Puzzles: one of each in every row and column</sub></td>
+<td width="50%"><img src="docs/screenshots/shape-puzzles-hole.jpg" alt="Shape Puzzles: which piece fills the hole?"><br><sub>Shape Puzzles: which piece fills the hole?</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/picture-puzzles.jpg" alt="Picture Puzzles: picture pairs, with the reason shown"><br><sub>Picture Puzzles: picture pairs, with the reason shown</sub></td>
+<td width="50%"><img src="docs/screenshots/number-puzzles.jpg" alt="Number Puzzles: number grids"><br><sub>Number Puzzles: number grids</sub></td>
+</tr>
 </table>
 
 On a phone, upright:
@@ -105,6 +113,22 @@ as a hint, like Peek, and costs the round's gold star.
   numbers, times and sharing. Harder levels use a number keypad instead of choices.
 - **Alien Patterns** - picture patterns, counting up and down, skip counting,
   number rules, and brain busters like 1, 2, 4, 8.
+
+**Puzzle games** (five levels each, starter to about 3rd grade): thinking puzzles in the style of
+the NGAT (Naglieri General Ability Tests) used for gifted and talented screening. Each one is a
+box of pictures with one empty and five answers to pick from; the wrong answers are near misses,
+like on the real test. A wrong tap says "Try again"; a second one shows the answer. After each
+puzzle a short line says why ("The color changes.", "Rabbits eat carrots. Monkeys eat bananas.").
+- **Shape Puzzles** (nonverbal) - rows and columns that match, one thing that changes (color,
+  shape, size, inside, a quarter turn), two changes at once, 3 by 3 grids with one of each,
+  shapes that grow or turn across a row, lines that stack (and cancel out), and "which piece
+  fills the hole?" in a big pattern.
+- **Picture Puzzles** (verbal, no reading needed) - what goes together (fruits, ocean animals,
+  things that fly...), picture pairs (rabbit : carrot as monkey : ?), close calls (birds, not
+  bugs), part of / used for / opposites, and 3 by 3 grids where each row is a group.
+- **Number Puzzles** (quantitative) - the same number of things, one more or two less, number
+  pairs with a rule (4 : 8 as 5 : ?), 3 by 3 number grids (add across, double, times), and
+  shapes with more sides, circles with more parts colored, rows times columns of dots.
 
 Every screen has the same yellow Back button in the top-left corner; it goes back one step at a
 time, and so does the device's Back key. Stars for each level are saved on the device. On

@@ -46,7 +46,7 @@ const server = http.createServer((req, res) => {
   const shot = async name => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: path.join(SHOTS, name + ".png") }); } };
 
   // Pickers
-  for (const p of ["index.html", "words.html", "math.html"]) {
+  for (const p of ["index.html", "words.html", "math.html", "puzzles.html"]) {
     await page.goto(base + p); await page.waitForTimeout(150);
     const n = await page.locator("[data-go]").count();
     n >= 2 ? ok(p + ": " + n + " buttons") : fail(p + " has " + n + " buttons");
@@ -114,6 +114,145 @@ const server = http.createServer((req, res) => {
     await shot(g + "-end");
     const saved = await page.evaluate(g => localStorage.getItem("math:" + g + ":best"), g);
     saved && Object.keys(JSON.parse(saved)).length === levels ? ok(g + ": stars saved " + saved) : fail(g + " stars not saved: " + saved);
+  }
+
+
+  // Puzzle games (NGAT-style: a box of pictures with one empty, 5 answers). Generated rounds of every level:
+  // 5 different answers, the rule really picks out the right one (rebuilt here from what's on screen),
+  // every picture exists, everything said has a clip; then play every level and the 2-misses reveal.
+  await page.goto(base + "puzzles.html"); await page.click("text=Number Puzzles"); await page.waitForURL(/puzzle\.html\?g=number/); ok("puzzles -> Number Puzzles navigation");
+  for (const g of ["shape", "picture", "number"]) {
+    await page.goto(base + "puzzle.html?g=" + g); await page.waitForTimeout(150);
+    await shot("puzzle-" + g + "-levels");
+    const report = await page.evaluate(() => {
+      const P = PuzzleGame, out = { bad: [], keys: {}, pics: {}, kinds: {} }, G = P.game();
+      const key = (R, v) => R.key(v), same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const nr = r => ((r % 360) + 360) % 360;
+      const inCat = (x, c) => P.CATS[c].m.indexOf(x) >= 0;
+      // number rules: +k, -k (k up to 20), x2..x5, /2../5; only one answer may fit what's shown
+      const rules = []; for (let k = 1; k <= 20; k++) rules.push(a => a + k, a => a - k); for (let k = 2; k <= 5; k++) rules.push(a => a * k, a => a % k ? null : a / k);
+      const fams = [r => r[1] - r[0] === r[2] - r[1] && r[1] !== r[0] ? (a, b) => 2 * b - a : null, r => r[0] + r[1] === r[2] ? (a, b) => a + b : null,
+        r => r[0] - r[1] === r[2] ? (a, b) => a - b : null, r => r[0] * r[1] === r[2] ? (a, b) => a * b : null,
+        r => r[0] > 0 && r[1] % r[0] === 0 && r[1] > r[0] && r[1] * r[1] / r[0] === r[2] ? (a, b) => (b % a ? null : b * b / a) : null];
+      G.levels.forEach((lv, li) => lv.rounds.forEach((mk, ri) => {
+        for (let t = 0; t < 250; t++) {
+          const R = mk(), T = R.test, opts = R.options, ans = opts[0].v, wrongs = opts.slice(1).map(o => o.v);
+          const where = "L" + (li + 1) + " " + T.type + (T.kind || "") + ": ";
+          out.kinds[li + 1 + T.type] = 1;
+          R.say.concat(R.why.say).forEach(k => out.keys[k] = 1);
+          if (opts.length !== 5) out.bad.push(where + opts.length + " answers");
+          if (new Set(opts.map(o => o.key)).size !== opts.length || new Set(opts.map(o => o.html)).size !== opts.length) out.bad.push(where + "two answers look the same");
+          if (R.cells && key(R, R.cells[R.hole]) !== opts[0].key) out.bad.push(where + "the empty box isn't the answer");
+          if (R.tapPics) { R.cells.forEach(c => { out.keys["w_" + c] = 1; out.pics[P.PIC[c] || ("none:" + c)] = 1; }); opts.forEach(o => out.pics[P.PIC[o.v] || ("none:" + o.v)] = 1); }
+          const C = R.cells, fits = [];
+          if (T.type === "match") {
+            const ok = v => v[T.A] === C[2][T.A] && v[T.B] === C[1][T.B] && ["s", "c", "f", "z", "n"].every(p => p === T.A || p === T.B || v[p] === C[0][p]);
+            if (!ok(ans) || C[0][T.A] !== C[1][T.A] || C[0][T.B] !== C[2][T.B]) out.bad.push(where + "rows/columns don't match");
+            wrongs.forEach(w => { if (ok(w)) fits.push(w); });
+          } else if (T.type === "change") {
+            const [A, B, Cc] = C, exp = Object.assign({}, Cc);
+            ["s", "c", "f", "z", "n"].forEach(p => { if (A[p] !== B[p]) { if (Cc[p] !== A[p]) out.bad.push(where + "bottom one doesn't start like the top one (" + p + ")"); exp[p] = B[p]; } });
+            exp.r = Cc.r + (B.r - A.r);
+            const k = v => [v.s, v.c, v.f, v.z, nr(v.r), v.n].join();
+            if (k(exp) !== k(ans)) out.bad.push(where + "answer isn't the same change");
+            if (k(A) === k(Cc)) out.bad.push(where + "bottom one is the top one");
+          } else if (T.type === "oneeach") {
+            const full = C.slice(); full[R.hole] = ans;
+            const good = g => [0, 1, 2].every(i => ["s", "c"].concat(T.three ? ["f"] : []).every(p => new Set([0, 1, 2].map(j => g[i * 3 + j][p])).size === 3 && new Set([0, 1, 2].map(j => g[j * 3 + i][p])).size === 3));
+            if (!good(full)) out.bad.push(where + "not one of each");
+            wrongs.forEach(w => { const f2 = C.slice(); f2[R.hole] = w; if (good(f2)) fits.push(w); });
+          } else if (T.type === "grow") {
+            const row = v => [C[6], C[7], v], ok = v => { const r = row(v);
+              if (r.some(x => x.s !== r[0].s || x.c !== r[0].c || x.f !== r[0].f)) return false;
+              if (T.kind === "n") return r[1].n - r[0].n === 1 && r[2].n - r[1].n === 1;
+              if (T.kind === "z") return r[1].z - r[0].z === r[2].z - r[1].z && r[1].z !== r[0].z;
+              return nr(r[1].r - r[0].r) === nr(r[2].r - r[1].r) && nr(r[1].r - r[0].r) !== 0; };
+            if (!ok(ans)) out.bad.push(where + "last row doesn't grow");
+            wrongs.forEach(w => { if (ok(w)) fits.push(w); });
+          } else if (T.type === "lines") {
+            const op = (a, b) => T.xor ? a ^ b : a | b;
+            for (let r = 0; r < 2; r++) { if (op(C[r * 3], C[r * 3 + 1]) !== C[r * 3 + 2]) out.bad.push(where + "row " + (r + 1) + " doesn't add up");
+              if (T.xor && !(C[r * 3] & C[r * 3 + 1])) out.bad.push(where + "xor row without shared lines"); if (!T.xor && (C[r * 3] & C[r * 3 + 1])) out.bad.push(where + "lines overlap"); }
+            if (op(C[6], C[7]) !== ans) out.bad.push(where + "answer doesn't add up");
+          } else if (T.type === "hole") {
+            const want = [[T.f(T.r0, T.c0), T.f(T.r0, T.c0 + 1)], [T.f(T.r0 + 1, T.c0), T.f(T.r0 + 1, T.c0 + 1)]];
+            if (!same(want, ans)) out.bad.push(where + "piece isn't the pattern");
+            wrongs.forEach(w => { if (same(w, want)) fits.push(w); });
+          } else if (T.type === "together") {
+            if (!C.every(x => inCat(x, T.cat))) out.bad.push(where + "shown things not all " + T.cat);
+            wrongs.forEach(w => { if (inCat(w, T.cat) || (P.CATS[T.cat].avoid || []).indexOf(w) >= 0) fits.push(w); });
+          } else if (T.type === "kind") {
+            if (!inCat(C[0], T.X) || !inCat(C[1], T.X) || !inCat(C[2], T.cat) || !inCat(ans, T.cat) || inCat(C[2], T.X)) out.bad.push(where + "pairs aren't two of a kind");
+            wrongs.forEach(w => { if (inCat(w, T.cat)) fits.push(w); });
+          } else if (T.type === "rows") {
+            if (!inCat(C[6], T.cat) || !inCat(C[7], T.cat) || !inCat(ans, T.cat)) out.bad.push(where + "last row isn't one group");
+            wrongs.forEach(w => { if (inCat(w, T.cat) || (P.CATS[T.cat].avoid || []).indexOf(w) >= 0) fits.push(w); });
+          } else if (T.type === "pair") {
+            const all = []; Object.keys(P.FAMS).forEach(f => P.FAMS[f].p.forEach(p => all.push(p[0] + ">" + p[1])));
+            if (all.indexOf(C[0] + ">" + C[1]) < 0 || all.indexOf(C[2] + ">" + ans) < 0) out.bad.push(where + "not a listed pair");
+            wrongs.forEach(w => { if (all.indexOf(C[2] + ">" + w) >= 0) fits.push(w); });
+          } else if (T.type === "rule") {
+            const shown = T.pairs.slice(0, -1), a = T.pairs[T.pairs.length - 1][0], preds = new Set();
+            rules.forEach(f => { if (shown.every(p => f(p[0]) === p[1])) { const v = f(a); if (v !== null && v >= 0) preds.add(v); } });
+            if (preds.size !== 1 || !preds.has(ans.v)) out.bad.push(where + "rule not clear: " + JSON.stringify(T.pairs) + " -> " + [...preds]);
+            if (T.pairs.some((p, i) => C[i * 2].v !== p[0] || C[i * 2 + 1].v !== p[1])) out.bad.push(where + "boxes don't show the pairs");
+          } else if (T.type === "same") {
+            if (C[0].v !== C[1].v || C[2].v !== ans.v) out.bad.push(where + "not the same number");
+          } else if (T.type === "numgrid") {
+            const v = C.map(c => c.v), rows = [v.slice(0, 3), v.slice(3, 6), [v[6], v[7], ans.v]], preds = new Set();
+            fams.forEach(fm => { const f0 = fm(rows[0]), f1 = fm(rows[1]); if (f0 && f1) { const p = f0(rows[2][0], rows[2][1]); if (p !== null && p >= 0) preds.add(p); } });
+            if (preds.size !== 1 || !preds.has(ans.v)) out.bad.push(where + "grid rule not clear: " + JSON.stringify(rows) + " -> " + [...preds]);
+          } else if (T.type === "sides" || T.type === "parts") {
+            const full = C.slice(); full[R.hole] = ans;
+            const cols = R.cols; for (let r = 0; r < R.rows; r++) for (let c = 1; c < cols; c++) if (full[r * cols + c].v - full[r * cols + c - 1].v !== T.step) out.bad.push(where + "doesn't go up by " + T.step);
+            if (T.type === "parts" && full.some(o => o.v > o.P || o.P !== full[0].P)) out.bad.push(where + "more parts colored than there are");
+          } else if (T.type === "dots") {
+            if (ans.v !== C[4].r * C[4].c || C[0].v !== C[1].v || C[2].v !== C[3].v) out.bad.push(where + "dots don't match their numbers");
+          } else out.bad.push(where + "no check for this kind");
+          if (fits.length) out.bad.push(where + "a wrong answer also fits: " + JSON.stringify(fits[0]));
+        }
+      }));
+      out.bad = [...new Set(out.bad)].slice(0, 15); out.keys = Object.keys(out.keys); out.pics = Object.keys(out.pics); out.kinds = Object.keys(out.kinds).length;
+      return out;
+    });
+    report.bad.length ? report.bad.forEach(b => fail("puzzle " + g + " " + b)) : ok("puzzle " + g + ": 250 rounds of each of " + report.kinds + " kinds: 5 different answers, exactly one fits");
+    const missingKeys = report.keys.filter(k => !(k in phrases));
+    missingKeys.length ? fail("puzzle " + g + " speech keys missing from phrases.json: " + missingKeys.join(", ")) : ok("puzzle " + g + ": all " + report.keys.length + " speech keys exist");
+    const noPic = report.pics.filter(c => !fs.existsSync(path.join(WWW, "emoji", c + ".svg")));
+    if (report.pics.length) noPic.length ? fail("puzzle " + g + " pictures missing: " + noPic.join(", ")) : ok("puzzle " + g + ": all " + report.pics.length + " pictures exist");
+    // play every level: tap the right answer each time
+    const levels = await page.evaluate(() => PuzzleGame.game().levels.length);
+    for (let i = 0; i < levels; i++) {
+      await page.evaluate(i => PuzzleGame.start(i), i);
+      for (let r = 0; r < 10; r++) {
+        const a = await page.evaluate(() => PuzzleGame.state().R.answer);
+        if (r === 0) await shot("puzzle-" + g + "-L" + (i + 1));
+        await page.locator("#stage .pzopt").nth(a).click();
+        await page.waitForFunction(r => { const s = PuzzleGame.state(); return s.round > r || document.getElementById("end").className.indexOf("on") >= 0; }, r, { timeout: 4000 });
+      }
+      const end = await page.evaluate(() => [document.getElementById("end").className.indexOf("on") >= 0, PuzzleGame.state().stars]);
+      end[0] && end[1] === 10 ? ok("puzzle " + g + " level " + (i + 1) + ": played 10 rounds, 10 stars") : fail("puzzle " + g + " level " + (i + 1) + " ended " + JSON.stringify(end));
+    }
+    const saved = await page.evaluate(g => localStorage.getItem("puzzle:" + g + ":best"), g);
+    saved && Object.keys(JSON.parse(saved)).length === levels ? ok("puzzle " + g + ": stars saved " + saved) : fail("puzzle " + g + " stars not saved: " + saved);
+  }
+  {
+    // two wrong taps show the answer (no star); one wrong tap then the right one is no star either
+    await page.goto(base + "puzzle.html?g=shape"); await page.waitForTimeout(150);
+    await page.evaluate(() => PuzzleGame.start(1));
+    const wrongIdx = await page.evaluate(() => { const a = PuzzleGame.state().R.answer; return [0, 1, 2, 3, 4].filter(i => i !== a).slice(0, 2); });
+    await page.locator("#stage .pzopt").nth(wrongIdx[0]).click(); await page.waitForTimeout(450);
+    const afterOne = await page.evaluate(() => [PuzzleGame.state().round, PuzzleGame.state().locked]);
+    // (read straight after the tap: the test's fast timers move on to the next round right away)
+    const shown = await page.evaluate(i => { document.querySelectorAll("#stage .pzopt")[i].click();
+      return [PuzzleGame.state().results[0], !!document.querySelector("#hole.shown, .board"), !!document.querySelector(".pzopt.shown"), document.querySelector(".why.on") ? document.querySelector(".why").textContent : ""]; }, wrongIdx[1]);
+    await page.waitForFunction(() => PuzzleGame.state().round === 1, null, { timeout: 4000 });
+    await page.locator("#stage .pzopt").nth(await page.evaluate(() => (PuzzleGame.state().R.answer + 1) % 5)).click(); await page.waitForTimeout(450);
+    await page.locator("#stage .pzopt").nth(await page.evaluate(() => PuzzleGame.state().R.answer)).click(); await page.waitForTimeout(100);
+    const second = await page.evaluate(() => [PuzzleGame.state().results[1], PuzzleGame.state().stars]);
+    afterOne[0] === 0 && !afterOne[1] && shown[0] === "ok" && shown[1] && shown[2] && shown[3] && second[0] === "ok" && second[1] === 0
+      ? ok("puzzle: one miss = try again, two misses show the answer and why; a miss costs the star")
+      : fail("puzzle misses: " + JSON.stringify({ afterOne, shown, second }));
   }
 
   // Alien Patterns: every round has a rule, the rule really makes the sequence (rebuilt here from
@@ -1102,6 +1241,15 @@ const server = http.createServer((req, res) => {
     await page.goto(base + "math-game.html?g=" + g);
     for (let i = 0; i < 5; i++) for (let t = 0; t < 8; t++) { await page.evaluate(i => MathGame.start(i), i); await collect(); }
   }
+  for (const g of ["shape", "picture", "number"]) {
+    await page.goto(base + "puzzle.html?g=" + g);
+    // every kind of round on every level, with its why line showing
+    const kinds = await page.evaluate(() => PuzzleGame.game().levels.map(l => l.rounds.length));
+    for (let i = 0; i < kinds.length; i++) for (let j = 0; j < kinds[i]; j++) for (let t = 0; t < 3; t++) {
+      await page.evaluate(([i, j]) => { PuzzleGame.start(i, PuzzleGame.game().levels[i].rounds[j]); const R = PuzzleGame.state().R; document.querySelector("#stage .why").innerHTML = R.why.text.indexOf("<") >= 0 ? "" : Speech.tapText(R.why.text); }, [i, j]);
+      await collect();
+    }
+  }
   await page.goto(base + "class-words.html");
   for (const k of ["find", "blank", "teach", "hunt", "spell", "write", "roll", "say"]) for (let t = 0; t < 6; t++) { await page.evaluate(k => ClassWords.start(k), k); await collect(); }
   await page.evaluate(() => { document.getElementById("backBtn").click(); document.getElementById("wallBtn").click(); }); await collect();
@@ -1162,12 +1310,13 @@ const server = http.createServer((req, res) => {
   await page.goto(base + "index.html"); await page.evaluate(() => { window.AndroidApp = { backToPhotos: () => { window.__photos = true; } }; });
   await box("index"); await page.click("#backBtn");
   (await page.evaluate(() => window.__photos === true)) ? ok("Back on Pick a mission returns to the photos") : fail("Back on Pick a mission did nothing");
-  for (const hub of ["words.html", "math.html"]) {
+  for (const hub of ["words.html", "math.html", "puzzles.html"]) {
     await page.goto(base + hub); await box(hub); await page.click("#backBtn"); await page.waitForURL(/index\.html/);
     ok("Back on " + hub + " goes to Pick a mission");
   }
   const games = { "picture-planet.html": "words", "saucer.html": "words", "match.html?g=connect": "words", "match.html?g=rhyme": "words",
-    "sound-lab.html": "words", "compound.html": "words", "wordsearch.html": "words", "read.html": "words", "math-game.html?g=count": "math", "math-game.html?g=ops": "math", "math-game.html?g=pattern": "math" };
+    "sound-lab.html": "words", "compound.html": "words", "wordsearch.html": "words", "read.html": "words", "math-game.html?g=count": "math", "math-game.html?g=ops": "math", "math-game.html?g=pattern": "math",
+    "puzzle.html?g=shape": "puzzles", "puzzle.html?g=picture": "puzzles", "puzzle.html?g=number": "puzzles" };
   for (const g of Object.keys(games)) {
     await page.goto(base + g); await page.waitForTimeout(80); await box(g + " levels");
     await page.locator("#path button").first().click(); await page.waitForTimeout(80); await box(g + " game");
@@ -1198,7 +1347,7 @@ const server = http.createServer((req, res) => {
     : fail("Back button moves around: " + JSON.stringify(boxes));
 
   // Volume control: on pickers and level lists, hidden while playing; -, +, bars; 0 means silent.
-  for (const pg of ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=ops"]) {
+  for (const pg of ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=ops", "puzzles.html", "puzzle.html?g=number"]) {
     await page.goto(base + pg); await page.waitForTimeout(80);
     const v = await page.evaluate(() => { const b = document.querySelector(".volbox"); return !!b && b.offsetWidth > 0 && !document.getElementById("soundBtn"); });
     v ? ok(pg + ": volume control shown, no talking toggle") : fail(pg + ": volume control missing or talking toggle still there");
@@ -1299,7 +1448,8 @@ const server = http.createServer((req, res) => {
 
   // Every round of every game has the speaker button to hear the instructions again.
   const noSay = [];
-  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+  for (const w of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern",
+                   "puzzle.html?g=shape", "puzzle.html?g=picture", "puzzle.html?g=number"]) {
     await spd.goto(base + w); await spd.waitForTimeout(150);
     const n = await spd.locator("#path button").count();
     for (let i = 0; i < n; i++) for (let t = 0; t < 3; t++) {
@@ -1334,7 +1484,8 @@ const server = http.createServer((req, res) => {
 
   // Volume control: top right, never overlapping text, pictures, buttons or cards (screen by screen).
   const volPages = ["index.html", "words.html", "math.html", "class-words.html", "picture-planet.html", "saucer.html",
-    "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=pattern"];
+    "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=pattern",
+    "puzzles.html", "puzzle.html?g=shape", "puzzle.html?g=picture", "puzzle.html?g=number"];
   for (const pg of volPages) {
     await page.goto(base + pg); await page.waitForTimeout(250);
     const hits = await page.evaluate(() => {
@@ -1406,9 +1557,9 @@ const server = http.createServer((req, res) => {
   });
   const pillBad = [];
   const pillCheck = async label => { const h = await pillHits(); if (h.length) pillBad.push(label + ": " + h.join(", ")); };
-  for (const pg of ["words.html", "math.html"]) { await page.goto(base + pg); await page.waitForTimeout(150); await pillCheck(pg); }
+  for (const pg of ["words.html", "math.html", "puzzles.html"]) { await page.goto(base + pg); await page.waitForTimeout(150); await pillCheck(pg); }
   for (const g of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html",
-                   "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+                   "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern", "puzzle.html?g=shape", "puzzle.html?g=picture", "puzzle.html?g=number"]) {
     await page.goto(base + g); await page.waitForTimeout(150); await pillCheck(g + " levels");
     const n = await page.locator("#path button").count();
     for (const i of [0, Math.floor(n / 2), n - 1]) {
@@ -1619,8 +1770,9 @@ const server = http.createServer((req, res) => {
     };
     const sweep = async (tag, bad) => {
       const chk = name => check(tag + name, bad);
-      for (const p of ["index", "words", "math"]) { await pp.goto(base + p + ".html"); await chk(p); }
-      for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern"]) {
+      for (const p of ["index", "words", "math", "puzzles"]) { await pp.goto(base + p + ".html"); await chk(p); }
+      for (const u of ["picture-planet.html", "saucer.html", "match.html?g=connect", "match.html?g=rhyme", "sound-lab.html", "compound.html", "wordsearch.html", "read.html", "math-game.html?g=count", "math-game.html?g=ops", "math-game.html?g=pattern",
+                       "puzzle.html?g=shape", "puzzle.html?g=picture", "puzzle.html?g=number"]) {
         await pp.goto(base + u); await chk(u + " levels");
         const cnt = await pp.locator("#path button").count();
         for (const i of [0, cnt - 1]) { await pp.goto(base + u); await pp.waitForTimeout(100); await pp.locator("#path button").nth(i).click(); await chk(u + " level " + (i + 1)); }
@@ -1708,6 +1860,12 @@ const server = http.createServer((req, res) => {
   await page.goto(base + "math.html"); await page.waitForTimeout(150);
   const got = await page.locator(".got").first().textContent();
   /stars/.test(got) ? ok("math hub shows " + got) : fail("math hub star total missing");
+  await page.evaluate(() => { localStorage.setItem("puzzle:number:best", JSON.stringify({ 0: 7, 2: 4 })); localStorage.setItem("puzzle:shape:best", JSON.stringify({ 1: 3 })); });
+  await page.goto(base + "index.html"); await page.waitForTimeout(150);
+  const pzGot = [await page.locator('[data-go="puzzles.html"] .got').textContent()];
+  await page.goto(base + "puzzles.html"); await page.waitForTimeout(150);
+  pzGot.push(await page.locator('[data-go="puzzle.html?g=number"] .got').textContent(), await page.locator('[data-go="puzzle.html?g=shape"] .got').textContent());
+  /\b14 stars/.test(pzGot[0]) && /\b11 stars/.test(pzGot[1]) && /\b3 stars/.test(pzGot[2]) ? ok("star totals: Puzzle games " + pzGot.join(", ")) : fail("puzzle star totals: " + JSON.stringify(pzGot));
   await shot("math-after");
 
   errors.length ? errors.slice(0, 10).forEach(e => fail("page error: " + e)) : ok("no page errors");
