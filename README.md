@@ -114,12 +114,17 @@ as a hint, like Peek, and costs the round's gold star.
 - **Alien Patterns** - picture patterns, counting up and down, skip counting,
   number rules, and brain busters like 1, 2, 4, 8.
 
-**Puzzle games** (five levels each, starter to about 3rd grade): thinking puzzles in the style of
+**Puzzle games** (100 levels each, in five tabs of 20, from starter puzzles up to about 3rd grade
+and beyond): thinking puzzles in the style of
 the NGAT (Naglieri General Ability Tests) used for gifted and talented screening. Each one is a
 box of pictures with one empty and five answers to pick from; the wrong answers are near misses,
 like on the real test. A wrong tap says "Try again"; a second one shows the answer. After each
 puzzle a short line says why ("The color changes.", "Rabbits eat carrots. Monkeys eat bananas.").
-- **Shape Puzzles** (nonverbal) - rows and columns that match, one thing that changes (color,
+New puzzles are made up each time, so a level never runs out; each kind of puzzle starts at its
+own level and gets harder as the levels go up, and each level mixes 10 of them. The level map
+opens where she left off, with the next level marked "Play!".
+- **Shape Puzzles** (nonverbal) - rows and columns that match, what comes next in a row (colors
+  taking turns, shapes in order, turns), one thing that changes (color,
   shape, size, inside, a quarter turn), two changes at once, 3 by 3 grids with one of each,
   shapes that grow or turn across a row, lines that stack (and cancel out), and "which piece
   fills the hole?" in a big pattern.
@@ -127,8 +132,9 @@ puzzle a short line says why ("The color changes.", "Rabbits eat carrots. Monkey
   things that fly...), picture pairs (rabbit : carrot as monkey : ?), close calls (birds, not
   bugs), part of / used for / opposites, and 3 by 3 grids where each row is a group.
 - **Number Puzzles** (quantitative) - the same number of things, one more or two less, number
-  pairs with a rule (4 : 8 as 5 : ?), 3 by 3 number grids (add across, double, times), and
-  shapes with more sides, circles with more parts colored, rows times columns of dots.
+  pairs with a rule (4 : 8 as 5 : ?), what comes next (2, 4, 8, 16; jumps that grow), across
+  and down grids, dice that add up (or multiply), 3 by 3 number grids (add across, double,
+  times), shapes with more sides, circles with more parts colored, rows times columns of dots.
 
 Every screen has the same yellow Back button in the top-left corner; it goes back one step at a
 time, and so does the device's Back key. Stars for each level are saved on the device. On

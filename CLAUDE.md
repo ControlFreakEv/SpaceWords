@@ -28,8 +28,13 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
 - **Puzzle games** (owner's request: she got into TAG and the NGAT score could be better;
   puzzles.html, third card on Pick a mission -> puzzle.html?g=shape|picture|number): NGAT-style
   (Naglieri General Ability Tests: Nonverbal, Verbal, Quantitative). A matrix of boxes (2x2, 3x3,
-  3x2, 1x4) or a 5x5 pattern with a 2x2 hole, one box empty, always 5 answer choices (near misses,
-  like the test). 5 levels x 10 rounds; star = right first try; 2 misses show the answer. After
+  3x2, 1x4-1x6 rows) or a 5x5 pattern with a 2x2 hole, one box empty, always 5 answer choices (near
+  misses, like the test). 100 levels per game (owner asked for "LOTS", 100 each): KINDS[game] lists
+  K(id, from, to, weight, make(n, t)): a kind is open from level `from` to `to` and gets harder
+  inside that range (t 0 -> 1); levelMakers(n) mixes 10 of the open kinds (a new kind counts double
+  for its first 6 levels, at most 3 of a kind). Puzzles are generated, never stored. The level
+  list is 5 tabs of 20 (STAGES), opening on the first level not played. Star = right first try;
+  2 misses show the answer; best per level index 0-99. After
   each answer a "why" line is shown and said (pz_* keys). Shapes are inline SVG (specSvg: shape,
   color, inside, size, turn, count; linesSvg; boardSvg), Picture Puzzles use Twemoji from PIC
   (CATS groups with `avoid` lists of too-close-to-call things, cross groups flies/wheels/light

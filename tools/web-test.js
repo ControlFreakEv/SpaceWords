@@ -117,28 +117,44 @@ const server = http.createServer((req, res) => {
   }
 
 
-  // Puzzle games (NGAT-style: a box of pictures with one empty, 5 answers). Generated rounds of every level:
-  // 5 different answers, the rule really picks out the right one (rebuilt here from what's on screen),
-  // every picture exists, everything said has a clip; then play every level and the 2-misses reveal.
+  // Puzzle games (NGAT-style: a box of pictures with one empty, 5 answers), 100 levels each. Every kind of
+  // puzzle across all its levels: 5 different answers, the rule really picks out the right one (rebuilt
+  // here from what's on screen), every picture exists, everything said has a clip; every level gets 10
+  // puzzles of kinds open there; then play levels from each tab and the 2-misses reveal.
   await page.goto(base + "puzzles.html"); await page.click("text=Number Puzzles"); await page.waitForURL(/puzzle\.html\?g=number/); ok("puzzles -> Number Puzzles navigation");
   for (const g of ["shape", "picture", "number"]) {
     await page.goto(base + "puzzle.html?g=" + g); await page.waitForTimeout(150);
     await shot("puzzle-" + g + "-levels");
     const report = await page.evaluate(() => {
-      const P = PuzzleGame, out = { bad: [], keys: {}, pics: {}, kinds: {} }, G = P.game();
+      const P = PuzzleGame, out = { bad: [], keys: {}, pics: {}, kinds: {} };
       const key = (R, v) => R.key(v), same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const nr = r => ((r % 360) + 360) % 360;
       const inCat = (x, c) => P.CATS[c].m.indexOf(x) >= 0;
       // number rules: +k, -k (k up to 20), x2..x5, /2../5; only one answer may fit what's shown
-      const rules = []; for (let k = 1; k <= 20; k++) rules.push(a => a + k, a => a - k); for (let k = 2; k <= 5; k++) rules.push(a => a * k, a => a % k ? null : a / k);
+      const rules = []; for (let k = 1; k <= 20; k++) rules.push(a => a + k, a => a - k); for (let k = 2; k <= 10; k++) rules.push(a => a * k, a => a % k ? null : a / k);
+      // a row that goes on: each part either stays, repeats every 2 or 3, or goes up by the same step
+      const nextOf = (vals, turn) => {
+        if (vals.every(v => v === vals[0])) return [vals[0]];
+        for (const per of [2, 3]) if (vals.length > per && vals.every((v, i) => i < per || v === vals[i - per])) return [vals[vals.length - per]];
+        const d = vals.map((v, i) => i ? (turn ? nr(v - vals[i - 1]) : v - vals[i - 1]) : null).slice(1);
+        if (d.every(x => x === d[0]) && d[0] !== 0) return [turn ? nr(vals[vals.length - 1] + d[0]) : vals[vals.length - 1] + d[0]];
+        return [];
+      };
+      const numNext = v => { const out = new Set(), d = v.slice(1).map((x, i) => x - v[i]), L = v.length;
+        if (d.every(x => x === d[0])) out.add(v[L - 1] + d[0]);
+        if (v[0] > 0 && v.every((x, i) => !i || (x % v[i - 1] === 0 && x / v[i - 1] === v[1] / v[0])) && v[1] / v[0] > 1) out.add(v[L - 1] * v[1] / v[0]);
+        const dd = d.slice(1).map((x, i) => x - d[i]); if (dd.every(x => x === dd[0]) && dd[0] !== 0) out.add(v[L - 1] + d[d.length - 1] + dd[0]);
+        if (d.length >= 3 && d[0] !== d[1] && d.every((x, i) => i < 2 || x === d[i - 2])) out.add(v[L - 1] + d[d.length - 2]);
+        return [...out]; };
       const fams = [r => r[1] - r[0] === r[2] - r[1] && r[1] !== r[0] ? (a, b) => 2 * b - a : null, r => r[0] + r[1] === r[2] ? (a, b) => a + b : null,
         r => r[0] - r[1] === r[2] ? (a, b) => a - b : null, r => r[0] * r[1] === r[2] ? (a, b) => a * b : null,
         r => r[0] > 0 && r[1] % r[0] === 0 && r[1] > r[0] && r[1] * r[1] / r[0] === r[2] ? (a, b) => (b % a ? null : b * b / a) : null];
-      G.levels.forEach((lv, li) => lv.rounds.forEach((mk, ri) => {
-        for (let t = 0; t < 250; t++) {
-          const R = mk(), T = R.test, opts = R.options, ans = opts[0].v, wrongs = opts.slice(1).map(o => o.v);
-          const where = "L" + (li + 1) + " " + T.type + (T.kind || "") + ": ";
-          out.kinds[li + 1 + T.type] = 1;
+      P.kinds().forEach(K => {
+        const span = K.to - K.from + 1;
+        for (let t = 0; t < Math.max(250, span * 3); t++) {
+          const lv = K.from + (t % span), R = P.maker(K, lv)(), T = R.test, opts = R.options, ans = opts[0].v, wrongs = opts.slice(1).map(o => o.v);
+          const where = K.id + " (level " + lv + "): ";
+          out.kinds[K.id] = 1;
           R.say.concat(R.why.say).forEach(k => out.keys[k] = 1);
           if (opts.length !== 5) out.bad.push(where + opts.length + " answers");
           if (new Set(opts.map(o => o.key)).size !== opts.length || new Set(opts.map(o => o.html)).size !== opts.length) out.bad.push(where + "two answers look the same");
@@ -149,6 +165,26 @@ const server = http.createServer((req, res) => {
             const ok = v => v[T.A] === C[2][T.A] && v[T.B] === C[1][T.B] && ["s", "c", "f", "z", "n"].every(p => p === T.A || p === T.B || v[p] === C[0][p]);
             if (!ok(ans) || C[0][T.A] !== C[1][T.A] || C[0][T.B] !== C[2][T.B]) out.bad.push(where + "rows/columns don't match");
             wrongs.forEach(w => { if (ok(w)) fits.push(w); });
+          } else if (T.type === "match3") {
+            const full = C.slice(); full[R.hole] = ans;
+            const good = g => [0, 1, 2].every(i => new Set([0, 1, 2].map(j => g[i * 3 + j][T.A])).size === 1 && new Set([0, 1, 2].map(j => g[j * 3 + i][T.B])).size === 1) &&
+              new Set(g.map(x => x[T.A])).size === 3 && new Set(g.map(x => x[T.B])).size === 3 && ["s", "c", "f", "z", "n"].every(p => p === T.A || p === T.B || g.every(x => x[p] === g[0][p]));
+            if (!good(full)) out.bad.push(where + "rows/columns don't match");
+            wrongs.forEach(w => { const f2 = C.slice(); f2[R.hole] = w; if (good(f2)) fits.push(w); });
+          } else if (T.type === "series") {
+            const shown = C.slice(0, -1), exp = {};
+            ["s", "c", "f", "z", "n", "r"].forEach(p => { const nx = nextOf(shown.map(x => p === "r" ? nr(x.r) : x[p]), p === "r"); if (nx.length !== 1) out.bad.push(where + "can't tell what comes next (" + p + ")"); exp[p] = nx[0]; });
+            const k = v => [v.s, v.c, v.f, v.z, nr(v.r), v.n].join();
+            if (k(exp) !== k(ans)) out.bad.push(where + "answer isn't what comes next");
+          } else if (T.type === "numseries") {
+            const v = C.slice(0, -1).map(c => c.v), nx = numNext(v);
+            if (nx.length !== 1 || nx[0] !== ans.v) out.bad.push(where + "next number not clear: " + v + " -> " + nx);
+          } else if (T.type === "across") {
+            if (ans.v !== C[1].v + C[2].v - C[0].v || C[1].v === C[0].v || C[2].v === C[0].v) out.bad.push(where + "across/down doesn't add up");
+          } else if (T.type === "dice") {
+            const ops = [(a, b) => a + b, (a, b) => a * b], fitsRows = op => [0, 1].every(r => op(C[r * 3].v, C[r * 3 + 1].v) === C[r * 3 + 2].v);
+            const good = ops.filter(fitsRows);
+            if (good.length !== 1 || good[0](C[6].v, C[7].v) !== ans.v) out.bad.push(where + "dice rule not clear");
           } else if (T.type === "change") {
             const [A, B, Cc] = C, exp = Object.assign({}, Cc);
             ["s", "c", "f", "z", "n"].forEach(p => { if (A[p] !== B[p]) { if (Cc[p] !== A[p]) out.bad.push(where + "bottom one doesn't start like the top one (" + p + ")"); exp[p] = B[p]; } });
@@ -211,18 +247,28 @@ const server = http.createServer((req, res) => {
           } else out.bad.push(where + "no check for this kind");
           if (fits.length) out.bad.push(where + "a wrong answer also fits: " + JSON.stringify(fits[0]));
         }
-      }));
+      });
+      // every level: 10 puzzles, only of kinds open at that level, at least 2 different kinds
+      for (let lv = 1; lv <= P.levels; lv++) for (let t = 0; t < 3; t++) {
+        const Rs = P.levelMakers(lv).map(m => m()), ids = Rs.map(R => R.kindId);
+        if (Rs.length !== 10) out.bad.push("level " + lv + " has " + Rs.length + " puzzles");
+        ids.forEach(id => { const K = P.kinds().filter(k => k.id === id)[0]; if (lv < K.from || lv > K.to) out.bad.push("level " + lv + " got " + id); });
+        const open = P.kinds().filter(k => k.from <= lv && lv <= k.to).length, cap = Math.max(3, Math.ceil(10 / open));
+        if (open < 3) out.bad.push("level " + lv + " has only " + open + " kinds of puzzle");
+        if (new Set(ids).size < 3) out.bad.push("level " + lv + " mixes only " + new Set(ids).size + " kinds");
+        if (ids.some(id => ids.filter(x => x === id).length > cap)) out.bad.push("level " + lv + " has more than " + cap + " of one kind");
+      }
       out.bad = [...new Set(out.bad)].slice(0, 15); out.keys = Object.keys(out.keys); out.pics = Object.keys(out.pics); out.kinds = Object.keys(out.kinds).length;
       return out;
     });
-    report.bad.length ? report.bad.forEach(b => fail("puzzle " + g + " " + b)) : ok("puzzle " + g + ": 250 rounds of each of " + report.kinds + " kinds: 5 different answers, exactly one fits");
+    report.bad.length ? report.bad.forEach(b => fail("puzzle " + g + " " + b)) : ok("puzzle " + g + ": " + report.kinds + " kinds of puzzle across 100 levels: 5 different answers, exactly one fits; every level mixes 10");
     const missingKeys = report.keys.filter(k => !(k in phrases));
     missingKeys.length ? fail("puzzle " + g + " speech keys missing from phrases.json: " + missingKeys.join(", ")) : ok("puzzle " + g + ": all " + report.keys.length + " speech keys exist");
     const noPic = report.pics.filter(c => !fs.existsSync(path.join(WWW, "emoji", c + ".svg")));
     if (report.pics.length) noPic.length ? fail("puzzle " + g + " pictures missing: " + noPic.join(", ")) : ok("puzzle " + g + ": all " + report.pics.length + " pictures exist");
-    // play every level: tap the right answer each time
-    const levels = await page.evaluate(() => PuzzleGame.game().levels.length);
-    for (let i = 0; i < levels; i++) {
+    // play levels from every tab (1-20 ... 81-100): tap the right answer each time
+    const played = [0, 19, 20, 49, 79, 99];
+    for (const i of played) {
       await page.evaluate(i => PuzzleGame.start(i), i);
       for (let r = 0; r < 10; r++) {
         const a = await page.evaluate(() => PuzzleGame.state().R.answer);
@@ -234,7 +280,21 @@ const server = http.createServer((req, res) => {
       end[0] && end[1] === 10 ? ok("puzzle " + g + " level " + (i + 1) + ": played 10 rounds, 10 stars") : fail("puzzle " + g + " level " + (i + 1) + " ended " + JSON.stringify(end));
     }
     const saved = await page.evaluate(g => localStorage.getItem("puzzle:" + g + ":best"), g);
-    saved && Object.keys(JSON.parse(saved)).length === levels ? ok("puzzle " + g + ": stars saved " + saved) : fail("puzzle " + g + " stars not saved: " + saved);
+    saved && Object.keys(JSON.parse(saved)).join() === played.join() ? ok("puzzle " + g + ": stars saved " + saved) : fail("puzzle " + g + " stars not saved: " + saved);
+    // the level map: 5 tabs of 20; it opens on the tab of the first level not played yet, marked "Play!"
+    await page.evaluate(() => { const b = {}; for (let i = 0; i < 27; i++) b[i] = 8; localStorage.setItem("puzzle:" + (location.search.match(/g=(\w+)/)[1]) + ":best", JSON.stringify(b)); });
+    await page.reload(); await page.waitForTimeout(150);
+    const map = await page.evaluate(() => [document.querySelectorAll("#tabs .tab").length, document.querySelector("#tabs .tab.on").textContent, document.querySelectorAll("#path .lvl").length,
+      document.querySelector("#path .lvl.next").textContent, document.querySelector("#path .lvl").textContent]);
+    await shot("puzzle-" + g + "-map");
+    await page.locator("#tabs .tab").nth(4).click();
+    const last = await page.evaluate(() => [document.querySelector("#path .lvl:last-child").textContent, document.querySelector("#tabs .tab.on").textContent]);
+    await page.locator("#path .lvl").last().click(); await page.waitForTimeout(100);
+    const lvl100 = await page.evaluate(() => PuzzleGame.state().level);
+    map[0] === 5 && /^21/.test(map[1]) && map[2] === 20 && /^28Play!/.test(map[3]) && /^21/.test(map[4]) && /^100/.test(last[0]) && /^81/.test(last[1]) && lvl100 === 99
+      ? ok("puzzle " + g + ": level map opens on 21-40 with level 28 marked Play!, tab 81-100 ends at level 100")
+      : fail("puzzle " + g + " level map: " + JSON.stringify({ map, last, lvl100 }));
+    await page.evaluate(() => localStorage.removeItem("puzzle:" + (location.search.match(/g=(\w+)/)[1]) + ":best"));
   }
   {
     // two wrong taps show the answer (no star); one wrong tap then the right one is no star either
@@ -1244,9 +1304,10 @@ const server = http.createServer((req, res) => {
   for (const g of ["shape", "picture", "number"]) {
     await page.goto(base + "puzzle.html?g=" + g);
     // every kind of round on every level, with its why line showing
-    const kinds = await page.evaluate(() => PuzzleGame.game().levels.map(l => l.rounds.length));
-    for (let i = 0; i < kinds.length; i++) for (let j = 0; j < kinds[i]; j++) for (let t = 0; t < 3; t++) {
-      await page.evaluate(([i, j]) => { PuzzleGame.start(i, PuzzleGame.game().levels[i].rounds[j]); const R = PuzzleGame.state().R; document.querySelector("#stage .why").innerHTML = R.why.text.indexOf("<") >= 0 ? "" : Speech.tapText(R.why.text); }, [i, j]);
+    const kinds = await page.evaluate(() => PuzzleGame.kinds().map(k => [k.id, k.from, k.to]));
+    for (const k of kinds) for (const lv of [k[1], k[2]]) for (let t = 0; t < 3; t++) {
+      await page.evaluate(([id, lv]) => { const K = PuzzleGame.kinds().filter(x => x.id === id)[0]; PuzzleGame.start(lv - 1, PuzzleGame.maker(K, lv));
+        const R = PuzzleGame.state().R; document.querySelector("#stage .why").innerHTML = R.why.text.indexOf("<") >= 0 ? "" : Speech.tapText(R.why.text); }, [k[0], lv]);
       await collect();
     }
   }
