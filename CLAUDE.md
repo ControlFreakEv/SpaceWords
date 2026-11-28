@@ -49,7 +49,9 @@ digital photo frame: a draggable floating UFO button over the Skylight slideshow
   each answer a "why" line is shown and said (pz_* keys). Shapes are inline SVG (specSvg: shape,
   color, inside, size, turn, count; linesSvg; boardSvg), Picture Puzzles use Twemoji from PIC
   (CATS groups with `avoid` lists of too-close-to-call things, cross groups flies/wheels/light
-  with `safe` groups, FAMS picture pairs with their sentences pz_p_<a>_<b>); number rules are
+  with `safe` groups, FAMS picture pairs with their sentences pz_p_<a>_<b>; owner: shark:fish / koala:? was
+  answerable as "water animals / land animals" with mouse offered, so pairArguable() drops a wrong choice the same kind
+  (kindOf: group tops + KIND_EXTRA) as the bottom picture whenever the top two are the same kind); number rules are
   checked so only one rule fits what's shown (onlyRule, gridOnly). Every round carries `test`
   data; web-test.js rebuilds each puzzle's rule from the boxes and checks that the answer fits
   and no wrong choice does (250 rounds per kind). Stars: localStorage puzzle:<g>:best.

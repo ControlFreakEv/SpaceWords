@@ -678,20 +678,37 @@ var FAMS = {
   home:{ from:words("fruit clothes music tools balls"), p:[["eagle","nest","Birds live in nests."],["fish","wave","Fish live in water."],["penguin","ice","Penguins live on the ice."]] },
   goesin:{ from:words("fruit farm wild music balls"), p:[["envelope","mailbox","Letters go in a mailbox."],["books","backpack","Books go in a backpack."],["hammer","toolbox","A hammer goes in a toolbox."]] },
   wears:{ from:words("fruit farm wild cars sweets"), p:[["headphones","ear","Headphones go on your ears."],["ring","hand","A ring goes on your finger."],["glasses","nose","Glasses sit on your nose."]] },
-  part:{ from:words("fruit clothes music balls sweets"), p:[["leaf","tree","A leaf is part of a tree."],["wheel","car","A wheel is part of a car."],["wing","eagle","A wing is part of a bird."],["tooth","mouth","A tooth is part of a mouth."],
+  part:{ from:words("tools clothes music balls sweets"), p:[["leaf","tree","A leaf is part of a tree."],["wheel","car","A wheel is part of a car."],["wing","eagle","A wing is part of a bird."],["tooth","mouth","A tooth is part of a mouth."],
     ["feather","parrot","A feather is part of a bird."],["nose","face","A nose is part of a face."]] },
   tool:{ from:words("farm wild music clothes balls"), p:[["key","lock","A key opens a lock."],["toothbrush","tooth","A toothbrush cleans teeth."],["pencil","notebook","A pencil writes in a notebook."],
     ["soap","hand","Soap washes your hands."],["chopsticks","rice","We eat rice with chopsticks."]] },
   opp:{ from:words("fruit farm clothes tools music"), p:[["sunrise","sunset","Sunrise and sunset are opposites."],["thumbsup","thumbsdown","Thumbs up and thumbs down are opposites."],["sun","moon","The sun is out in the day, the moon at night."]] }
 };
 function pairKeyName(p){ return "pz_p_" + p[0] + "_" + p[1]; }
+/* the big kind of thing a picture is (the groups' tops, plus the pair pictures that are in no group) */
+var KIND_EXTRA = { mouse:"animal", hen:"animal", chick:"animal", wing:"animal", feather:"animal", egg:"food", milk:"food", honey:"food",
+  cheese:"food", rice:"food", chopsticks:"food", leaf:"plant", sun:"sky", sunrise:"sky", sunset:"sky", train:"vehicle", sled:"vehicle",
+  skate:"vehicle", rocket:"vehicle", wheel:"vehicle", key:"home", lock:"home", toothbrush:"home", thumbsup:"body", thumbsdown:"body", face:"body" };
+function kindOf(x){
+  var out = []; PLAIN.forEach(function(c){ if (inCat(x, c) && out.indexOf(CATS[c].top) < 0) out.push(CATS[c].top); });
+  if (KIND_EXTRA[x] && out.indexOf(KIND_EXTRA[x]) < 0) out.push(KIND_EXTRA[x]);
+  return out;
+}
+function sameKind(a, b){ var kb = kindOf(b); return kindOf(a).some(function(k){ return kb.indexOf(k) >= 0; }); }
+/* a wrong choice that could be argued for: when the top two are the same kind of thing (shark, fish), one the same kind as
+   the bottom picture (koala, mouse) fits "the same way" too; so does one paired with the bottom picture anywhere */
+function pairArguable(A, C, w){
+  if (sameKind(A[0], A[1]) && sameKind(C[0], w)) return true;
+  for (var f in FAMS) if (FAMS[f].p.some(function(p){ return (p[0] === C[0] && p[1] === w) || (p[1] === C[0] && p[0] === w); })) return true;
+  return false;
+}
 function rPair(fams){
   var fam = FAMS[pick(fams)], two = shuffle(fam.p).slice(0, 2), A = two[0], C = two[1], D = C[1];
   var names = []; fam.p.forEach(function(p){ names.push(p[0], p[1]); });
-  var firsts = fam.p.map(function(p){ return p[0]; }).filter(function(x){ return x !== C[0] && x !== D; });
+  var firsts = fam.p.map(function(p){ return p[0]; }).filter(function(x){ return x !== C[0] && x !== D && !pairArguable(A, C, x); });
   var rand = [], i;
-  fam.from.forEach(function(c){ CATS[c].m.forEach(function(x){ if (names.indexOf(x) < 0 && rand.indexOf(x) < 0) rand.push(x); }); });
-  var wrong = [A[0]].concat(shuffle(firsts).slice(0, 1), spread(rand, 4, []));
+  fam.from.forEach(function(c){ CATS[c].m.forEach(function(x){ if (names.indexOf(x) < 0 && rand.indexOf(x) < 0 && !pairArguable(A, C, x)) rand.push(x); }); });
+  var wrong = (pairArguable(A, C, A[0]) ? [] : [A[0]]).concat(shuffle(firsts).slice(0, 1), spread(rand, 4, []));
   return picRound({ kind:"grid", hint:"The top two go together. Which one goes with the bottom picture the same way?", say:["pz_i_pair"], rows:2, cols:2,
     cells:[A[0], A[1], C[0], D], hole:3, options:choices(D, wrong, picHtml, picKey),
     why:{ text:A[2] + " " + C[2], say:[pairKeyName(A), pairKeyName(C)] }, test:{ type:"pair", A:A, C:C } });
@@ -1237,7 +1254,7 @@ function confetti(target){
 
 /* hook for automated tests (harmless on the frame) */
 window.PuzzleGame = { game:function(){ return GAME; }, kinds:function(){ return KIND; }, levels:NLEVELS, levelMakers:function(n){ return levelMakers(n, KIND); }, maker:maker,
-  state:function(){ return G; }, start:startLevel, home:renderHome, PIC:PIC, CATS:CATS, FAMS:FAMS, FAMILY:FAMILY, RULES:RULES, applyRule:applyRule };
+  state:function(){ return G; }, start:startLevel, home:renderHome, PIC:PIC, CATS:CATS, FAMS:FAMS, pairArguable:pairArguable, kindOf:kindOf, FAMILY:FAMILY, RULES:RULES, applyRule:applyRule };
 
 document.addEventListener("touchstart", function(){}, true);
 renderHome();

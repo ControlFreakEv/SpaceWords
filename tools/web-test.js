@@ -227,7 +227,8 @@ const server = http.createServer((req, res) => {
           } else if (T.type === "pair") {
             const all = []; Object.keys(P.FAMS).forEach(f => P.FAMS[f].p.forEach(p => all.push(p[0] + ">" + p[1])));
             if (all.indexOf(C[0] + ">" + C[1]) < 0 || all.indexOf(C[2] + ">" + ans) < 0) out.bad.push(where + "not a listed pair");
-            wrongs.forEach(w => { if (all.indexOf(C[2] + ">" + w) >= 0) fits.push(w); });
+            wrongs.forEach(w => { if (all.indexOf(C[2] + ">" + w) >= 0 || P.pairArguable([C[0], C[1]], [C[2], ans], w)) fits.push(w); });
+            if (wrongs.length !== 4) out.bad.push(where + "only " + wrongs.length + " wrong choices");
           } else if (T.type === "rule") {
             const shown = T.pairs.slice(0, -1), a = T.pairs[T.pairs.length - 1][0], preds = new Set();
             rules.forEach(f => { if (shown.every(p => f(p[0]) === p[1])) { const v = f(a); if (v !== null && v >= 0) preds.add(v); } });
